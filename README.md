@@ -12,4 +12,8 @@ Input: a text prompt, optional real images of the domain, and a simulator video.
 
 ## Docs
 
-- [docs/design-doc-v0.md](docs/design-doc-v0.md): the first draft of the `v0` tab. The Google Doc may have changed since.
+Each local draft and the Google Doc tab it was pasted into. The Google Doc may have changed since.
+
+| Local draft | Google Doc tab |
+| --- | --- |
+| [docs/2026-11-09-1416-design-doc-v0.md](docs/2026-11-09-1416-design-doc-v0.md) | [v0](https://docs.google.com/document/d/1cAho8uc2gT9nnzAg9GN1NU0pHQ4cggaQcGlL9v-IBb4/edit?tab=t.0) |
