@@ -1,5 +1,9 @@
 # Agent notes
 
+## Git
+
+- Start every branch name with the owner's name or GitHub handle and a slash, i.e. `<name>/<topic>` such as `spsharan/lit-survey`, so it's clear whose branch it is. If you don't know whose work it is, ask before creating the branch.
+
 ## Docs
 
 - Doc filenames start with a local date-time stamp, `YYYY-MM-DD-HHMM-`, e.g. `docs/2026-11-09-1416-design-doc-v0.md`.
