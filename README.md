@@ -4,6 +4,10 @@ Sim-conditioned video synthesis for drone and satellite scenarios (AFRL Thread 1
 
 Input: a text prompt, optional real images of the domain, and a simulator video. Output: a realistic synthetic video, scored by a testbench of verifiers and metrics.
 
+## Getting started
+
+[`setup/README.md`](setup/README.md) covers the workspace (third-party code, envs, Blender, weights) and how to re-run the `drones_air` proof of concept. On swarm5 you can reuse the existing workspace and read its outputs directly.
+
 ## Links
 
 - [Google Drive folder](https://drive.google.com/drive/folders/19sR4ksrWNhh8aFPyejz8-W5eYPbB3Epu?usp=sharing): shared project files
@@ -20,7 +24,18 @@ Each local draft and the Google Doc tab it was pasted into. The Google Doc may h
 | [docs/2026-11-09-1626-project-understanding.md](docs/2026-11-09-1626-project-understanding.md) | not pasted yet |
 | [docs/lit-review/2026-11-09-1750-lit-review-synthesis.md](docs/lit-review/2026-11-09-1750-lit-review-synthesis.md) | not pasted yet |
 | [docs/2026-11-09-2309-cosmos-hardware-check.md](docs/2026-11-09-2309-cosmos-hardware-check.md) | not pasted yet |
+| [docs/2026-11-10-0012-v0-engineering-plan.md](docs/2026-11-10-0012-v0-engineering-plan.md) | not pasted yet |
+| [docs/2026-11-10-1251-poc-drones-air-findings.md](docs/2026-11-10-1251-poc-drones-air-findings.md) | not pasted yet |
 
 ### Literature review
 
 [`docs/lit-review/`](docs/lit-review/) holds the [synthesis](docs/lit-review/2026-11-09-1750-lit-review-synthesis.md) and its four source surveys, written independently: [Claude Opus](docs/lit-review/2026-11-09-1650-lit-survey-claude-opus.md), [Codex GPT-6.1 Sol](docs/lit-review/2026-11-09-1741-lit-survey-codex-sol.md), [Codex GPT-6 Astra](docs/lit-review/2026-11-09-1744-lit-survey-codex-astra.md), and [Claude Fable 5.2](docs/lit-review/2026-11-09-1935-lit-survey-fable.md). The [shared prompt](docs/lit-review/2026-11-09-1735-codex-review-prompt.md) given to the Codex and Fable surveys is saved alongside them. A [paper-direction review by Fable 5.2](docs/lit-review/2026-11-09-1918-paper-direction-fable.md) covers how this could become a top-tier paper.
+
+## Artifacts
+
+claude.ai artifacts made for this project, oldest first. Links open for people in the UT Austin org.
+
+| Artifact | Kind | Author | Created | What it covers |
+| --- | --- | --- | --- | --- |
+| [Sim2Real v0 Walkthrough](https://claude.ai/artifact/WnryWm5K5uvxH6kC9oTVoj) | Page | Shourov Joarder | 2026-11-09 | v0 smoke test on the lab server: Blender scene gives sparse motion (boxes or point tracks), Wan2.1 1.3B generates the clip |
+| [Sim2Real-VideoGen: Week 1](https://claude.ai/artifact/Xnc3VJyqozBpXNLK3LrQkB) | Slides | S P Sharan | 2026-11-10 | Week 1 deck: literature review, problem formulation, v0 architecture, drones_air proof of concept, next steps |

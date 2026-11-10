@@ -1,0 +1,47 @@
+[project]
+name = "eval-env"
+version = "0.1.0"
+description = "Shared env for SAM 2.1 and CoTracker3 evaluation tools"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "torch==2.7.1",
+    "torchvision==0.22.1",
+    "sam-2",
+    "cotracker",
+    "numpy",
+    "opencv-python",
+    "imageio[ffmpeg]",
+    "matplotlib",
+    "tqdm",
+    "hydra-core>=1.3.2",
+    "iopath>=0.1.10",
+    "pillow",
+    "setuptools",
+]
+
+[tool.uv]
+package = false
+# SAM 2 is built without build isolation against the env's torch, with its optional CUDA
+# extension (sam2._C, used only for mask hole-filling post-processing) disabled:
+# swarm5 has no CUDA toolkit / nvcc.
+no-build-isolation-package = ["sam-2"]
+
+[tool.uv.extra-build-variables]
+sam-2 = { SAM2_BUILD_CUDA = "0" }
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu126" }
+torchvision = { index = "pytorch-cu126" }
+sam-2 = { path = "../../sam2", editable = true }
+cotracker = { path = "../../co-tracker", editable = true }
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+# Static metadata so `uv lock` need not build sam-2 before torch is installed.
+[[tool.uv.dependency-metadata]]
+name = "sam-2"
+version = "1.0"
+requires-dist = ["torch>=2.5.1", "torchvision>=0.20.1", "numpy>=1.24.4", "tqdm>=4.66.1", "hydra-core>=1.3.2", "iopath>=0.1.10", "pillow>=9.4.0"]

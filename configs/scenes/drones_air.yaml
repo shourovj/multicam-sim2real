@@ -1,0 +1,48 @@
+# drones_air: two quadcopters cross in front of a static camera, sky and horizon behind them.
+# World frame: Z up, metres. The camera sits at x=0 and looks along +Y, tilted slightly up.
+name: drones_air
+duration_s: 5.1            # 153 frames at 30 fps; frame counts must be 1 + 4n (plan §4)
+fps: 30
+frames: 153
+resolution: [832, 480]     # W, H
+seed: 0
+render: {samples: 48, denoise: true}
+
+camera:
+  type: perspective
+  position: [0.0, 0.0, 1.6]
+  look_at: [0.0, 10.0, 2.3]   # ~4 deg upward pitch: horizon sits a little below the centre
+  fov_deg: 50                 # horizontal
+  motion: static
+
+background:
+  type: procedural            # no downloaded assets
+  sky: {model: nishita, sun_elevation_deg: 35, sun_rotation_deg: 200, strength: 0.22}
+  ground: {size_m: 4000, colors: [[0.10, 0.17, 0.04], [0.30, 0.27, 0.12]], noise_scale: 0.08}
+
+objects:
+  # trajectory keyframes: [t_s, x, y, z, yaw_deg]; Catmull-Rom between keys.
+  # Each drone leans toward its direction of travel in proportion to speed (sim/motion.py).
+  - id: drone_1
+    instance_id: 1
+    asset: {type: quadcopter, arm_span_m: 0.62, body_color: [0.85, 0.30, 0.05]}
+    trajectory:
+      keyframes:
+        - [0, -2.50, 7.00, 2.60, 0]
+        - [1.7, -0.90, 7.20, 2.80, 0]
+        - [3.4, 0.80, 7.40, 2.70, 0]
+        - [5.1, 2.40, 7.30, 2.85, 0]
+  - id: drone_2
+    instance_id: 2
+    asset: {type: quadcopter, arm_span_m: 0.62, body_color: [0.85, 0.87, 0.90]}
+    trajectory:
+      keyframes:
+        - [0, 3.30, 10.00, 3.25, 45]
+        - [1.7, 1.20, 9.80, 3.05, 45]
+        - [3.4, -1.00, 9.60, 3.20, 45]
+        - [5.1, -3.20, 9.70, 3.10, 45]
+
+events:                      # ground truth for eval; crossing = image-x order swaps (checked in export)
+  - {name: crossing, t: 2.4}
+
+tracks: {points_per_object: 16}

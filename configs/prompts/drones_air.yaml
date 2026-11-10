@@ -1,0 +1,21 @@
+# Frozen prompts for drones_air (plan §6). Neutral wording: "quadcopters", no model-specific cues.
+scene: drones_air
+base: >-
+  Two small quadcopters fly across the sky in front of a static camera, passing each other
+  in mid-air. Behind them is a soft blue sky over a distant flat horizon. Realistic footage,
+  smooth natural motion, the camera does not move.
+# A+: base scene and camera wording plus the scripted motion, written from bundle/timeline.json and
+# boxes.json (drone_1 = orange, ~7 m; drone_2 = white, ~10 m; image-x order swaps at frame 79, 2.63 s).
+detailed: >-
+  Two small quadcopters fly across the sky in front of a static camera, passing each other
+  in mid-air. Behind them is a soft blue sky over a distant flat horizon. One quadcopter has an
+  orange body and is nearer the camera, so it looks larger; the other has a white body and is
+  farther back, so it looks smaller. At the start the orange quadcopter is near the left edge of
+  the frame and the white one is near the right edge, both in the upper half of the frame at
+  about the same height. The orange quadcopter flies steadily to the right and the white one
+  flies steadily to the left. They pass each other in the middle of the frame about halfway
+  through the video, with the orange one in front, briefly covering part of the white one. They
+  keep going: at the end the orange quadcopter is near the right edge and the white one is near
+  the left edge. Both stay in view the whole time. Realistic footage, smooth natural motion,
+  the camera does not move.
+negative: null   # use each model's default negative prompt
