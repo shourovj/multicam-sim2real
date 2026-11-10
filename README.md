@@ -17,3 +17,10 @@ Each local draft and the Google Doc tab it was pasted into. The Google Doc may h
 | Local draft | Google Doc tab |
 | --- | --- |
 | [docs/2026-11-09-1416-design-doc-v0.md](docs/2026-11-09-1416-design-doc-v0.md) | [v0](https://docs.google.com/document/d/1cAho8uc2gT9nnzAg9GN1NU0pHQ4cggaQcGlL9v-IBb4/edit?tab=t.0) |
+| [docs/2026-11-09-1626-project-understanding.md](docs/2026-11-09-1626-project-understanding.md) | not pasted yet |
+| [docs/lit-review/2026-11-09-1750-lit-review-synthesis.md](docs/lit-review/2026-11-09-1750-lit-review-synthesis.md) | not pasted yet |
+| [docs/2026-11-09-2309-cosmos-hardware-check.md](docs/2026-11-09-2309-cosmos-hardware-check.md) | not pasted yet |
+
+### Literature review
+
+[`docs/lit-review/`](docs/lit-review/) holds the [synthesis](docs/lit-review/2026-11-09-1750-lit-review-synthesis.md) and its four source surveys, written independently: [Claude Opus](docs/lit-review/2026-11-09-1650-lit-survey-claude-opus.md), [Codex GPT-6.1 Sol](docs/lit-review/2026-11-09-1741-lit-survey-codex-sol.md), [Codex GPT-6 Astra](docs/lit-review/2026-11-09-1744-lit-survey-codex-astra.md), and [Claude Fable 5.2](docs/lit-review/2026-11-09-1935-lit-survey-fable.md). The [shared prompt](docs/lit-review/2026-11-09-1735-codex-review-prompt.md) given to the Codex and Fable surveys is saved alongside them. A [paper-direction review by Fable 5.2](docs/lit-review/2026-11-09-1918-paper-direction-fable.md) covers how this could become a top-tier paper.
