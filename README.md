@@ -8,6 +8,32 @@ Input: a text prompt, optional real images of the domain, and a simulator video.
 
 [`setup/README.md`](setup/README.md) covers the workspace (third-party code, envs, Blender, weights) and how to re-run the `drones_air` proof of concept. On swarm5 you can reuse the existing workspace and read its outputs directly.
 
+The [round 2 guide](docs/2026-11-11-1304-pilot-v0-branch-guide.md) covers the current pipeline: how to run it and where the outputs are. Round 2 also needs a VideoX-Fun clone with the Wan2.2-VACE-Fun-A14B weights; the setup guide does not cover it yet, so the steps are in §3 of the round 2 guide.
+
+## Pipeline
+
+Each step reads and writes files under `$S2R_DATA/poc/<scene>/`, so any step can be re-run on its own.
+
+| Step | Code | Output |
+| --- | --- | --- |
+| 1. Describe a scene: camera, background, objects and what each object tries to do | [`configs/scenes/`](configs/scenes/), [`configs/prompts/`](configs/prompts/) | |
+| 2. Move the objects with a physics model (quadrotor, ground vehicle, rigid body) | [`sim/physics/`](sim/physics/), [`sim/simulate.py`](sim/simulate.py) | |
+| 3. Render and export the scene bundle: RGB, depth, object masks, boxes, point tracks, events | [`sim/build_bundle.sh`](sim/build_bundle.sh) | `bundle/` |
+| 4. Make frame 0 realistic by hand in an image editor | [`frame0_edits/`](frame0_edits/) | `bundle/frame0_edited.png` |
+| 5. Build each condition's model inputs | [`sim/controls.py`](sim/controls.py) | `<condition>/inputs/` |
+| 6. Generate every scene × condition × seed on the shared GPUs | [`gen/run_matrix.py`](gen/run_matrix.py), [`configs/matrix.yaml`](configs/matrix.yaml) | `<condition>/<model>-s<steps>/seed<k>/out_video.mp4` |
+
+A condition is only a choice of inputs to the same model: text, a first frame, box outlines, depth, or a mix. The conditions are listed in [`configs/matrix.yaml`](configs/matrix.yaml).
+
+## Results so far
+
+| Round | Setup | Findings |
+| --- | --- | --- |
+| Proof of concept (Nov 10) | `drones_air` with scripted motion, Wan2.1-VACE-14B, Wan-Move and Cosmos Sim-Transfer | [PoC findings](docs/2026-11-10-1251-poc-drones-air-findings.md) |
+| Round 2 (Nov 11) | Three physics scenes × seven conditions on Wan2.2-VACE-Fun-A14B, 51 clips | [Round 2 findings](docs/2026-11-11-0845-round2-findings.md) |
+
+Round 2 in short, read by eye and not scored by a tool: box outlines for the whole clip keep the drones on the simulator's path in all 6 clips of the two drone scenes; with text, a first frame, or boxes for the first second only, the event does not happen in 15 of 16 drone clips; the overhead convoy scene fails in every condition and needs rework.
+
 ## Links
 
 - [Google Drive folder](https://drive.google.com/drive/folders/19sR4ksrWNhh8aFPyejz8-W5eYPbB3Epu?usp=sharing): shared project files
@@ -26,6 +52,8 @@ Each local draft and the Google Doc tab it was pasted into. The Google Doc may h
 | [docs/2026-11-09-2309-cosmos-hardware-check.md](docs/2026-11-09-2309-cosmos-hardware-check.md) | not pasted yet |
 | [docs/2026-11-10-0012-v0-engineering-plan.md](docs/2026-11-10-0012-v0-engineering-plan.md) | not pasted yet |
 | [docs/2026-11-10-1251-poc-drones-air-findings.md](docs/2026-11-10-1251-poc-drones-air-findings.md) | not pasted yet |
+| [docs/2026-11-11-0845-round2-findings.md](docs/2026-11-11-0845-round2-findings.md) | not pasted yet |
+| [docs/2026-11-11-1304-pilot-v0-branch-guide.md](docs/2026-11-11-1304-pilot-v0-branch-guide.md) | not pasted yet |
 
 ### Literature review
 

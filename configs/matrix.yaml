@@ -16,6 +16,9 @@ conditions:
   A: text
   Aplus: detailed text describing the path
   C: simulator frame 0 + depth
+  # The same two with the simulator's own frame 0, to compare against the edited frame.
+  Bbox: simulator frame 0 + box outlines for the whole clip
+  B: text + simulator frame 0
 
 # GPU use on the shared server. A GPU is used only if it has this much free memory right before launch,
 # and never while one of our own jobs is on it.
