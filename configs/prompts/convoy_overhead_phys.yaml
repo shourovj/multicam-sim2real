@@ -1,0 +1,22 @@
+# Frozen prompts for convoy_overhead_phys: the same scene as convoy_overhead, with the motion from the physics model.
+# base is identical to convoy_overhead's. The tank is hidden from 1.0 s to 3.9 s, the first truck from 3.3 s, and the last truck is under the bridge at 1.0 s.
+scene: convoy_overhead_phys
+base: >-
+  An olive green army tank followed by two olive green army trucks drives along a pale dirt road
+  through dense green woodland, seen from directly above. The road curves, passes under a concrete
+  bridge and runs under the tree canopy. Realistic aerial footage, smooth natural motion, the
+  camera does not move.
+# A+: base wording plus the motion, written from the bundle's timeline.json events and boxes.json.
+detailed: >-
+  An olive green army tank followed by two olive green army trucks drives along a pale dirt road
+  through dense green woodland, seen from directly above. The road curves, passes under a concrete
+  bridge and runs under the tree canopy. At the start all three vehicles are in the left half of
+  the frame, driving to the right in a line with even gaps: the tank in front, then the first
+  truck, then the second truck at the far left. A grey concrete bridge crosses the road between
+  the two trucks, and the second truck drives under it about one second in. The road then bends
+  and disappears under the trees in the middle of the frame. The vehicles slow a little for the
+  bend. The tank drives under the trees about one second in and is hidden; the first truck follows
+  it under the trees about three seconds in. The tank comes back into view on the right side of
+  the frame about four seconds in and keeps driving to the right. The second truck is still on the
+  open road at the end. Realistic aerial footage, smooth natural motion, the camera does not move.
+negative: null   # use each model's default negative prompt

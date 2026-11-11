@@ -18,7 +18,6 @@ source "$REPO/smoke/vace_common.sh"
 IN=$OUT_ROOT/$COND/inputs
 case "$COND" in
   A|Aplus) run_vace "$COND" ;;
-  B|C|C0|Bbox) for f in "$IN/src_video.mp4" "$IN/src_mask.mp4"; do [[ -f $f ]] || { echo "missing $f" >&2; exit 1; }; done
+  *) for f in "$IN/src_video.mp4" "$IN/src_mask.mp4"; do [[ -f $f ]] || { echo "missing $f" >&2; exit 1; }; done
        run_vace "$COND" --src_video "$IN/src_video.mp4" --src_mask "$IN/src_mask.mp4" ;;
-  *) echo "COND must be A, Aplus, B, C, C0 or Bbox" >&2; exit 1 ;;
 esac

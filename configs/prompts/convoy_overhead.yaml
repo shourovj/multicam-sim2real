@@ -1,0 +1,30 @@
+# Frozen prompts for convoy_overhead. Same template as drones_air: objects with colours, ground,
+# background, camera, then the same style sentence.
+scene: convoy_overhead
+base: >-
+  An olive green army tank followed by two olive green army trucks drives along a pale dirt road
+  through dense green woodland, seen from directly above. The road curves, passes under a concrete
+  bridge and runs under the tree canopy. Realistic aerial footage, smooth natural motion, the
+  camera does not move.
+# A+: base wording plus the scripted motion, written from configs/scenes/convoy_overhead.yaml.
+detailed: >-
+  An olive green army tank followed by two olive green army trucks drives along a pale dirt road
+  through dense green woodland, seen from directly above. The road curves, passes under a concrete
+  bridge and runs under the tree canopy. At the start all three vehicles are in the left half of
+  the frame, driving to the right in a line with even gaps: the tank in front, then the first
+  truck, then the second truck at the far left. A grey concrete bridge crosses the road between
+  the two trucks, and the second truck drives under it in the first second. The road then bends
+  and disappears under the trees in the middle of the frame. The tank drives under the trees first
+  and is hidden, then the first truck, then the second truck. The tank comes back into view on
+  the right side of the frame about three seconds in and keeps driving to the right, and the first
+  truck comes out behind it at the very end. Realistic aerial footage, smooth natural motion, the
+  camera does not move.
+negative: null   # use each model's default negative prompt
+
+
+#for the edit:
+# This is a real aerial photograph with three 3D-rendered vehicles and a rendered bridge added. Make the added objects look like part of the photograph.
+# Keep the tank and both trucks exactly where they are on the dirt road, at the same size and pointing the same way. Do not add or remove any vehicles. Keep the bridge exactly where it is, at the same size and angle. Keep the road, the trees and the rest of the photograph unchanged.
+# Make the tank a real olive green army tank seen from directly above, and the two trucks real olive green army trucks with canvas-covered cargo beds. Make the bridge a real grey concrete road bridge. Give all of them shadows that fall the same way as the tree shadows in the photograph.
+# Aerial photograph taken from directly above, same lighting and colours as the rest of the image, sharp focus.
+# No new objects, no new roads or buildings, no text, no motion blur.

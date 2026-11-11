@@ -1,0 +1,145 @@
+"""Run every scene x condition x seed in configs/matrix.yaml, a few at a time, on whichever GPUs have room.
+
+  source env.sh; $S2R_ROOT/envs/eval/.venv/bin/python gen/run_matrix.py [--status] [--only-seed 0] [--dry-run]
+
+A job is done when its out_video.mp4 exists, so a rerun picks up where the last one stopped.
+A running job leaves a .running file with its process id in its output folder, so a restarted runner does not start it twice.
+Each launch is appended to $S2R_DATA/poc/manifest.jsonl, and again when it ends, with wall time and peak memory.
+GPU memory is read right before every launch; a GPU already running one of our jobs is not used again.
+To stop: touch $S2R_DATA/poc/STOP (no new jobs start; running ones finish).
+"""
+
+import argparse
+import json
+import os
+import subprocess
+import time
+
+import yaml
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(os.environ["S2R_DATA"], "poc")
+# model name in the matrix -> (run script, extra environment). The name is also the output folder prefix.
+RUNNERS = {"vacefun-a14b": ("gen/run_vacefun.sh", {}),                         # Wan2.2-VACE-Fun-A14B (VideoX-Fun)
+           "vace21-14B": ("gen/run_vace_diffusers.sh", {"MODEL": "14B"}),      # Wan2.1-VACE-14B (diffusers)
+           "vace21-1.3B": ("gen/run_vace_diffusers.sh", {"MODEL": "1.3B"})}    # Wan2.1-VACE-1.3B (diffusers)
+
+
+def out_dir(tag, scene, cond, seed):
+    return os.path.join(DATA, scene, cond, tag, f"seed{seed}")
+
+
+def my_gpus():
+    """GPUs that already hold a compute process of this user, e.g. a job from an earlier runner."""
+    q = lambda what, fields: subprocess.run(["nvidia-smi", f"--query-{what}={fields}", "--format=csv,noheader,nounits"],
+                                            capture_output=True, text=True, check=True).stdout.strip().splitlines()
+    index = dict(line.split(", ")[::-1] for line in q("gpu", "index,uuid"))
+    mine = set()
+    for line in q("compute-apps", "gpu_uuid,pid"):
+        uuid, pid = line.split(", ")
+        try:
+            if os.stat(f"/proc/{pid}").st_uid == os.getuid():
+                mine.add(int(index[uuid]))
+        except OSError:
+            pass
+    return mine
+
+
+def free_gib():
+    out = subprocess.run(["nvidia-smi", "--query-gpu=index,memory.total,memory.used", "--format=csv,noheader,nounits"],
+                         capture_output=True, text=True, check=True).stdout
+    return {int(i): (int(t) - int(u)) / 1024 for i, t, u in (line.split(", ") for line in out.strip().splitlines())}
+
+
+def log(row):
+    with open(os.path.join(DATA, "manifest.jsonl"), "a") as f:
+        f.write(json.dumps(row) + "\n")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--matrix", default=os.path.join(REPO, "configs/matrix.yaml"))
+    ap.add_argument("--status", action="store_true", help="list every job and whether it is done, then exit")
+    ap.add_argument("--only-seed", type=int)
+    ap.add_argument("--dry-run", action="store_true", help="print the launch order, then exit")
+    a = ap.parse_args()
+    m = yaml.safe_load(open(a.matrix))
+    model, gpu, steps = m["model"], m["gpu"], m["steps"]
+    assert model in RUNNERS, f"unknown model {model!r}; known: {sorted(RUNNERS)}"
+    tag = f"{model}-s{steps}"
+    jobs = [(scene, cond, seed) for seed in m["seeds"] for scene in m["scenes"] for cond in m["conditions"]
+            if seed in m.get("seeds_override", {}).get(cond, m["seeds"]) and (a.only_seed is None or seed == a.only_seed)]
+    done = lambda j: os.path.exists(os.path.join(out_dir(tag, *j), "out_video.mp4"))
+    if a.status or a.dry_run:
+        for j in jobs:
+            print(f"{'done   ' if done(j) else 'pending'}  {j[0]:16s} {j[1]:10s} seed {j[2]}")
+        print(f"{sum(map(done, jobs))} of {len(jobs)} done")
+        return
+
+    for scene, cond, _ in jobs:        # fail before launching anything if an input is missing
+        if cond not in ("A", "Aplus"):
+            for f in ("src_video.mp4", "src_mask.mp4"):
+                assert os.path.exists(os.path.join(DATA, scene, cond, "inputs", f)), f"missing {scene}/{cond}/inputs/{f}"
+
+    def in_progress(j):                # launched by an earlier runner and still alive
+        try:
+            os.kill(int(open(os.path.join(out_dir(tag, *j), ".running")).read()), 0)
+            return True
+        except (OSError, ValueError):
+            return False
+
+    queue = [j for j in jobs if not done(j) and not in_progress(j)]
+    running = {}                       # gpu index -> (job, process, start time, mode)
+    tries = {}                         # job -> times it was requeued after failing
+    print(f"[matrix] {len(queue)} of {len(jobs)} jobs to run", flush=True)
+    while queue or running:
+        for g, (job, proc, t0, mode) in list(running.items()):
+            if proc.poll() is None:
+                continue
+            del running[g]
+            if os.path.exists(os.path.join(out_dir(tag, *job), ".running")):
+                os.remove(os.path.join(out_dir(tag, *job), ".running"))
+            row = {"scene": job[0], "cond": job[1], "seed": job[2], "model": model, "steps": steps, "gpu": g, "mode": mode,
+                   "status": "done" if done(job) else "failed", "returncode": proc.returncode,
+                   "launcher_s": round(time.time() - t0), "finished": time.strftime("%Y-%m-%d %H:%M:%S")}
+            info = os.path.join(out_dir(tag, *job), "run.json")
+            if os.path.exists(info):
+                r = json.load(open(info))
+                row.update(wall_s=r["wall_s"], peak_gpu_gib=r["peak_gpu_gib"])
+            log(row)
+            print(f"[matrix] {row['status']}: {job} on GPU {g} ({mode}), {row['launcher_s']} s", flush=True)
+            if row["status"] == "failed" and tries.get(job, 0) < gpu.get("retries", 2):
+                tries[job] = tries.get(job, 0) + 1      # usually another user's job took the GPU while ours was loading
+                queue.append(job)
+                print(f"[matrix] requeued {job}, retry {tries[job]}", flush=True)
+        stop = os.path.exists(os.path.join(DATA, "STOP"))
+        if stop and not running:
+            print("[matrix] STOP file found, exiting", flush=True)
+            return
+        if queue and not stop and len(running) < gpu["max_parallel"]:
+            free, busy = free_gib(), my_gpus() | set(running)          # read right before launching
+            pick = next(((g, md["name"]) for md in gpu["modes"] for g, f in sorted(free.items(), key=lambda x: -x[1])
+                         if g not in busy and f >= md["min_free_gib"]), None)
+            if pick:
+                g, mode = pick
+                job = queue.pop(0)
+                os.makedirs(os.path.join(DATA, "logs"), exist_ok=True)
+                script, extra = RUNNERS[model]
+                env = dict(os.environ, SCENE=job[0], COND=job[1], SEED=str(job[2]), STEPS=str(steps), MEMORY_MODE=mode,
+                           CUDA_VISIBLE_DEVICES=str(g), **extra)
+                logf = open(os.path.join(DATA, "logs", f"{job[0]}__{job[1]}__s{job[2]}.log"), "w")
+                proc = subprocess.Popen(["bash", os.path.join(REPO, script)], env=env, stdout=logf, stderr=subprocess.STDOUT)
+                running[g] = (job, proc, time.time(), mode)
+                os.makedirs(out_dir(tag, *job), exist_ok=True)
+                open(os.path.join(out_dir(tag, *job), ".running"), "w").write(str(proc.pid))
+                log({"scene": job[0], "cond": job[1], "seed": job[2], "model": model, "steps": steps, "gpu": g, "mode": mode,
+                     "status": "started", "free_gib_at_launch": round(free[g], 1), "started": time.strftime("%Y-%m-%d %H:%M:%S")})
+                print(f"[matrix] started {job} on GPU {g} ({mode}, {free[g]:.0f} GiB free)", flush=True)
+                time.sleep(240)        # let it load and claim its memory before judging the GPUs again
+                continue
+        time.sleep(30)
+    print("[matrix] all jobs finished", flush=True)
+
+
+if __name__ == "__main__":
+    main()

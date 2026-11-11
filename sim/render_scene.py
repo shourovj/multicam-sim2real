@@ -26,6 +26,7 @@ from mathutils import Matrix
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import assets  # noqa: E402
 import motion  # noqa: E402
+import physics  # noqa: E402
 
 
 def main(spec_path, out, preview=None):
@@ -47,29 +48,93 @@ def main(spec_path, out, preview=None):
     scene.render.fps = fps
     scene.view_settings.view_transform = "Standard"
 
-    assets.build_world(spec["background"])
-    for ob in assets.build_ground(spec["background"], seed=spec["seed"]):
+    bg, cam = spec["background"], spec["camera"]
+    assert cam["motion"] == "static"
+    overhead = bg["type"] == "aerial_image"
+    if overhead:
+        # Aerial photo as the ground: image centre at the origin, +X east, +Y north. Pixels -> metres.
+        mpp = bg["metres_per_pixel"]
+        image = bg["image"] if os.path.isabs(bg["image"]) else os.path.join(os.environ["S2R_DATA"], bg["image"])
+        ground, ground_size, (wp, hp) = assets.build_image_ground(image, mpp)
+        to_world = lambda px: (np.asarray(px, float) - [wp / 2, hp / 2]) * [mpp, -mpp]
+        assets.build_flat_world(bg["light"]["ambient"])
+        light = bg["light"]
+        ground_obs = [ground]
+    else:
+        assets.build_world(bg)
+        light = {**bg["sky"], "sun_strength": 3.0}
+        ground_obs = assets.build_ground(bg, seed=spec["seed"])
+    for ob in ground_obs:
         bproc.types.MeshObject(ob).set_cp("category_id", 0)
 
-    sky = spec["background"]["sky"]
     sun = bproc.types.Light()
     sun.set_type("SUN")
-    sun.set_energy(3.0)
-    el, az = np.deg2rad(sky["sun_elevation_deg"]), np.deg2rad(sky["sun_rotation_deg"])
+    sun.set_energy(light["sun_strength"])
+    el, az = np.deg2rad(light["sun_elevation_deg"]), np.deg2rad(light["sun_rotation_deg"])
     sun_dir = np.array([np.cos(el) * np.sin(az), np.cos(el) * np.cos(az), np.sin(el)])  # toward the sun
     sun.set_rotation_mat(bproc.camera.rotation_from_forward_vec(-sun_dir))
 
+    # Camera pose. overhead: straight down from altitude_m above centre_px, covering view_width_m of
+    # ground; yaw_deg turns it about the vertical (0 = north at the top of the frame, -90 = east at the top).
+    bproc.camera.set_resolution(W, H)
+    if cam["type"] == "overhead":
+        cx, cy = to_world(cam["centre_px"])
+        pos = np.array([cx, cy, cam["altitude_m"]])
+        yaw = np.deg2rad(cam.get("yaw_deg", 0.0))
+        rot = np.array([[np.cos(yaw), -np.sin(yaw), 0], [np.sin(yaw), np.cos(yaw), 0], [0, 0, 1]])
+        fov = 2 * np.arctan(cam["view_width_m"] / 2 / cam["altitude_m"])
+        bproc.camera.set_intrinsics_from_blender_params(fov, W, H, clip_end=cam["altitude_m"] * 3, lens_unit="FOV")
+    else:
+        pos = np.asarray(cam["position"], float)
+        rot = bproc.camera.rotation_from_forward_vec(np.asarray(cam["look_at"], float) - pos)
+        bproc.camera.set_intrinsics_from_blender_params(np.deg2rad(cam["fov_deg"]), W, H, lens_unit="FOV")
+    cam2world = bproc.math.build_transformation_mat(pos, rot)
+    for i in range(T):
+        bproc.camera.add_camera_pose(cam2world, frame=i)
+    K = np.asarray(bproc.camera.get_intrinsics_as_K_matrix())
+
+    road = motion.road_path(to_world(spec["road"]["waypoints_px"])) if "road" in spec else None
+
+    # Static occluders: part of the background (instance 0), but in the depth and in front of the objects.
+    # Positions along the road (at_m, from_m, to_m) are arc lengths from the first waypoint.
+    for k, oc in enumerate(spec.get("occluders", [])):
+        if oc["type"] == "tree":
+            ob = assets.build_tree(f"occluder_{k}", oc["position"], oc["trunk_height_m"], oc["crown_radius_m"])
+        elif oc["type"] == "bridge":
+            xy, tan = motion.path_point(road, oc["at_m"])
+            ob = assets.build_bridge(f"occluder_{k}", xy, np.arctan2(tan[1], tan[0]), oc["width_m"], oc["length_m"],
+                                     oc["height_m"])
+        elif oc["type"] == "canopy":
+            xy, tan = motion.path_point(road, np.arange(oc["from_m"], oc["to_m"] + 1e-6, 1.0))
+            side = np.stack([-tan[:, 1], tan[:, 0]], -1) * oc["width_m"] / 2
+            ob = assets.build_canopy_patch(f"occluder_{k}", xy + side, xy - side, oc["height_m"], pos, ground_size,
+                                           ground.data.materials[0])
+        else:
+            raise SystemExit(f"unknown occluder type {oc['type']}")
+        bproc.types.MeshObject(ob).set_cp("category_id", 0)
+
+    builders = {"quadcopter": lambda n, a: assets.build_quadcopter(n, a["arm_span_m"], a["body_color"]),
+                "tank": lambda n, a: assets.build_tank(n, a["color"]),
+                "truck": lambda n, a: assets.build_truck(n, a["color"])}
+    obj_specs = motion.scene_objects(spec)
+    # Objects with a `motion` block are moved by sim/physics, all on one clock; the rest follow their scripted trajectory.
+    driven = [o for o in obj_specs if "motion" in o]
+    phys = physics.simulate(driven, fps, spec["frames"], road=road, seed=spec["seed"]) if driven else None
+    pick = preview if preview else slice(None)
     objects = []
-    for k, o in enumerate(spec["objects"]):
-        a = o["asset"]
-        assert a["type"] == "quadcopter"
-        ob = assets.build_quadcopter(o["id"], a["arm_span_m"], a["body_color"])
+    for k, o in enumerate(obj_specs):
+        ob = builders[o["asset"]["type"]](o["id"], o["asset"])
         mo = bproc.types.MeshObject(ob)
         mo.set_cp("category_id", int(o["instance_id"]))
-        pos, rots = motion.sample_trajectory(o["trajectory"], times, phase=1.7 * k)
+        if "motion" in o:
+            pos_t, rots = phys["objects"][o["id"]]["pos"][pick], phys["objects"][o["id"]]["rot"][pick]
+        elif "keyframes" in o["trajectory"]:
+            pos_t, rots = motion.sample_trajectory(o["trajectory"], times, phase=1.7 * k)
+        else:
+            pos_t, rots = motion.sample_path(road, o["trajectory"], times)
         for i in range(T):
             m = np.eye(4)
-            m[:3, :3], m[:3, 3] = rots[i], pos[i]
+            m[:3, :3], m[:3, 3] = rots[i], pos_t[i]
             mo.set_local2world_mat(m)
             ob.keyframe_insert("location", frame=i)
             ob.keyframe_insert("rotation_euler", frame=i)
@@ -80,17 +145,6 @@ def main(spec_path, out, preview=None):
         for fc in ob.animation_data.action.fcurves:
             for kp in fc.keyframe_points:
                 kp.interpolation = "CONSTANT"
-
-    cam = spec["camera"]
-    assert cam["motion"] == "static"
-    bproc.camera.set_resolution(W, H)
-    bproc.camera.set_intrinsics_from_blender_params(np.deg2rad(cam["fov_deg"]), W, H, lens_unit="FOV")
-    pos = np.asarray(cam["position"], float)
-    fwd = np.asarray(cam["look_at"], float) - pos
-    cam2world = bproc.math.build_transformation_mat(pos, bproc.camera.rotation_from_forward_vec(fwd))
-    for i in range(T):
-        bproc.camera.add_camera_pose(cam2world, frame=i)
-    K = np.asarray(bproc.camera.get_intrinsics_as_K_matrix())
 
     bproc.renderer.set_render_devices(use_only_cpu=False, desired_gpu_device_type=["CUDA"])
     prefs = bpy.context.preferences.addons["cycles"].preferences
@@ -105,13 +159,16 @@ def main(spec_path, out, preview=None):
     timeline = {"fps": fps, "frames": T, "resolution": [W, H], "times_s": times.tolist(),
                 "camera": {"K": K.tolist(), "cam2world_blender": np.asarray(cam2world).tolist(),
                            "convention": "Blender camera: looks down -Z, +Y up"},
-                "objects": [], "events": spec.get("events", [])}
+                "objects": [], "events": spec.get("events", []) + (phys["events"] if phys else [])}
+    if phys:    # per-frame state from the physics (speed, on_ground, ...), as ground truth
+        timeline["physics"] = {i: {k: v[pick].tolist() for k, v in o.items() if k not in ("pos", "rot")}
+                               for i, o in phys["objects"].items()}
     for o, ob, pts in objects:
         mats = []
         for i in range(T):
             scene.frame_set(i)
             mats.append(np.asarray(ob.matrix_world).tolist())
-        timeline["objects"].append({"id": o["id"], "instance_id": int(o["instance_id"]),
+        timeline["objects"].append({"id": o["id"], "instance_id": int(o["instance_id"]), "type": o["asset"]["type"],
                                     "local2world": mats, "track_points_local": pts.tolist()})
     scene.frame_set(0)
 

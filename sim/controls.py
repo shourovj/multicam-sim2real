@@ -15,10 +15,16 @@ Writes:
   <poc>/C0/inputs/src_video.mp4, src_mask.mp4  vace_depth for all 81 frames, mask all white
                                                (VACE's plain depth task, no first frame)
   <poc>/Bbox/inputs/src_video.mp4, src_mask.mp4  frame 0, then the simulator boxes drawn in VACE's
-                                               layout_track format (3 px 'drone' colour on white)
+                                               layout_track format (3 px label colour on white)
+  <poc>/P1/inputs/src_video.mp4, src_mask.mp4  as Bbox for the first second (frames 1..16), then gray:
+                                               the model gets the start of the motion and continues it
   <poc>/E/inputs/tracks.npy [81, N, 2] float32, visibility.npy [81, N] bool, points.json
        Wan-Move tracks: frame-0 mask pixels back-projected through the depth, carried rigidly with
        their drone, at most one point per 8x8 latent cell per drone, all visible at frame 0.
+
+--frame0 IMAGE uses that image (e.g. a hand-edited, realistic frame 0) in place of the bundle's
+frame0.png for B, Bbox and P1, and --suffix names those folders (B_edit, ...), so both versions can
+sit side by side. C always uses the simulator's frame 0, because its depth has to match the frame.
 
 Every 16 fps stream picks bundle frames by timestamp: output frame i <- bundle frame round(i * 30/16),
 so frame 80 is bundle frame 150 and motion keeps its real speed.
@@ -73,12 +79,24 @@ def save_mp4(path, frames_rgb, fps):
     save_one_video(path, list(frames_rgb), fps=fps)
 
 
-def build_vace_b(bundle, poc):
-    out = os.path.join(poc, "B", "inputs")
+def load_frame0(path, H, W):
+    """Frame 0 as RGB at the clip size. An edited frame may come back from the editor at another size."""
+    im = cv2.imread(path)
+    assert im is not None, f"can't read {path}"
+    if im.shape[:2] != (H, W):
+        assert abs(im.shape[1] / im.shape[0] - W / H) < 0.02, f"{path} has a different aspect ratio: {im.shape[1]}x{im.shape[0]}"
+        im = cv2.resize(im, (W, H), interpolation=cv2.INTER_AREA)
+    return cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+
+
+def build_vace_b(frame0, out, H, W):
+    """Text + first frame (VACE's frameref CLI): `frame0` then 80 gray frames, written to `out`."""
     os.makedirs(out, exist_ok=True)
+    image = os.path.join(out, "frame0.png")
+    cv2.imwrite(image, cv2.cvtColor(load_frame0(frame0, H, W), cv2.COLOR_RGB2BGR))
     subprocess.run([os.path.join(VACE_DIR, ".venv/bin/python"), "vace/vace_preproccess.py",
                     "--task", "frameref", "--mode", "firstframe", "--expand_num", str(WAN_N - 1),
-                    "--image", os.path.join(bundle, "frame0.png"), "--save_fps", str(WAN_FPS),
+                    "--image", image, "--save_fps", str(WAN_FPS),
                     "--pre_save_dir", out], check=True, cwd=VACE_DIR)
     os.replace(os.path.join(out, "src_video-frameref.mp4"), os.path.join(out, "src_video.mp4"))
     os.replace(os.path.join(out, "src_mask-frameref.mp4"), os.path.join(out, "src_mask.mp4"))
@@ -89,8 +107,9 @@ def build_vace_c(bundle, poc, vace_depth, H, W):
     from annotators.utils import read_video_frames
     out = os.path.join(poc, "C", "inputs")
     os.makedirs(out, exist_ok=True)
-    ff_video = os.path.join(poc, "B", "inputs", "src_video.mp4")
-    ff_mask = os.path.join(poc, "B", "inputs", "src_mask.mp4")
+    build_vace_b(os.path.join(bundle, "frame0.png"), os.path.join(out, "frameref"), H, W)   # simulator frame 0, always
+    ff_video = os.path.join(out, "frameref", "src_video.mp4")
+    ff_mask = os.path.join(out, "frameref", "src_mask.mp4")
     v1 = read_video_frames(ff_video, use_type="cv2")
     v2 = read_video_frames(vace_depth, use_type="cv2")
     binar = lambda ms: [np.where(m > 127, 1, 0).astype(np.uint8) for m in ms]  # as VACE's gradio tab
@@ -110,34 +129,42 @@ def build_vace_c0(poc, vace_depth, H, W):
     save_mp4(os.path.join(out, "src_mask.mp4"), [np.full((H, W, 3), 255, np.uint8)] * WAN_N, WAN_FPS)
 
 
-DRONE_TAG_RGB = (201, 103, 188)   # 'drone' in VACE-Annotators layout/ram_tag_color_list.txt (line 1417)
+# Box colour per object type: 'drone', 'army tank' and 'truck' in VACE-Annotators layout/ram_tag_color_list.txt.
+TAG_RGB = {"quadcopter": (201, 103, 188), "tank": (67, 213, 201), "truck": (67, 42, 201)}
 
 
-def build_vace_bbox(bundle, poc, idx, H, W):
+def build_vace_bbox(bundle, out, idx, H, W, frame0, types, until=None, pad=0):
     """First frame + box layout, VACE layout_track (bboxtrack) format composed like move_anything.
 
     layout_track draws the external contour of each tracked mask, 3 px, in the label's RAM-tag
     colour on white. Our masks are the simulator boxes (bboxtrack + a 'bbox' mask_cfg gives the
     same). Each drone is drawn on its own and the canvases are merged, so the two boxes stay
     separate where they overlap. Frame 0 is the real frame; mask black on frame 0, white after.
+    A fully hidden object has no box on that frame. `types` maps instance id -> asset type (box colour).
+    `until`: boxes are drawn up to this output frame (inclusive) and the later frames are gray, VACE's
+    "no control" value. Use a multiple of 4, so the cut falls between two of the model's latent frames.
+    `pad`: grow every box by this many pixels on each side. The simulator's box is tight around the rendered
+    object; a little room keeps the model from clipping parts (rotor tips) that stick out in a realistic frame 0.
     """
     from annotators.layout import LayoutMaskAnnotator
     import cv2 as _cv2
     anno = LayoutMaskAnnotator({"USE_AUG": False})
     boxes = json.load(open(os.path.join(bundle, "boxes.json")))
     frames = []
-    for i in idx[1:]:
+    for n, i in enumerate(idx[1:], start=1):
+        if until is not None and n > until:
+            frames.append(np.full((H, W, 3), 127, np.uint8))
+            continue
         canv = np.full((H, W, 3), 255, np.uint8)
         for oid, per in boxes.items():
             b = per[i]
             if b is None:
                 continue
             m = np.zeros((H, W), np.uint8)
-            m[b[1]:b[3] + 1, b[0]:b[2] + 1] = 1
-            canv = np.minimum(canv, np.asarray(anno.forward(mask=m, color=DRONE_TAG_RGB), np.uint8))
+            m[max(b[1] - pad, 0):b[3] + 1 + pad, max(b[0] - pad, 0):b[2] + 1 + pad] = 1
+            canv = np.minimum(canv, np.asarray(anno.forward(mask=m, color=TAG_RGB[types.get(oid, "quadcopter")]), np.uint8))
         frames.append(canv)
-    f0 = _cv2.cvtColor(_cv2.imread(os.path.join(bundle, "frame0.png")), _cv2.COLOR_BGR2RGB)
-    out = os.path.join(poc, "Bbox", "inputs")
+    f0 = load_frame0(frame0, H, W)
     os.makedirs(out, exist_ok=True)
     save_mp4(os.path.join(out, "src_video.mp4"), [f0] + frames, WAN_FPS)
     save_mp4(os.path.join(out, "src_mask.mp4"),
@@ -207,7 +234,12 @@ def main():
     ap.add_argument("bundle")
     ap.add_argument("poc")
     ap.add_argument("--only", nargs="*", default=["vace", "cosmos", "B", "C", "E"])
+    ap.add_argument("--frame0", help="image used as frame 0 for B, Bbox and P1 (default: the bundle's frame0.png)")
+    ap.add_argument("--suffix", default="", help="added to the B, Bbox and P1 folder names, e.g. _edit")
+    ap.add_argument("--box_pad", type=int, default=0, help="pixels added on each side of every box in Bbox and P1")
     a = ap.parse_args()
+    frame0 = a.frame0 or os.path.join(a.bundle, "frame0.png")
+    cond_dir = lambda c: os.path.join(a.poc, c + a.suffix, "inputs")
     sys.path.insert(0, os.path.join(VACE_DIR, "vace"))
     tl = json.load(open(os.path.join(a.bundle, "timeline.json")))
     depth = np.load(os.path.join(a.bundle, "depth.npy"))
@@ -220,14 +252,17 @@ def main():
         save_mp4(vace_depth, inverse_depth_u8(depth[idx], per_frame=True), WAN_FPS)
     if "cosmos" in a.only:
         save_mp4(os.path.join(cdir, "cosmos_depth.mp4"), inverse_depth_u8(depth, per_frame=False), tl["fps"])
+    types = {str(o["instance_id"]): o.get("type", "quadcopter") for o in tl["objects"]}
     if "B" in a.only:
-        build_vace_b(a.bundle, a.poc)
+        build_vace_b(frame0, cond_dir("B"), H, W)
     if "C" in a.only:
         build_vace_c(a.bundle, a.poc, vace_depth, H, W)
     if "C0" in a.only:
         build_vace_c0(a.poc, vace_depth, H, W)
     if "Bbox" in a.only:
-        build_vace_bbox(a.bundle, a.poc, idx, H, W)
+        build_vace_bbox(a.bundle, cond_dir("Bbox"), idx, H, W, frame0, types, pad=a.box_pad)
+    if "P1" in a.only:
+        build_vace_bbox(a.bundle, cond_dir("P1"), idx, H, W, frame0, types, until=16, pad=a.box_pad)
     if "E" in a.only:
         build_wanmove(a.bundle, a.poc, tl, depth, inst, idx)
 

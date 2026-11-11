@@ -1,0 +1,44 @@
+# drone_takeoff_phys: drone_takeoff with the drone flown by the physics model (sim/physics/quadrotor.py).
+# It rests on the grass until its motors spin up, lifts off when thrust exceeds its weight, and climbs to the
+# right behind a small foreground tree. Same camera, sky, ground, tree and start position as drone_takeoff.
+# World frame: Z up, metres. The camera sits at x=0 and looks along +Y, tilted slightly up.
+name: drone_takeoff_phys
+duration_s: 5.1            # 153 frames at 30 fps; frame counts must be 1 + 4n (plan §4)
+fps: 30
+frames: 153
+resolution: [832, 480]     # W, H
+seed: 0
+render: {samples: 48, denoise: true}
+
+camera:
+  type: perspective
+  position: [0.0, 0.0, 1.6]
+  look_at: [0.0, 10.0, 2.3]   # ~4 deg upward pitch; the ground is in view from about 8 m out
+  fov_deg: 50                 # horizontal
+  motion: static
+
+background:
+  type: procedural            # no downloaded assets
+  sky: {model: nishita, sun_elevation_deg: 35, sun_rotation_deg: 200, strength: 0.22}
+  ground: {size_m: 4000, colors: [[0.10, 0.17, 0.04], [0.30, 0.27, 0.12]], noise_scale: 0.08}
+
+occluders:
+  # A small tree 6 m from the camera, between it and the drone's climb. `position` is the trunk base.
+  - {type: tree, position: [0.3, 6.0], trunk_height_m: 2.1, crown_radius_m: 0.55}
+
+objects:
+  - id: drone_1
+    instance_id: 1
+    asset: {type: quadcopter, arm_span_m: 0.62, body_color: [0.85, 0.30, 0.05]}
+    motion:
+      model: quadrotor
+      yaw_deg: 20
+      start: {pos: [-2.20, 10.00, 0.0], on_ground: true}   # resting on the grass, left of the tree
+      goals:
+        - {from_t: 0.7, t: 2.2, pos: [-1.60, 10.00, 1.50], vel: [1.0, 0.0, 0.8]}   # lift off and climb, already moving right
+        - {t: 5.1, pos: [2.60, 10.00, 3.90]}                                        # up and right behind the tree, then hover
+      params: {gust_mps2: 0.2}
+
+events: []                   # lift-off comes from the physics, the time behind the tree from the render
+
+tracks: {points_per_object: 16}

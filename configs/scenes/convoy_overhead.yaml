@@ -1,0 +1,56 @@
+# convoy_overhead: a tank and two trucks drive round a bend on a dirt road, seen from straight above.
+# One truck passes under a bridge; all three drive under the tree canopy that covers the road after the bend.
+# The ground is a real aerial photo. World frame: image centre at the origin, +X east, +Y north, Z up, metres.
+# Everything on the road is placed by arc length in metres from the first waypoint ("road metres").
+name: convoy_overhead
+duration_s: 5.1            # 153 frames at 30 fps; frame counts must be 1 + 4n (plan §4)
+fps: 30
+frames: 153
+resolution: [832, 480]     # W, H
+seed: 0
+render: {samples: 48, denoise: true}
+
+camera:
+  type: overhead              # looks straight down
+  centre_px: [845, 495]       # the photo pixel under the camera
+  altitude_m: 150
+  view_width_m: 110           # ground covered by the frame's long side (0.13 m per output pixel)
+  yaw_deg: -90                # east at the top of the frame, so the convoy drives left to right
+  motion: static
+
+background:
+  type: aerial_image
+  image: assets/aerial/limecreek_bend_200m.png    # under $S2R_DATA; source and licence in the .json beside it
+  metres_per_pixel: 0.12019                       # 200 m across 1664 px
+  # Sun matched to the photo's shadows (low winter sun from the south-south-east).
+  light: {sun_elevation_deg: 28, sun_rotation_deg: 165, sun_strength: 4.5, ambient: 0.35}
+
+road:
+  # Centre line traced on the photo, in photo pixels (x right, y down), in driving order.
+  waypoints_px: [[600, 118], [650, 110], [699, 106], [755, 131], [805, 159], [849, 200], [886, 244],
+                 [917, 287], [939, 331], [952, 375], [961, 419], [964, 444], [966, 490], [958, 535],
+                 [940, 575], [915, 612], [885, 645], [860, 672], [842, 697], [824, 737], [799, 781],
+                 [761, 825], [730, 862], [699, 900], [667, 937], [645, 962]]
+
+convoy:
+  speed_mps: 13               # 47 km/h; the convoy covers 66 m in the clip
+  spacing_m: 19.5             # centre to centre
+  lead_start_m: 59.5          # road metres of the first vehicle at t = 0; the others start behind it
+  vehicles:                   # in driving order; instance ids are 1, 2, 3
+    - {id: tank, type: tank, color: [0.20, 0.24, 0.10]}
+    - {id: truck_1, type: truck, color: [0.20, 0.24, 0.10]}
+    - {id: truck_2, type: truck, color: [0.20, 0.24, 0.10]}
+
+occluders:
+  # Bridge between the two trucks at t = 0, clear of both: only the last truck drives under it (0.2 - 1.4 s).
+  - {type: bridge, at_m: 30.5, width_m: 8, length_m: 14, height_m: 5}
+  # The photo's own tree cover over the road (road metres 67 - 102), lifted to tree height.
+  - {type: canopy, from_m: 66, to_m: 103, width_m: 8, height_m: 8}
+
+events:                      # ground truth for eval: when each vehicle is fully hidden (s)
+  - {name: truck_2_under_bridge, t: 0.77}
+  - {name: tank_under_canopy, t: 0.76, until: 2.97}
+  - {name: truck_1_under_canopy, t: 2.27, until: 4.58}
+  - {name: truck_2_under_canopy, t: 3.77, until: 5.1}
+
+tracks: {points_per_object: 16}

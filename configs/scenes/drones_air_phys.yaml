@@ -1,0 +1,49 @@
+# drones_air_phys: the drones_air scene with the drones flown by the physics model (sim/physics/quadrotor.py)
+# instead of scripted keyframes. Same camera, background, drones and start positions; each drone starts in
+# flight at its scripted speed and flies to its end point, so the crossing time comes out of the physics.
+# World frame: Z up, metres. The camera sits at x=0 and looks along +Y, tilted slightly up.
+name: drones_air_phys
+duration_s: 5.1            # 153 frames at 30 fps; frame counts must be 1 + 4n (plan §4)
+fps: 30
+frames: 153
+resolution: [832, 480]     # W, H
+seed: 0
+render: {samples: 48, denoise: true}
+
+camera:
+  type: perspective
+  position: [0.0, 0.0, 1.6]
+  look_at: [0.0, 10.0, 2.3]   # ~4 deg upward pitch: horizon sits a little below the centre
+  fov_deg: 50                 # horizontal
+  motion: static
+
+background:
+  type: procedural            # no downloaded assets
+  sky: {model: nishita, sun_elevation_deg: 35, sun_rotation_deg: 200, strength: 0.22}
+  ground: {size_m: 4000, colors: [[0.10, 0.17, 0.04], [0.30, 0.27, 0.12]], noise_scale: 0.08}
+
+objects:
+  # motion: start state and goals; the physics works out the path, speed and lean (sim/physics/quadrotor.py).
+  - id: drone_1
+    instance_id: 1
+    asset: {type: quadcopter, arm_span_m: 0.62, body_color: [0.85, 0.30, 0.05]}
+    motion:
+      model: quadrotor
+      yaw_deg: 0
+      start: {pos: [-2.50, 7.00, 2.60], vel: [0.94, 0.12, 0.12]}
+      goals: [{t: 5.1, pos: [2.40, 7.30, 2.85]}]          # arrives and brakes to a hover
+      params: {gust_mps2: 0.2}                             # light wind, so the hover is not perfectly still
+  - id: drone_2
+    instance_id: 2
+    asset: {type: quadcopter, arm_span_m: 0.62, body_color: [0.85, 0.87, 0.90]}
+    motion:
+      model: quadrotor
+      yaw_deg: 45
+      start: {pos: [3.30, 10.00, 3.25], vel: [-1.24, -0.12, -0.12]}
+      goals: [{t: 5.1, pos: [-3.20, 9.70, 3.10]}]
+      params: {gust_mps2: 0.2}
+
+events: []                   # the crossing is measured from the render (sim/export.py)
+
+
+tracks: {points_per_object: 16}

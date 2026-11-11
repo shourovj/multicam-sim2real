@@ -9,7 +9,8 @@ Reads rgb.npy, depth.npy, instance.npy, timeline.json (sim/render_scene.py). Wri
                   depth [N,T] (camera z of the point, metres)
   boxes.json      per object, per frame [x0, y0, x1, y1] from instance.npy, or null
   overlay.mp4     RGB with boxes, track points (filled = visible, ring = occluded) and short trails
-  checks.json     in-frame / size checks and the observed crossing time, also added to timeline.json
+  checks.json     in-frame / size checks, the observed crossing time and the frames where each object is
+                  fully hidden; the crossing and the hidden ranges are also added to timeline.json as events
 """
 
 import json
@@ -21,7 +22,7 @@ import cv2
 import numpy as np
 
 VIS_DEPTH_TOL_M = 0.05
-PALETTE = {1: (0, 140, 255), 2: (255, 200, 0)}   # BGR per instance id, used in every overlay
+PALETTE = {1: (0, 140, 255), 2: (255, 200, 0), 3: (80, 220, 80)}   # BGR per instance id, used in every overlay
 
 
 def project(K, cam2world, pts_world):
@@ -124,16 +125,32 @@ def main(out):
     checks = {}
     for i in ids:
         b = np.array([bb if bb is not None else [-1] * 4 for bb in boxes[str(i)]])
+        b = b[b[:, 0] >= 0]            # frames where the object is fully hidden by an occluder have no box
         widths = b[:, 2] - b[:, 0] + 1
         checks[f"id{i}"] = {
-            "frames_present": int((b[:, 0] >= 0).sum()),
+            "frames_present": len(b),
             "fully_in_frame": bool(((b[:, 0] > 0) & (b[:, 1] > 0) & (b[:, 2] < W - 1) & (b[:, 3] < H - 1)).all()),
             "min_width_px": int(widths.min()), "max_width_px": int(widths.max()),
             "visible_point_frac": float(visible[object_id == i].mean()),
             "frame0_visible_points": int(visible[object_id == i, 0].sum()),
         }
-    cx = {i: np.array([(bb[0] + bb[2]) / 2 for bb in boxes[str(i)]]) for i in ids}
-    if len(ids) == 2:
+    # Occlusion ground truth: the frame ranges where an object is fully hidden (no pixel of it is visible).
+    names = {o["instance_id"]: o["id"] for o in tl["objects"]}
+    hidden_events = []
+    for i in ids:
+        gone = [bb is None for bb in boxes[str(i)]]
+        runs = [[t, t] for t in range(T) if gone[t] and (t == 0 or not gone[t - 1])]
+        for r in runs:
+            while r[1] + 1 < T and gone[r[1] + 1]:
+                r[1] += 1
+        checks[f"id{i}"]["hidden_frames"] = runs
+        hidden_events += [{"name": f"{names[i]}_hidden", "t": float(tl["times_s"][a]), "until": float(tl["times_s"][b]),
+                           "frames": [a, b]} for a, b in runs]
+    if hidden_events:
+        tl["events"] = [e for e in tl["events"] if not e["name"].endswith("_hidden")] + hidden_events
+        json.dump(tl, open(os.path.join(out, "timeline.json"), "w"))
+    if len(ids) == 2 and all(bb is not None for i in ids for bb in boxes[str(i)]):
+        cx = {i: np.array([(bb[0] + bb[2]) / 2 for bb in boxes[str(i)]]) for i in ids}
         s = np.sign(cx[ids[0]] - cx[ids[1]])
         swap = np.nonzero(s[1:] != s[:-1])[0]
         if len(swap):

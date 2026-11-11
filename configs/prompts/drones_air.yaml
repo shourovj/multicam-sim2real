@@ -1,14 +1,17 @@
 # Frozen prompts for drones_air (plan §6). Neutral wording: "quadcopters", no model-specific cues.
+# The drone colours and the ground are named, so the model does not invent them (PoC findings §4.3).
 scene: drones_air
 base: >-
-  Two small quadcopters fly across the sky in front of a static camera, passing each other
-  in mid-air. Behind them is a soft blue sky over a distant flat horizon. Realistic footage,
-  smooth natural motion, the camera does not move.
+  Two small quadcopters, one with an orange body and one with a white body, fly across the sky
+  in front of a static camera, passing each other in mid-air. Below them is a flat green grass
+  field with a line of trees in the distance, under a soft blue sky. Realistic footage, smooth
+  natural motion, the camera does not move.
 # A+: base scene and camera wording plus the scripted motion, written from bundle/timeline.json and
 # boxes.json (drone_1 = orange, ~7 m; drone_2 = white, ~10 m; image-x order swaps at frame 79, 2.63 s).
 detailed: >-
   Two small quadcopters fly across the sky in front of a static camera, passing each other
-  in mid-air. Behind them is a soft blue sky over a distant flat horizon. One quadcopter has an
+  in mid-air. Below them is a flat green grass field with a line of trees in the distance, under
+  a soft blue sky. One quadcopter has an
   orange body and is nearer the camera, so it looks larger; the other has a white body and is
   farther back, so it looks smaller. At the start the orange quadcopter is near the left edge of
   the frame and the white one is near the right edge, both in the upper half of the frame at

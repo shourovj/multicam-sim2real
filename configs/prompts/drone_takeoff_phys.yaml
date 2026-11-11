@@ -1,0 +1,20 @@
+# Frozen prompts for drone_takeoff_phys: the same scene as drone_takeoff, with the motion from the physics model.
+# base is identical to drone_takeoff's. Lift-off is at 0.9 s; the drone is hidden from 3.2 s to 3.6 s.
+scene: drone_takeoff_phys
+base: >-
+  A small quadcopter with an orange body takes off from a flat green grass field and climbs into
+  the air in front of a static camera, passing behind a small tree in the foreground. There is a
+  line of trees in the distance, under a soft blue sky. Realistic footage, smooth natural motion,
+  the camera does not move.
+# A+: base wording plus the motion, written from the bundle's timeline.json events and boxes.json.
+detailed: >-
+  A small quadcopter with an orange body takes off from a flat green grass field and climbs into
+  the air in front of a static camera, passing behind a small tree in the foreground. There is a
+  line of trees in the distance, under a soft blue sky. At the start the quadcopter rests on the
+  grass in the lower left of the frame, to the left of the tree. After about a second it lifts off
+  the ground and climbs, slowly at first and then faster, up and to the right. About three seconds
+  in it passes behind the leafy crown of the tree in the middle of the frame and is hidden for
+  about half a second. It comes out on the right side of the tree, still climbing, then slows and
+  hovers in the upper right of the frame. Realistic footage, smooth natural motion, the camera
+  does not move.
+negative: null   # use each model's default negative prompt

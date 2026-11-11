@@ -1,0 +1,22 @@
+# Frozen prompts for drones_air_phys: the same scene as drones_air, with the motion from the physics model.
+# base is identical to drones_air's. The crossing is at 2.1 s.
+scene: drones_air_phys
+base: >-
+  Two small quadcopters, one with an orange body and one with a white body, fly across the sky in
+  front of a static camera, passing each other in mid-air. Below them is a flat green grass field
+  with a line of trees in the distance, under a soft blue sky. Realistic footage, smooth natural
+  motion, the camera does not move.
+# A+: base wording plus the motion, written from the bundle's timeline.json events and boxes.json.
+detailed: >-
+  Two small quadcopters, one with an orange body and one with a white body, fly across the sky in
+  front of a static camera, passing each other in mid-air. Below them is a flat green grass field
+  with a line of trees in the distance, under a soft blue sky. The orange quadcopter is nearer the
+  camera, so it looks larger; the white one is farther back, so it looks smaller. At the start the
+  orange quadcopter is near the left edge of the frame and the white one is near the right edge,
+  both in the upper half of the frame at about the same height, already flying toward each other.
+  They speed up, the orange one flying to the right and the white one to the left, and pass each
+  other in the middle of the frame about two seconds in, with the orange one in front, briefly
+  covering part of the white one. They keep going and slow down: at the end the orange quadcopter
+  hovers near the right edge and the white one near the left edge. Both stay in view the whole
+  time. Realistic footage, smooth natural motion, the camera does not move.
+negative: null   # use each model's default negative prompt
