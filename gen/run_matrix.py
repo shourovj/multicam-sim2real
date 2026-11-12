@@ -22,7 +22,8 @@ DATA = os.path.join(os.environ["S2R_DATA"], "poc")
 # model name in the matrix -> (run script, extra environment). The name is also the output folder prefix.
 RUNNERS = {"vacefun-a14b": ("gen/run_vacefun.sh", {}),                         # Wan2.2-VACE-Fun-A14B (VideoX-Fun)
            "vace21-14B": ("gen/run_vace_diffusers.sh", {"MODEL": "14B"}),      # Wan2.1-VACE-14B (diffusers)
-           "vace21-1.3B": ("gen/run_vace_diffusers.sh", {"MODEL": "1.3B"})}    # Wan2.1-VACE-1.3B (diffusers)
+           "vace21-1.3B": ("gen/run_vace_diffusers.sh", {"MODEL": "1.3B"}),    # Wan2.1-VACE-1.3B (diffusers)
+           "cosmos3-nano": ("gen/run_cosmos_nano.sh", {})}                     # Cosmos3-Nano base; keeps its own step counts
 
 
 def out_dir(tag, scene, cond, seed):
@@ -64,9 +65,9 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="print the launch order, then exit")
     a = ap.parse_args()
     m = yaml.safe_load(open(a.matrix))
-    model, gpu, steps = m["model"], m["gpu"], m["steps"]
+    model, gpu, steps = m["model"], m["gpu"], m.get("steps")   # no steps: the model's own defaults, folder named after the model
     assert model in RUNNERS, f"unknown model {model!r}; known: {sorted(RUNNERS)}"
-    tag = f"{model}-s{steps}"
+    tag = f"{model}-s{steps}" if steps else model
     jobs = [(scene, cond, seed) for seed in m["seeds"] for scene in m["scenes"] for cond in m["conditions"]
             if seed in m.get("seeds_override", {}).get(cond, m["seeds"]) and (a.only_seed is None or seed == a.only_seed)]
     done = lambda j: os.path.exists(os.path.join(out_dir(tag, *j), "out_video.mp4"))
@@ -125,7 +126,7 @@ def main():
                 job = queue.pop(0)
                 os.makedirs(os.path.join(DATA, "logs"), exist_ok=True)
                 script, extra = RUNNERS[model]
-                env = dict(os.environ, SCENE=job[0], COND=job[1], SEED=str(job[2]), STEPS=str(steps), MEMORY_MODE=mode,
+                env = dict(os.environ, SCENE=job[0], COND=job[1], SEED=str(job[2]), STEPS=str(steps or ""), MEMORY_MODE=mode,
                            CUDA_VISIBLE_DEVICES=str(g), **extra)
                 logf = open(os.path.join(DATA, "logs", f"{job[0]}__{job[1]}__s{job[2]}.log"), "w")
                 proc = subprocess.Popen(["bash", os.path.join(REPO, script)], env=env, stdout=logf, stderr=subprocess.STDOUT)
@@ -135,7 +136,7 @@ def main():
                 log({"scene": job[0], "cond": job[1], "seed": job[2], "model": model, "steps": steps, "gpu": g, "mode": mode,
                      "status": "started", "free_gib_at_launch": round(free[g], 1), "started": time.strftime("%Y-%m-%d %H:%M:%S")})
                 print(f"[matrix] started {job} on GPU {g} ({mode}, {free[g]:.0f} GiB free)", flush=True)
-                time.sleep(240)        # let it load and claim its memory before judging the GPUs again
+                time.sleep(gpu.get("launch_gap_s", 240))   # let it load and claim its memory before judging the GPUs again
                 continue
         time.sleep(30)
     print("[matrix] all jobs finished", flush=True)
