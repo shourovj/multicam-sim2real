@@ -9,6 +9,7 @@ Each of our conditions maps to one Nano mode:
   P1_edit           as Bbox_edit, but the outlines stop after the first second (frames 0..16), then black
   C                 transfer with a depth control, plus the simulator frame 0
   C0                transfer with a depth control only
+  Vraw_edit         transfer with the simulator's colour video, unblurred, in the blur control slot, plus the edited frame 0
 Nano has no box input, so the box conditions use its edge control. Controls are 81 frames at 16 fps, 832x480,
 cached in <scene>/bundle/controls/nano_*.mp4. Sampler settings are Nano's own defaults for each mode.
 """
@@ -52,6 +53,11 @@ def box_edges(until=None):
     return frames
 
 
+def raw_rgb():                                            # the simulator video as rendered; Nano was trained on blurred video here
+    v = np.stack(list(iio.imiter(os.path.join(B, "rgb.mp4"))))
+    return [v[min(i, len(v) - 1)] for i in IDX]
+
+
 def frame0(edited):
     im = iio.imread(os.path.join(B, "frame0_edited.png" if edited else "frame0.png"))[..., :3]
     return cv2.resize(im, (832, 480), interpolation=cv2.INTER_AREA)
@@ -82,6 +88,8 @@ else:                                                     # transfer; settings f
         r["depth"] = {"control_path": cached("nano_depth.mp4", depth)}
     elif cond in ("Bbox", "Bbox_edit"):
         r["edge"] = {"control_path": cached("nano_boxedge.mp4", box_edges)}
+    elif cond == "Vraw_edit":
+        r["blur"] = {"control_path": cached("nano_rawrgb.mp4", raw_rgb)}
     elif cond == "P1_edit":
         r["edge"] = {"control_path": cached("nano_boxedge_p1.mp4", lambda: box_edges(until=16))}
     else:

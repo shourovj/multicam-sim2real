@@ -78,7 +78,7 @@ def main():
         return
 
     for scene, cond, _ in jobs:        # fail before launching anything if an input is missing
-        if cond not in ("A", "Aplus"):
+        if model != "cosmos3-nano" and cond not in ("A", "Aplus"):     # Nano builds its own controls from the bundle
             for f in ("src_video.mp4", "src_mask.mp4"):
                 assert os.path.exists(os.path.join(DATA, scene, cond, "inputs", f)), f"missing {scene}/{cond}/inputs/{f}"
 

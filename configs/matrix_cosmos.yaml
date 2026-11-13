@@ -8,6 +8,7 @@ seeds: [0, 1, 2]
 seeds_override: {A: [0], Aplus: [0]}
 
 conditions:
+  Vraw_edit: edited frame 0 + the simulator's colour video, unblurred, as a blur control   # dense reference, not sparse control
   Bbox_edit: edited frame 0 + boxes as an edge control      # Nano has no box input; outlines go in as white edges on black
   Bbox: simulator frame 0 + boxes as an edge control
   C0: depth, no frame 0
