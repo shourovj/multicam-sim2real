@@ -5,3 +5,6 @@ __pycache__/
 /data/
 /outputs/
 *.mp4
+
+docs/docs/
+docs/docs/weekly-reports
