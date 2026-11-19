@@ -1,0 +1,43 @@
+# Smoke test for multicam_v1.1: 4 steps, seed 0, its own folder (gen_smoke/). Run with --only to pick a view.
+# multicam_v1.1: the same two scenes, motion and cameras as multicam_v1, but the simulator is rendered as clay
+# (scene rev 2: no textures) and Cosmos3-Nano gets only structure controls: no colour from the simulator at all, so
+# every appearance (paint, clothes, buildings, materials, light) comes from the prompt. No first frame.
+# Why: in multicam_v1 the control was the textured render itself (V), and Cosmos copied it.
+# Design: docs/2026-11-18-1739-multicam-v1-design.md §14. Runner: gen/run_multicam.py. Prompts: the composed files in
+# configs/prompts/multicam_v1/<scene>/composed/ (gen/compose_prompts.py), negative: configs/prompts/cosmos3_negative_prompt.json.
+experiment: multicam_v1.1_smoke
+out_root: poc/multi-cam
+gen_subdir: gen_smoke
+
+scenes:
+  intersection_4way: {rev: 2, spec: configs/scenes/intersection_4way.yaml, prompts: configs/prompts/multicam_v1/intersection_4way}
+  robot_pour:        {rev: 2, spec: configs/scenes/robot_pour.yaml,        prompts: configs/prompts/multicam_v1/robot_pour}
+
+model:
+  name: cosmos3-nano
+  hf: nvidia/Cosmos3-Nano
+  revision: 45666784803b3a7ad577e0def405f9afcc3bddb2
+  framework_commit: 5950e7b4ea3677b99a2de279a7ed7058b5446e42
+
+video: {num_frames: 113, fps: 16, resolution: "480", aspect_ratio: "16,9"}
+sampler: {num_steps: 4, guidance: 3.0, control_guidance: 1.5, shift: 10.0}
+first_frame: none
+
+conditions:
+  # control videos from the bundle (sim/world/controls.py): exact, texture-free
+  G:  {depth: {weight: 1.0}, seg: {weight: 1.0}}                       # shape + which pixels are which object
+
+cuts:
+  intersection_4way: {cut3: [{cam: cctv, frames: [0, 36]}, {cam: dashcam, frames: [37, 76]}, {cam: phone, frames: [77, 112]}]}
+  robot_pour:        {cut3: [{cam: side, frames: [0, 36]}, {cam: wrist, frames: [37, 76]}, {cam: cctv, frames: [77, 112]}]}
+
+seeds: [0]
+
+# later (not in this run): the edge probe, depth + seg + edge on four views
+# probes:   # does adding the geometry edges help thin parts (limbs, gripper, stream) without costing realism?
+#   - {name: edge_probe, scene: intersection_4way, views: [cctv, dashcam], seed: 0, cond: GE,
+#      cond_spec: {depth: {weight: 1.0}, seg: {weight: 1.0}, edge: {weight: 1.0}}}
+#   - {name: edge_probe, scene: robot_pour, views: [wrist, side], seed: 0, cond: GE,
+#      cond_spec: {depth: {weight: 1.0}, seg: {weight: 1.0}, edge: {weight: 1.0}}}
+
+gpu: {min_free_gib: 50, max_parallel: 4, launch_gap_s: 120, retries: 1}

@@ -1,0 +1,109 @@
+{
+ "temporal_caption": "At 0:00 an egocentric camera on the robot's wrist looks along the gripper: the two gripper fingers hold the rim of the light-blue pitcher at the bottom of the frame, and beyond it the wooden table and the floor of the room. From 0:00 to 0:01 the view swings as the arm carries the pitcher, and the clear glass comes into view ahead on the table. From 0:01 to 0:02 the view tips forward as the pitcher tilts. From 0:02 to 0:05 a thin stream of water runs from the pitcher's lip down into the glass. From 0:05 to 0:06 the view tips back up as the pitcher is set upright, and from 0:06 to 0:07 it swings away from the glass.",
+ "subjects": [
+  {
+   "description": "A white seven-joint robot arm with black joint accents and a two-finger gripper",
+   "appearance_details": "Smooth white plastic links, a white gripper, mounted on the edge of the table",
+   "relationship": "Holds the pitcher and pours from it into the glass",
+   "action": "Carries the pitcher over the glass, tilts it to pour, tilts it back upright and moves it away",
+   "state_changes": "Moves smoothly and slowly; the wrist tilts forward to about 75 degrees and back",
+   "number_of_subjects": 1,
+   "number_of_arms": 1,
+   "number_of_legs": 0
+  },
+  {
+   "description": "A light-blue glossy ceramic pitcher with a small pouring lip",
+   "appearance_details": "About 16 cm tall, held near its rim by the gripper",
+   "relationship": "Held by the robot",
+   "action": "Tipped forward so water pours from its lip, then set upright again",
+   "state_changes": "Upright, tilted, upright",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  },
+  {
+   "description": "A clear drinking glass standing on the table",
+   "appearance_details": "Plain transparent glass tumbler, about 11 cm tall",
+   "relationship": "Receives the water",
+   "action": "Stands still while it fills",
+   "state_changes": "Empty at first, about two-thirds full of water at the end",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  },
+  {
+   "description": "A thin stream of clear water",
+   "appearance_details": "Transparent, catching the light",
+   "relationship": "Flows from the pitcher's lip into the glass",
+   "action": "Falls in a smooth arc from the lip into the glass",
+   "state_changes": "Starts at about 0:02, steady until about 0:05, then thins and stops",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  }
+ ],
+ "background_setting": "A bright, clean lab kitchen: a wooden table in the middle of the room, pale plaster walls, a grey and white checkered tile floor, a white cabinet with a counter along the back wall, a shelf with small colourful jars, a window with daylight and soft ceiling light panels.",
+ "lighting": {
+  "conditions": "Bright, even indoor light with daylight from a window",
+  "direction": "Soft light from above and from the window",
+  "shadows": "Soft shadows under the robot, the pitcher and the glass",
+  "illumination_effect": "Highlights on the glossy pitcher, the glass and the water"
+ },
+ "aesthetics": {
+  "color_scheme": "White robot, light-blue pitcher, clear glass and water, warm wood, pale walls",
+  "mood_atmosphere": "Calm, precise robotics demonstration",
+  "patterns": "Checkered floor tiles",
+  "composition": "Gripper and pitcher rim in the lower part of the frame, the table and glass ahead"
+ },
+ "cinematography": {
+  "camera_motion": "Moves with the robot's hand: swings, then tips forward and back",
+  "framing": "Close view over the gripper",
+  "camera_angle": "Looking forward and down from the robot's wrist",
+  "depth_of_field": "Deep",
+  "focus": "Pitcher rim and glass in focus",
+  "lens_focal_length": "Wide-angle wrist camera"
+ },
+ "style_medium": "Robot wrist-camera footage, photoreal live-action",
+ "artistic_style": "Realistic egocentric robot camera video",
+ "context": "Real-world footage of a robot arm pouring water into a glass. Realistic real-world video, natural lighting and motion, not a rendering.",
+ "actions": [
+  {
+   "time": "0:00-0:01",
+   "description": "The robot arm carries the upright pitcher from beside the glass to just above it."
+  },
+  {
+   "time": "0:01-0:02",
+   "description": "The arm tilts the pitcher forward until water reaches the lip."
+  },
+  {
+   "time": "0:02-0:05",
+   "description": "A thin, steady stream of water pours from the pitcher's lip into the glass, which fills to about two-thirds."
+  },
+  {
+   "time": "0:05-0:06",
+   "description": "The arm tilts the pitcher back upright and the stream stops."
+  },
+  {
+   "time": "0:06-0:07",
+   "description": "The arm moves the pitcher away from the glass."
+  }
+ ],
+ "text_and_signage_elements": [],
+ "segments": [
+  {
+   "segment_index": 0,
+   "time_range": "0:00-0:07",
+   "description": "One continuous wrist-camera shot",
+   "key_changes": "The view tips as the pitcher pours",
+   "camera": "Mounted on the robot's hand"
+  }
+ ],
+ "transitions": [],
+ "resolution": {
+  "W": 832,
+  "H": 480
+ },
+ "aspect_ratio": "16,9",
+ "duration": "0:07",
+ "fps": 16
+}

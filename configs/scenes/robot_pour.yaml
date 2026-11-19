@@ -1,0 +1,80 @@
+# robot_pour: a Franka Panda arm pours water from a pitcher into a glass on a table, simulated once and rendered
+# from a wrist camera, a side tripod and a CCTV camera in the corner of the room.
+# Scene spec v2 (sim/world). Written by Claude Code (claude-opus-5-5) from the user prompt in robot_pour.source.md;
+# numbers explained in docs/2026-11-18-1739-multicam-v1-design.md §5.2.
+# World frame: Z up, metres, origin at the floor centre. The table top is at 0.75 m.
+# The water is the analytic model in sim/physics/pour.py (a weir over the lip, a ballistic stream), not a fluid solver.
+spec_version: 2
+name: robot_pour
+rev: 2                     # r2: rendered as clay (no textures); r1 was textured
+duration_s: 7.0625         # 113 frames at 16 fps (1 + 4n): rendered at the rate Cosmos3-Nano takes
+fps: 16
+frames: 113
+resolution: [832, 480]
+seed: 0
+render: {samples: 24, denoise: true, style: clay}   # clay: one matte grey everywhere, only signal lamps keep colour
+
+world:
+  type: room
+  size_m: [5.0, 5.0, 2.8]
+  table: {center: [0.35, 0.0], size_m: [1.2, 0.8], height_m: 0.75, model: wooden_table_02}
+  materials: {floor: floor_tiles_06, walls: painted_plaster_wall}
+  lights: {ceiling_w: 220, window: true}
+  props:
+    - {asset: security_camera_02, pos: [-2.38, 2.38, 2.62], yaw_deg: -45}     # the CCTV camera's own body
+
+objects:
+  - id: robot
+    instance_id: 1
+    asset: {type: robot, model: franka_panda}
+    motion:
+      model: arm
+      robot: franka_panda
+      base: {pos: [-0.10, 0.0, 0.75], yaw_deg: 0}
+      hold: {object: pitcher, offset: {pos: [0.13, 0.0, 0.0], rpy_deg: [0, -90, 0]}, gripper_m: 0.035}   # gripped 3 cm below the rim
+      point_local: [0.043, 0.0, 0.16]          # the pitcher's lip, in the pitcher's frame (spout on its +X side)
+      keys:                                    # where the lip is, which way the spout faces, how far it is tilted
+        - {t: 0.0,    point: [0.42, 0.143, 1.06], yaw_deg: -90, tilt_deg: 0}     # pitcher held up, beside the glass
+        - {t: 1.4,    point: [0.50, -0.030, 0.96], yaw_deg: -90, tilt_deg: 0}    # lip 7 cm short of the glass centre: the stream arcs in
+        - {t: 2.3,    point: [0.50, -0.030, 0.94], yaw_deg: -90, tilt_deg: 45}   # tilting; water reaches the lip
+        - {t: 4.7,    point: [0.50, -0.030, 0.93], yaw_deg: -90, tilt_deg: 75}   # steady stream, glass filling
+        - {t: 5.6,    point: [0.50, -0.030, 0.96], yaw_deg: -90, tilt_deg: 0}    # upright again
+        - {t: 7.0625, point: [0.43, 0.12, 1.05], yaw_deg: -90, tilt_deg: 0}      # carried back
+  - id: pitcher
+    instance_id: 2
+    asset: {type: pitcher, radius_m: 0.035, height_m: 0.16, wall_m: 0.004, color: [0.42, 0.62, 0.80]}
+    motion: {model: attached, parent: robot, part: tcp}       # offset = the arm's hold offset
+  - id: glass
+    instance_id: 3
+    asset: {type: glass, radius_m: 0.036, height_m: 0.11, wall_m: 0.003, base_m: 0.008}
+    pose: {pos: [0.50, -0.10]}                 # on the table (z from the layout)
+  - id: water_stream
+    instance_id: 4
+    asset: {type: water_stream}
+    motion: {model: pour, source: pitcher, target: glass, volume_l: 0.50, spout_width_m: 0.03, weir_c: 0.6,
+             level_object: water_glass}
+  - id: water_glass
+    instance_id: 5
+    asset: {type: water_level, radius_m: 0.0325}
+    motion: {model: level}
+
+cameras:
+  - id: wrist                                  # on the robot's hand, above the gripper, looking along it
+    type: attached
+    parent: robot
+    part: hand
+    offset: {pos: [-0.09, 0.0, 0.06], forward: [0, 0, 1], up: [-1, 0, 0], pitch_deg: -28}   # in front of the hand body
+    fov_deg: 87
+    clip_start_m: 0.02
+  - {id: side, type: fixed, position: [0.50, -1.45, 1.15], look_at: [0.40, -0.05, 0.95], fov_deg: 60}
+  - {id: cctv, type: fixed, position: [-2.2, 2.2, 2.6], look_at: [0.35, -0.10, 0.85], fov_deg: 65}
+
+checks:
+  - {type: ik_error, max_m: 0.003, max_deg: 1.5}
+  - {type: joint_limits}
+  - {type: stream_in_glass}
+  - {type: final_level, min: 0.55, max: 0.80}
+  - {type: event_order, events: [pour_start, pour_stop]}
+  - {type: visible, camera: wrist, objects: [glass, pitcher], min_frames: 30}
+  - {type: visible, camera: side, objects: [robot, pitcher, glass, water_stream], min_frames: 20}
+  - {type: visible, camera: cctv, objects: [robot, pitcher, glass], min_frames: 60}

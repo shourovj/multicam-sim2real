@@ -1,0 +1,10 @@
+{
+  "_about": "Camera block: wrist (on the robot's hand, in front of the hand body, looking along the gripper and down 28 degrees; 87 degree lens; moves with the hand).",
+  "temporal_caption": "At 0:00 an egocentric camera on the robot's wrist looks along the gripper: the two gripper fingers hold the rim of the light-blue pitcher at the bottom of the frame, and beyond it the wooden table and the floor of the room. From 0:00 to 0:01 the view swings as the arm carries the pitcher, and the clear glass comes into view ahead on the table. From 0:01 to 0:02 the view tips forward as the pitcher tilts. From 0:02 to 0:05 a thin stream of water runs from the pitcher's lip down into the glass. From 0:05 to 0:06 the view tips back up as the pitcher is set upright, and from 0:06 to 0:07 it swings away from the glass.",
+  "aesthetics": {"composition": "Gripper and pitcher rim in the lower part of the frame, the table and glass ahead"},
+  "cinematography": {"camera_motion": "Moves with the robot's hand: swings, then tips forward and back", "framing": "Close view over the gripper", "camera_angle": "Looking forward and down from the robot's wrist", "depth_of_field": "Deep", "focus": "Pitcher rim and glass in focus", "lens_focal_length": "Wide-angle wrist camera"},
+  "style_medium": "Robot wrist-camera footage, photoreal live-action",
+  "artistic_style": "Realistic egocentric robot camera video",
+  "segments": [{"segment_index": 0, "time_range": "0:00-0:07", "description": "One continuous wrist-camera shot", "key_changes": "The view tips as the pitcher pours", "camera": "Mounted on the robot's hand"}],
+  "transitions": []
+}

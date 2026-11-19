@@ -12,7 +12,9 @@ The [round 2 guide](docs/2026-11-11-1304-pilot-v0-branch-guide.md) covers the cu
 
 ## Pipeline
 
-Each step reads and writes files under `$S2R_DATA/poc/<scene>/`, so any step can be re-run on its own.
+Each step reads and writes files under `$S2R_DATA/poc/single-cam/<scene>/`, so any step can be re-run on its own. Multi-camera tests are under `$S2R_DATA/poc/multi-cam/`.
+
+Multi-camera scenes (spec v2, from Nov 18) use a second pipeline that simulates a world once and renders it from any number of cameras: [`sim/world/`](sim/world/) (simulator, kinematics, cameras, Blender builders), [`sim/build_world.sh`](sim/build_world.sh), [`gen/run_multicam.py`](gen/run_multicam.py) with an experiment file in [`configs/experiments/`](configs/experiments/), and [`eval/score_multicam.py`](eval/score_multicam.py). The [multi-camera v1 design doc](docs/2026-11-18-1739-multicam-v1-design.md) covers the scenes, the Cosmos settings, the tracking rules and how to run it (§13).
 
 | Step | Code | Output |
 | --- | --- | --- |
@@ -54,6 +56,7 @@ Each local draft and the Google Doc tab it was pasted into. The Google Doc may h
 | [docs/2026-11-10-1251-poc-drones-air-findings.md](docs/2026-11-10-1251-poc-drones-air-findings.md) | not pasted yet |
 | [docs/2026-11-11-0845-round2-findings.md](docs/2026-11-11-0845-round2-findings.md) | not pasted yet |
 | [docs/2026-11-11-1304-pilot-v0-branch-guide.md](docs/2026-11-11-1304-pilot-v0-branch-guide.md) | not pasted yet |
+| [docs/2026-11-18-1739-multicam-v1-design.md](docs/2026-11-18-1739-multicam-v1-design.md) | not pasted yet |
 
 ### Literature review
 
@@ -67,5 +70,5 @@ claude.ai artifacts made for this project, oldest first. Links open for people i
 | --- | --- | --- | --- | --- |
 | [Sim2Real v0 Walkthrough](https://claude.ai/artifact/WnryWm5K5uvxH6kC9oTVoj) | Page | Shourov Joarder | 2026-11-09 | v0 smoke test on the lab server: Blender scene gives sparse motion (boxes or point tracks), Wan2.1 1.3B generates the clip |
 | [Sim2Real-VideoGen: Week 1](https://claude.ai/artifact/Xnc3VJyqozBpXNLK3LrQkB) | Slides | S P Sharan | 2026-11-10 | Week 1 deck: literature review, problem formulation, v0 architecture, drones_air proof of concept, next steps |
-| [Sim2Real Round 2](https://claude.ai/artifact/DMwkj9covsGwnoHo46j3hD) | Page | Shourov Joarder | 2026-11-11 | Round 2 from prompt to results: three physics scenes, seven conditions plus B / B-box repeated on the simulator's frame 0, run on Wan2.2-VACE-Fun-A14B and Cosmos3-Nano, every setting, a dense reference where Cosmos3-Nano gets the whole simulator video, and all 147 clips with playback |
+| [Sim2Real Round 2](https://claude.ai/artifact/DMwkj9covsGwnoHo46j3hD) | Page | Shourov Joarder | 2026-11-11 | Round 2 from prompt to results: three physics scenes, seven conditions plus B / B-box repeated on the simulator's frame 0, run on Wan2.2-VACE-Fun-A14B and Cosmos3-Nano, every setting, a dense reference where Cosmos3-Nano gets the whole simulator video, and all 147 clips with playback. A two-camera follow-up (Nov 13) renders the two-drone scene from a second camera and generates both views on Cosmos3-Nano, separately and in one video (cut and split screen). Multi-camera v1 (Nov 18–19) simulates an intersection and a robot pour once each, renders each from three cameras plus a three-camera cut, and compares the textured render against depth + segmentation as the Cosmos3-Nano control, with the pipeline, scores and the exact prompts |
 | [Sim2Real Round 2 Results](https://claude.ai/artifact/S8mjMoxtDY3y6cFJrnEcsM) | Slides | Shourov Joarder | 2026-11-11 | Round 2 deck: pipeline, scenes, prompts, conditions, settings, Wan results per scene, edited vs simulator frame 0, the same conditions on Cosmos3-Nano, Nano with the whole simulator video, Wan vs Nano, cost, caveats, next steps |

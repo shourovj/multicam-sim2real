@@ -1,0 +1,10 @@
+{
+  "_about": "Camera block: dashcam (behind the windscreen of the dark grey hatchback, which waits at the east stop line then drives forward; 100 degree lens).",
+  "temporal_caption": "At 0:00 a dashcam looks straight ahead through the windscreen of a car stopped at a red light, with a strip of its dark hood at the bottom of the frame. Just ahead is a zebra crosswalk: the pedestrian in the white shirt crosses from the left and the pedestrian in the red jacket from the right. Across the intersection a traffic light shows red and the blue sedan waits facing the camera. From 0:01 to 0:04 the white SUV crosses in front from left to right and the red sedan crosses from right to left. At 0:03 the side lights turn amber, then red. At about 0:04 the light ahead turns green and the pedestrians reach the sidewalks. From 0:05 to 0:07 the car drives slowly forward into the intersection and the blue sedan passes on the left.",
+  "aesthetics": {"composition": "Forward view down the street; buildings on both sides, the intersection in the middle"},
+  "cinematography": {"camera_motion": "Static while the car waits, then moving slowly forward from about 0:05", "framing": "Wide forward view through the windscreen", "camera_angle": "Eye level from inside a car", "depth_of_field": "Deep", "focus": "Everything in focus", "lens_focal_length": "Wide-angle dashcam lens"},
+  "style_medium": "Dashcam footage, photoreal live-action",
+  "artistic_style": "Realistic in-car dashcam video",
+  "segments": [{"segment_index": 0, "time_range": "0:00-0:07", "description": "One continuous dashcam shot from the waiting car", "key_changes": "Cars cross in front; the light ahead turns green; the car moves forward", "camera": "Dashcam fixed to the car, moves with it"}],
+  "transitions": []
+}

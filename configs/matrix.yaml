@@ -7,7 +7,7 @@ seeds: [0, 1, 2]
 seeds_override: {A: [0], Aplus: [0]}   # text-only conditions get one seed
 
 # A condition is only a choice of inputs. Each name is also the folder holding its inputs,
-# $S2R_DATA/poc/<scene>/<condition>/inputs/ (sim/controls.py); A and Aplus need none.
+# $S2R_DATA/poc/single-cam/<scene>/<condition>/inputs/ (sim/controls.py); A and Aplus need none.
 conditions:
   Bbox_edit: edited frame 0 + box outlines for the whole clip      # the sparse-control condition; runs first
   C0: depth, no frame 0

@@ -1,0 +1,10 @@
+{
+  "_about": "Camera block: side (tripod beside the table, static, 60 degree lens).",
+  "temporal_caption": "At 0:00 a static side view of the wooden table: the white robot arm stands on the left, reaching right and holding the light-blue pitcher in the air; the clear empty glass stands in the middle of the table; behind is the back wall with a white cabinet and a shelf of jars. From 0:00 to 0:01 the arm carries the pitcher over the glass. From 0:01 to 0:02 it tilts the pitcher toward the camera. From 0:02 to 0:05 a thin stream of water falls from the lip into the glass and the water level rises. From 0:05 to 0:06 the pitcher tilts back upright and the stream stops. From 0:06 to 0:07 the arm moves the pitcher back to the right.",
+  "aesthetics": {"composition": "Table across the lower half of the frame, the robot on the left, the glass in the centre"},
+  "cinematography": {"camera_motion": "Static", "framing": "Medium-wide shot of the table and robot", "camera_angle": "Slightly above table height, from the side", "depth_of_field": "Deep", "focus": "The robot, pitcher and glass in focus", "lens_focal_length": "Standard 35mm"},
+  "style_medium": "Live-action video, photoreal",
+  "artistic_style": "Realistic robotics demonstration video",
+  "segments": [{"segment_index": 0, "time_range": "0:00-0:07", "description": "One continuous static side shot", "key_changes": "The pour starts and stops", "camera": "Fixed tripod"}],
+  "transitions": []
+}

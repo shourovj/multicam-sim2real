@@ -100,7 +100,7 @@ export VIDEOX_FUN_DIR=$L/VideoX-Fun
 SCENE=drones_air_phys COND=A SEED=0 STEPS=2 MEMORY_MODE=sequential_cpu_offload CUDA_VISIBLE_DEVICES=<gpu> bash gen/run_vacefun.sh
 ```
 
-It passes if `$S2R_DATA/poc/drones_air_phys/A/vacefun-a14b-s2/seed0/out_video.mp4` exists; the clip itself will be noise at 2 steps. The Nov 10 check was the same idea but not this exact command: 2 steps on the box inputs, through `gen/vacefun_launch.py` directly.
+It passes if `$S2R_DATA/poc/single-cam/drones_air_phys/A/vacefun-a14b-s2/seed0/out_video.mp4` exists; the clip itself will be noise at 2 steps. The Nov 10 check was the same idea but not this exact command: 2 steps on the box inputs, through `gen/vacefun_launch.py` directly.
 
 ### Only for Wan2.1-VACE
 
@@ -120,7 +120,7 @@ $S2R_ROOT/envs/eval/.venv/bin/python sim/simulate.py configs/scenes/drones_air_p
 ### Build one scene's inputs
 
 ```
-D=$S2R_DATA/poc/drones_air_phys; PY=$S2R_ROOT/VACE/.venv/bin/python
+D=$S2R_DATA/poc/single-cam/drones_air_phys; PY=$S2R_ROOT/VACE/.venv/bin/python
 bash sim/build_bundle.sh configs/scenes/drones_air_phys.yaml $D/bundle                       # render + export
 $PY sim/controls.py $D/bundle $D --only vace C C0                                            # depth conditions
 $PY sim/controls.py $D/bundle $D --only B Bbox P1 --frame0 $D/bundle/frame0_edited.png --suffix _edit --box_pad 6
@@ -154,20 +154,23 @@ Set `STEPS=30`. The script's default is 50, and the step count is part of the ou
 
 ## 5. Outputs
 
-Everything is under `$S2R_DATA/poc/`. For this round that is `/mnt/Data/sj37434/sim2real-data/poc/` on swarm5 (3.3 GB, world-readable).
+Everything is under `$S2R_DATA/poc/`. For this round that is `/mnt/Data/sj37434/sim2real-data/poc/` on swarm5 (3.3 GB, world-readable). Single-camera scenes are in `single-cam/`; the two-camera follow-up of Nov 13 is in `multi-cam/`.
 
 ```
 poc/
   manifest.jsonl                  one line per job start and end: GPU, mode, status, wall time, peak memory
   run_matrix.log                  the batch runner's log
   logs/<scene>__<cond>__s<k>.log  output of each job
-  <scene>/
+  single-cam/<scene>/
     bundle/                       what the simulator produced (about 500 MB per scene)
     <cond>/inputs/                what the model gets: src_video.mp4, src_mask.mp4
     <cond>/vacefun-a14b-s30/seed<k>/
       out_video.mp4               the generated clip: 81 frames, 16 fps, 832×480
       run.json                    prompt, seed, steps, guidance, wall time, peak GPU memory
       run.log
+  multi-cam/
+    drones_air_phys_cam2/         drones_air_phys from a second camera: scene.yaml, bundle, clips, scripts
+    drones_air_phys_mv/           both cameras in one video (cut and split screen)
 ```
 
 ### Scenes

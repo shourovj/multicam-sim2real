@@ -1,0 +1,18 @@
+# Smoke test for multicam_v1 (gen/run_multicam.py): the same scenes, inputs and settings, but 4 sampler steps and
+# its own output folder (gen_smoke/), so a short run never sits next to a real one. Used for Gate B in the design doc.
+experiment: multicam_v1_smoke
+out_root: poc/multi-cam
+gen_subdir: gen_smoke
+scenes:
+  intersection_4way: {rev: 1, spec: configs/scenes/history/intersection_4way.r1.yaml, prompts: configs/prompts/multicam_v1/intersection_4way}
+model: {name: cosmos3-nano, hf: nvidia/Cosmos3-Nano, revision: 45666784803b3a7ad577e0def405f9afcc3bddb2,
+        framework_commit: 5950e7b4ea3677b99a2de279a7ed7058b5446e42}
+video: {num_frames: 113, fps: 16, resolution: "480", aspect_ratio: "16,9"}
+sampler: {num_steps: 4, guidance: 3.0, control_guidance: 1.5, shift: 10.0}
+first_frame: none
+conditions:
+  V: {blur: {preset_blur_strength: none}}
+cuts:
+  intersection_4way: {cut3: [{cam: cctv, frames: [0, 36]}, {cam: dashcam, frames: [37, 76]}, {cam: phone, frames: [77, 112]}]}
+seeds: [0]
+gpu: {min_free_gib: 50, max_parallel: 2, launch_gap_s: 60, retries: 0}

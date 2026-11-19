@@ -1,0 +1,10 @@
+{
+  "_about": "Camera block: phone (held up by the pedestrian in the green hoodie on the south-east corner, landscape, slight hand shake, 70 degree lens).",
+  "temporal_caption": "At 0:00 a handheld phone video from the south-east corner at eye level shows the zebra crosswalk in front: the pedestrian in the white shirt walks toward the camera on the left and the pedestrian in the red jacket walks away further back; the dark grey hatchback waits at the right edge of the frame; behind them are the intersection and tall buildings. From 0:01 to 0:03 the white SUV crosses the middle distance from left to right and the red sedan passes in the background. From 0:04 to 0:07 the pedestrian in white steps onto the corner and the dark grey hatchback pulls forward across the frame from right to left.",
+  "aesthetics": {"composition": "Eye-level view across the crosswalk toward the intersection"},
+  "cinematography": {"camera_motion": "Handheld with slight natural shake, no panning", "framing": "Medium-wide shot", "camera_angle": "Eye level from a pedestrian on the sidewalk", "depth_of_field": "Deep", "focus": "Everything in focus", "lens_focal_length": "Smartphone main camera"},
+  "style_medium": "Smartphone video, photoreal live-action",
+  "artistic_style": "Realistic handheld phone video",
+  "segments": [{"segment_index": 0, "time_range": "0:00-0:07", "description": "One continuous handheld phone shot from the corner", "key_changes": "Pedestrians cross close by; cars pass; the waiting car drives off", "camera": "Handheld phone, slight shake"}],
+  "transitions": []
+}

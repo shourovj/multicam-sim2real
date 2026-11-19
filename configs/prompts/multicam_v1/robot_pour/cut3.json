@@ -1,0 +1,14 @@
+{
+  "_about": "Cut block: cut3 (output frames 0-36 side, 37-76 wrist, 77-112 cctv; hard cuts at 2.31 s and 4.81 s). One clock: each shot shows the world at the same times as its camera's separate video.",
+  "temporal_caption": "From 0:00 to 0:02 a static side view of the table: the white robot arm carries the light-blue pitcher over the clear glass and starts to tilt it. At 0:02 a hard cut to the robot's wrist camera looking along the gripper: the pitcher's rim at the bottom of the frame and a thin stream of water running down into the glass, which fills. At 0:05 a hard cut to a high security-camera view from a corner of the room: the robot tilts the pitcher back upright and moves it away from the glass.",
+  "aesthetics": {"composition": "Three framings of the same pour: side, egocentric, high corner"},
+  "cinematography": {"camera_motion": "Three shots joined by hard cuts: a fixed side camera, a moving wrist camera, a fixed ceiling camera", "framing": "Medium-wide, then close, then wide", "camera_angle": "Table height from the side, then down from the robot's wrist, then high angle", "depth_of_field": "Deep", "focus": "The pitcher, stream and glass in focus", "lens_focal_length": "Standard, then wide-angle, then wide-angle"},
+  "style_medium": "Real-world footage edited from three cameras: side camera, robot wrist camera and CCTV; photoreal live-action",
+  "artistic_style": "Realistic multi-camera edit of one robot pour",
+  "segments": [
+    {"segment_index": 0, "time_range": "0:00-0:02", "description": "Side view: the arm brings the pitcher over the glass and starts tilting", "key_changes": "Tilt begins", "camera": "Fixed tripod beside the table"},
+    {"segment_index": 1, "time_range": "0:02-0:05", "description": "Wrist view: water pours from the lip into the glass", "key_changes": "The glass fills", "camera": "Robot wrist camera"},
+    {"segment_index": 2, "time_range": "0:05-0:07", "description": "CCTV view: the pitcher is tilted back and moved away", "key_changes": "The pour stops", "camera": "Fixed ceiling-corner camera"}
+  ],
+  "transitions": ["Hard cut at 0:02 from the side view to the wrist camera", "Hard cut at 0:05 from the wrist camera to the CCTV view"]
+}

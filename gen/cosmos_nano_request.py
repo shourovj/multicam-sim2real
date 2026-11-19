@@ -20,7 +20,7 @@ import cv2, numpy as np, imageio.v3 as iio, yaml
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 N, FPS, PAD = 81, 16, 6
 scene, cond, seed, out = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4]
-B = os.path.join(os.environ["S2R_DATA"], "poc", scene, "bundle")
+B = os.path.join(os.environ["S2R_DATA"], "poc", "single-cam", scene, "bundle")
 C = os.path.join(B, "controls")
 IDX = [round(t * 30 / FPS) for t in range(N)]            # simulator frame (30 fps) for each output frame
 

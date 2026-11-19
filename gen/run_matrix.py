@@ -19,6 +19,7 @@ import yaml
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(os.environ["S2R_DATA"], "poc")
+SCENES = os.path.join(DATA, "single-cam")   # one folder per scene; the manifest, logs and STOP stay in DATA
 # model name in the matrix -> (run script, extra environment). The name is also the output folder prefix.
 RUNNERS = {"vacefun-a14b": ("gen/run_vacefun.sh", {}),                         # Wan2.2-VACE-Fun-A14B (VideoX-Fun)
            "vace21-14B": ("gen/run_vace_diffusers.sh", {"MODEL": "14B"}),      # Wan2.1-VACE-14B (diffusers)
@@ -27,7 +28,7 @@ RUNNERS = {"vacefun-a14b": ("gen/run_vacefun.sh", {}),                         #
 
 
 def out_dir(tag, scene, cond, seed):
-    return os.path.join(DATA, scene, cond, tag, f"seed{seed}")
+    return os.path.join(SCENES, scene, cond, tag, f"seed{seed}")
 
 
 def my_gpus():
@@ -80,7 +81,7 @@ def main():
     for scene, cond, _ in jobs:        # fail before launching anything if an input is missing
         if model != "cosmos3-nano" and cond not in ("A", "Aplus"):     # Nano builds its own controls from the bundle
             for f in ("src_video.mp4", "src_mask.mp4"):
-                assert os.path.exists(os.path.join(DATA, scene, cond, "inputs", f)), f"missing {scene}/{cond}/inputs/{f}"
+                assert os.path.exists(os.path.join(SCENES, scene, cond, "inputs", f)), f"missing {scene}/{cond}/inputs/{f}"
 
     def in_progress(j):                # launched by an earlier runner and still alive
         try:

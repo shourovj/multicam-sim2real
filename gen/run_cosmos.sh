@@ -6,7 +6,7 @@ set -euo pipefail
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 SCENE=${SCENE:?}
 source "$REPO/env.sh"
-D=$S2R_DATA/poc/$SCENE
+D=$S2R_DATA/poc/single-cam/$SCENE
 export SEED=${SEED:-0} NAME=D_seed${SEED:-0}
 export CONTROL=$D/bundle/controls/cosmos_depth.mp4 OUT=$D/D
 export PROMPT=$("$S2R_ROOT/VACE/.venv/bin/python" -c \

@@ -1,0 +1,113 @@
+# intersection_4way: a four-way city intersection with traffic lights, four cars and three pedestrians,
+# simulated once and rendered from a CCTV pole, the dashcam of a waiting car and a bystander's phone.
+# Scene spec v2 (sim/world). Written by Claude Code (claude-opus-5-5) from the user prompt in
+# intersection_4way.source.md; numbers explained in docs/2026-11-18-1739-multicam-v1-design.md §5.1.
+# World frame: Z up, metres, +X east, +Y north, origin at the centre of the junction. Right-hand traffic.
+spec_version: 2
+name: intersection_4way
+rev: 2                     # r2: rendered as clay (no textures); r1 was textured
+duration_s: 7.0625         # 113 frames at 16 fps (1 + 4n): rendered at the rate Cosmos3-Nano takes, no resampling
+fps: 16
+frames: 113
+resolution: [832, 480]     # W, H
+seed: 0
+render: {samples: 24, denoise: true, style: clay}   # clay: one matte grey everywhere, only signal lamps keep colour
+
+world:
+  type: intersection
+  lanes_per_direction: 1
+  lane_width_m: 3.5
+  leg_length_m: 60
+  sidewalk_m: 3.0
+  kerb_m: 0.15
+  crosswalk_m: 3.0
+  crosswalk_gap_m: 0.5     # crosswalks span 4.0-7.0 m from the centre
+  stop_line_m: 8.0
+  signal_height_m: 5.4
+  sky: {model: nishita, sun_elevation_deg: 38, sun_rotation_deg: 135, strength: 0.25}
+  materials: {road: asphalt_02, sidewalk: concrete_pavement}        # Poly Haven ids (configs/assets/polyhaven.yaml)
+  buildings: {setback_m: 4.0, height_m: [17, 28], per_corner: 2, seed: 3,     # first lot starts 10.5 m from the centre
+              walls: [brick_wall_02, rectangular_facade_tiles, painted_plaster_wall]}
+  props:                    # static Poly Haven models on the sidewalks (part of the background)
+    - {asset: street_lamp_01, pos: [-5.2, 5.2], yaw_deg: -45}
+    - {asset: street_lamp_01, pos: [5.2, -5.2], yaw_deg: 135}
+    - {asset: fire_hydrant, pos: [-4.4, -8.5], yaw_deg: 0}
+    - {asset: metal_trash_can, pos: [4.5, 9.5], yaw_deg: 20}
+    - {asset: utility_box_01, pos: [-9.5, 4.6], yaw_deg: 0}
+    - {asset: security_camera_02, pos: [10.42, 10.42, 15.05], yaw_deg: -135}  # the CCTV camera's own body, on the NE building's corner
+
+signals:
+  - id: tl_NS
+    lanes: [north_in, south_in]
+    plan: [{state: green, until_s: 3.0}, {state: yellow, until_s: 4.0}, {state: red, until_s: 7.2}]
+  - id: tl_EW
+    lanes: [east_in, west_in]
+    plan: [{state: red, until_s: 4.5}, {state: green, until_s: 7.2}]
+
+objects:
+  # Cars: lane_vehicle (sim/physics/lane_vehicle.py). start_m is the car's centre along its lane, from the leg's end
+  # 60 m out; the stop line is at 52 m and the junction centre at 60 m.
+  - id: car_red
+    instance_id: 1
+    asset: {type: car, model: sedan, color: [0.50, 0.02, 0.02]}
+    motion: {model: lane_vehicle, lane: north_in, start_m: 34.0, start_mps: 10.0, signal: tl_NS,
+             params: {cruise_mps: 10.0}}
+  - id: car_white
+    instance_id: 2
+    asset: {type: car, model: suv, color: [0.82, 0.83, 0.83]}
+    motion: {model: lane_vehicle, lane: south_in, start_m: 40.0, start_mps: 9.0, signal: tl_NS,
+             params: {cruise_mps: 9.0}}
+  - id: car_ego                       # the dashcam car: waits at the red light, front 2 m before the stop line
+    instance_id: 3
+    asset: {type: car, model: hatchback, color: [0.09, 0.09, 0.10]}
+    motion: {model: lane_vehicle, lane: east_in, start_m: 47.9, start_mps: 0.0, signal: tl_EW,
+             yield_to: [ped_red, ped_white], params: {cruise_mps: 9.0, accel_max: 2.5}}
+  - id: car_blue
+    instance_id: 4
+    asset: {type: car, model: sedan, color: [0.03, 0.10, 0.38]}
+    motion: {model: lane_vehicle, lane: west_in, start_m: 47.65, start_mps: 0.0, signal: tl_EW,
+             yield_to: [ped_red, ped_white], params: {cruise_mps: 9.0, accel_max: 2.5}}
+  # Pedestrians (sim/physics/pedestrian.py). Both cross the east crosswalk (x 4-7 m), just in front of car_ego.
+  - id: ped_red
+    instance_id: 5
+    asset: {type: pedestrian, height_m: 1.72,
+            colors: {top: [0.55, 0.04, 0.04], bottom: [0.07, 0.07, 0.09], skin: [0.62, 0.45, 0.35], hair: [0.09, 0.06, 0.04], shoes: [0.05, 0.05, 0.05]}}
+    motion: {model: pedestrian, path: [[4.6, 5.0], [4.6, -5.0]], speed_mps: 1.4, start_offset_m: 1.35}
+  - id: ped_white
+    instance_id: 6
+    asset: {type: pedestrian, height_m: 1.80,
+            colors: {top: [0.86, 0.86, 0.84], bottom: [0.10, 0.18, 0.36], skin: [0.85, 0.68, 0.55], hair: [0.30, 0.20, 0.10], shoes: [0.85, 0.85, 0.85]}}
+    motion: {model: pedestrian, path: [[6.4, -5.0], [6.4, 5.0]], speed_mps: 1.5, start_offset_m: 1.95}
+  - id: ped_phone                     # the bystander filming: stands on the south-east corner, phone up in both hands
+    instance_id: 7
+    asset: {type: pedestrian, height_m: 1.70,
+            colors: {top: [0.08, 0.40, 0.14], bottom: [0.30, 0.26, 0.20], skin: [0.45, 0.32, 0.24], hair: [0.05, 0.04, 0.03], shoes: [0.12, 0.12, 0.12]}}
+    motion: {model: pedestrian, idle_at: [9.5, -8.0], facing: [5.0, 3.5], pose: phone, sway_m: 0.02}
+    hide_from: [phone]
+
+cameras:
+  - {id: cctv, type: fixed, position: [10.1, 10.1, 15.0], look_at: [-1.0, -3.0, 0.0], fov_deg: 90}  # high on the NE building's corner
+  - id: dashcam                       # behind car_ego's windscreen by the mirror; the hood is in frame
+    type: attached
+    parent: car_ego
+    part: body
+    offset: {pos: [0.55, 0.0, 1.34], pitch_deg: 4}   # top of the windscreen; a strip of hood at the bottom
+    fov_deg: 100
+    hide: [car_ego/cabin]             # the roof, pillars and windscreen of its own car are not rendered
+  - id: phone
+    type: handheld
+    parent: ped_phone
+    part: phone
+    offset: {pos: [0.0, 0.0, 0.0]}
+    look_at: [5.0, 3.5, 1.2]
+    shake: {rot_deg: 0.8, pos_m: 0.005, hz: [0.8, 2.5], seed: 11}
+    fov_deg: 70
+
+checks:
+  - {type: min_gap, metres: 1.0}
+  - {type: obeys_signals}
+  - {type: yields_to_pedestrians}
+  - {type: event_order, events: [tl_NS_yellow, tl_EW_green, car_ego_moves]}
+  - {type: visible, camera: dashcam, objects: [car_red, car_white], min_frames: 16}     # frames at 16 fps: 1 s
+  - {type: visible, camera: cctv, objects: [car_red, car_white, car_ego, car_blue, ped_red, ped_white, ped_phone], min_frames: 30}
+  - {type: visible, camera: phone, objects: [car_ego, ped_red, ped_white], min_frames: 16}

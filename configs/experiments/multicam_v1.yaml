@@ -1,0 +1,39 @@
+# multicam_v1: two scenes, each simulated once and rendered from three cameras; Cosmos3-Nano turns each camera's
+# simulator video (and a three-camera cut of them) into realistic video. No first frame.
+# Design: docs/2026-11-18-1739-multicam-v1-design.md. Runner: gen/run_multicam.py. Frozen once runs start:
+# a change after that is a new experiment version (multicam_v1.1), not an edit (design doc §9.3).
+experiment: multicam_v1
+out_root: poc/multi-cam                     # under $S2R_DATA; per scene: <scene>/r<rev>/{world,cams,cut,inputs,gen,scores}
+
+scenes:
+  intersection_4way: {rev: 1, spec: configs/scenes/history/intersection_4way.r1.yaml, prompts: configs/prompts/multicam_v1/intersection_4way}
+  robot_pour:        {rev: 1, spec: configs/scenes/history/robot_pour.r1.yaml, prompts: configs/prompts/multicam_v1/robot_pour}
+
+model:
+  name: cosmos3-nano
+  hf: nvidia/Cosmos3-Nano
+  revision: 45666784803b3a7ad577e0def405f9afcc3bddb2
+  framework_commit: 5950e7b4ea3677b99a2de279a7ed7058b5446e42
+
+video: {num_frames: 113, fps: 16, resolution: "480", aspect_ratio: "16,9"}    # 7.06 s; the bundles are rendered at 16 fps
+sampler: {num_steps: 50, guidance: 3.0, control_guidance: 1.5, shift: 10.0}
+first_frame: none                           # num_first_chunk_conditional_frames: 0 and no vision_path
+
+conditions:
+  # The control video is built by gen/multicam_inputs.py with Cosmos's own blur code
+  # (apply_transfer_control_augmentor) and passed as blur.control_path; preset none = the simulator video as rendered.
+  V: {blur: {preset_blur_strength: none}}
+  # later: G:  {depth: {weight: 1.0}, seg: {weight: 1.0}}
+  # later: GA: {depth: {weight: 1.0}, seg: {weight: 1.0}, blur: {weight: 1.0, preset_blur_strength: low}}
+
+cuts:                                       # output-frame ranges (16 fps, inclusive); every shot starts at 1 + 4k
+  intersection_4way: {cut3: [{cam: cctv, frames: [0, 36]}, {cam: dashcam, frames: [37, 76]}, {cam: phone, frames: [77, 112]}]}
+  robot_pour:        {cut3: [{cam: side, frames: [0, 36]}, {cam: wrist, frames: [37, 76]}, {cam: cctv, frames: [77, 112]}]}
+
+seeds: [0, 1]                               # the same seed for every view of a scene (same initial noise; recorded, not varied)
+
+probes:
+  - {name: blur_sweep, scene: intersection_4way, view: cctv, cond: V, seed: 0,
+     vary: {preset_blur_strength: [very_low, low, medium, high]}}
+
+gpu: {min_free_gib: 50, max_parallel: 4, launch_gap_s: 120, retries: 1}

@@ -1,0 +1,17 @@
+# CC0 assets from Poly Haven (https://polyhaven.com, licence: CC0 1.0), fetched by setup/fetch_assets.py into
+# $S2R_DATA/assets/polyhaven/<id>/ with a SOURCE.md (URLs, date, sha256 of every file). Specs refer to them by id.
+# kind texture: the 1k Diffuse, normal (OpenGL) and roughness maps as JPG. kind model: the 1k glTF with its textures.
+textures:
+  asphalt_02:               {res: 2k, used_by: [intersection_4way], for: road surface}
+  concrete_pavement:        {res: 1k, used_by: [intersection_4way], for: sidewalks}
+  brick_wall_02:            {res: 1k, used_by: [intersection_4way], for: building walls}
+  rectangular_facade_tiles: {res: 1k, used_by: [intersection_4way], for: building walls}
+  painted_plaster_wall:     {res: 1k, used_by: [intersection_4way, robot_pour], for: building walls, room walls}
+  floor_tiles_06:           {res: 1k, used_by: [robot_pour], for: room floor}
+models:
+  street_lamp_01:           {res: 1k, used_by: [intersection_4way], for: street lamps on the corners}
+  fire_hydrant:             {res: 1k, used_by: [intersection_4way], for: sidewalk prop}
+  metal_trash_can:          {res: 1k, used_by: [intersection_4way], for: sidewalk prop}
+  utility_box_01:           {res: 1k, used_by: [intersection_4way], for: sidewalk prop}
+  security_camera_02:       {res: 1k, used_by: [intersection_4way, robot_pour], for: the CCTV camera body, seen by the other cameras}
+  wooden_table_02:          {res: 1k, used_by: [robot_pour], for: the table the robot works on}

@@ -1,0 +1,174 @@
+{
+ "temporal_caption": "From 0:00 to 0:02 a static high-angle security-camera view of the whole intersection: the white SUV and the red sedan approach from opposite sides on the green light while the dark grey hatchback and the blue sedan wait, two pedestrians cross the crosswalk on the left and the person in the green hoodie stands filming on the corner. At 0:02 a hard cut to the dashcam of the waiting dark grey hatchback: through the windscreen the white SUV crosses in front from left to right and the red sedan from right to left, the two pedestrians finish crossing just ahead, the side lights turn amber then red and the light ahead turns green. At 0:05 a hard cut to the bystander's handheld phone on the corner: the pedestrian in white steps onto the corner and the dark grey hatchback pulls forward across the frame.",
+ "subjects": [
+  {
+   "description": "A red four-door sedan",
+   "appearance_details": "Glossy red paint, dark tinted windows, silver five-spoke wheels",
+   "relationship": "Has the green light",
+   "action": "Drives south straight through the intersection and leaves",
+   "state_changes": "Moves at a steady city speed",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  },
+  {
+   "description": "A white SUV",
+   "appearance_details": "White paint, dark windows, black bumpers",
+   "relationship": "Has the green light, opposite direction to the red sedan",
+   "action": "Drives north straight through the intersection and leaves",
+   "state_changes": "Moves at a steady city speed",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  },
+  {
+   "description": "A dark grey hatchback",
+   "appearance_details": "Charcoal paint, dark windows",
+   "relationship": "Waits at the red light on the east side, behind the crosswalk",
+   "action": "Waits, then pulls forward slowly when its light turns green",
+   "state_changes": "Stopped, then accelerating gently from about 0:04",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  },
+  {
+   "description": "A dark blue sedan",
+   "appearance_details": "Deep blue paint, dark windows",
+   "relationship": "Waits at the red light on the west side, facing the dark grey hatchback",
+   "action": "Waits, then drives forward when its light turns green",
+   "state_changes": "Stopped, then accelerating gently from about 0:04",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  },
+  {
+   "description": "A pedestrian in a red jacket and dark trousers",
+   "clothing": "Red jacket, dark trousers, dark shoes",
+   "relationship": "Crosses in front of the waiting dark grey hatchback",
+   "action": "Walks south across the zebra crosswalk on the east side of the intersection",
+   "pose": "Walking",
+   "state_changes": "Steps up onto the far sidewalk at about 0:05",
+   "gender": "Unknown",
+   "age": "Adult",
+   "number_of_subjects": 1,
+   "number_of_arms": 2,
+   "number_of_legs": 2
+  },
+  {
+   "description": "A pedestrian in a white long-sleeve shirt and blue jeans",
+   "clothing": "White shirt, blue jeans, white sneakers",
+   "relationship": "Crosses the same crosswalk in the other direction",
+   "action": "Walks north across the zebra crosswalk on the east side of the intersection",
+   "pose": "Walking",
+   "state_changes": "Steps up onto the far sidewalk at about 0:05",
+   "gender": "Unknown",
+   "age": "Adult",
+   "number_of_subjects": 1,
+   "number_of_arms": 2,
+   "number_of_legs": 2
+  },
+  {
+   "description": "A pedestrian in a green hoodie and khaki trousers",
+   "clothing": "Green hoodie, khaki trousers",
+   "relationship": "A bystander filming the intersection",
+   "action": "Stands still on the south-east corner holding a phone up in both hands, filming",
+   "pose": "Standing, both hands raised to chest height holding a phone",
+   "state_changes": "No significant change.",
+   "gender": "Unknown",
+   "age": "Adult",
+   "number_of_subjects": 1,
+   "number_of_arms": 2,
+   "number_of_legs": 2
+  },
+  {
+   "description": "Traffic lights hanging from metal mast arms over each approach",
+   "appearance_details": "Black three-lamp signal heads: red on top, amber, green at the bottom",
+   "action": "The north-south lights are green, turn amber at 0:03 and red at 0:04; the east-west lights are red and turn green at about 0:04",
+   "state_changes": "One light change on each road",
+   "number_of_subjects": 4,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  }
+ ],
+ "background_setting": "A four-way city intersection on a clear afternoon: grey asphalt roads with white zebra crosswalks, white stop lines and double yellow centre lines; concrete sidewalks with old-style black street lamps, a red fire hydrant, a trash can and a utility box; four- to eight-storey brick, stone and plaster buildings with shop windows on every corner and taller buildings further away.",
+ "lighting": {
+  "conditions": "Natural daylight, clear afternoon",
+  "direction": "Sun high in the south-east",
+  "shadows": "Soft-edged shadows of the cars, people and poles on the road",
+  "illumination_effect": "Lit traffic lamps glowing red, amber or green"
+ },
+ "aesthetics": {
+  "color_scheme": "Natural city colours: grey asphalt, white road markings, beige and red-brick buildings; a red car, a white car, a dark grey car and a blue car",
+  "mood_atmosphere": "Ordinary weekday city traffic",
+  "patterns": "Zebra crosswalk stripes",
+  "composition": "Three framings of the same intersection: high wide, in-car forward, eye-level handheld"
+ },
+ "cinematography": {
+  "camera_motion": "Three shots joined by hard cuts: a fixed security camera, a dashcam in a waiting car, a handheld phone",
+  "framing": "Wide, then wide forward, then medium-wide",
+  "camera_angle": "High angle, then eye level from a car, then eye level from the sidewalk",
+  "depth_of_field": "Deep",
+  "focus": "Everything in focus",
+  "lens_focal_length": "Wide-angle in all three"
+ },
+ "style_medium": "Real-world footage edited from three cameras: CCTV, dashcam and a phone; photoreal live-action",
+ "artistic_style": "Realistic multi-camera edit of one traffic scene",
+ "context": "Real-world footage of normal traffic at a signalised intersection. Realistic real-world video, natural lighting and motion, not a rendering.",
+ "actions": [
+  {
+   "time": "0:00-0:03",
+   "description": "The north-south lights are green. The red sedan drives south and the white SUV drives north through the intersection, passing each other in the middle at about 0:02. The dark grey hatchback and the blue sedan wait at red lights on the east and west sides."
+  },
+  {
+   "time": "0:00-0:05",
+   "description": "The pedestrian in the red jacket walks south and the pedestrian in the white shirt walks north across the zebra crosswalk on the east side, just in front of the waiting dark grey hatchback."
+  },
+  {
+   "time": "0:03-0:04",
+   "description": "The north-south lights turn amber, then red."
+  },
+  {
+   "time": "0:04-0:07",
+   "description": "The east-west lights turn green. The dark grey hatchback and the blue sedan pull away slowly into the intersection."
+  },
+  {
+   "time": "0:00-0:07",
+   "description": "The pedestrian in the green hoodie stands on the south-east corner filming with a phone."
+  }
+ ],
+ "text_and_signage_elements": [],
+ "segments": [
+  {
+   "segment_index": 0,
+   "time_range": "0:00-0:02",
+   "description": "CCTV view: the north-south cars approach on green; pedestrians crossing",
+   "key_changes": "Cars enter the intersection",
+   "camera": "Fixed CCTV camera high on a building corner"
+  },
+  {
+   "segment_index": 1,
+   "time_range": "0:02-0:05",
+   "description": "Dashcam view: cars cross in front; lights change; the light ahead turns green",
+   "key_changes": "Light change",
+   "camera": "Dashcam in the waiting dark grey hatchback"
+  },
+  {
+   "segment_index": 2,
+   "time_range": "0:05-0:07",
+   "description": "Phone view: the waiting car drives off",
+   "key_changes": "The hatchback moves",
+   "camera": "Bystander's handheld phone"
+  }
+ ],
+ "transitions": [
+  "Hard cut at 0:02 from the CCTV view to the dashcam view",
+  "Hard cut at 0:05 from the dashcam view to the phone view"
+ ],
+ "resolution": {
+  "W": 832,
+  "H": 480
+ },
+ "aspect_ratio": "16,9",
+ "duration": "0:07",
+ "fps": 16
+}
