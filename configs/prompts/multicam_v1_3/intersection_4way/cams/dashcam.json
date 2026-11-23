@@ -1,0 +1,27 @@
+{
+ "_about": "Camera block, text-only: dashcam (behind the windscreen of the dark grey hatchback, 1.3 m up, looking west; static until 4.5 s, then rolls 7.7 m forward; 100 degree lens). Placement from facts/dashcam.txt.",
+ "temporal_caption": "At 0:00 a dashcam looks west, straight ahead through the windscreen of the dark grey hatchback, which is stopped at a red light; the car's own dark grey hood fills the bottom of the frame. Just ahead a zebra crosswalk crosses the frame. On the left is the south-west corner's five-storey red-brick building and on the right the north-west corner's tall grey-blue plaster building; a black street lamp stands at the left edge and a metal trash can at the right edge; the road continues straight ahead between them into the distance. Across the intersection, small in the centre, the blue sedan waits facing the camera, and a traffic light on the far side shows red. On the crosswalk, the pedestrian in the white shirt walks from the left toward the right and the pedestrian in the red jacket walks from the centre toward the left; they pass each other in front of the car. From 0:01 to 0:04 the white SUV crosses close in front from left to right, filling a quarter of the frame width as it passes the centre at about 0:02, and the red sedan crosses further away from right to left. The north-south lights turn amber at 0:03 and red at 0:04. Just after 0:04 the light ahead turns green and the car starts rolling slowly forward; the pedestrians reach the sidewalks at the left and right edges. From 0:05 to 0:07 the car drives into the intersection, the buildings on both sides grow larger, and the blue sedan comes toward the camera and passes on the left.",
+ "aesthetics": {
+  "composition": "Forward view down the street; buildings on both sides, the intersection in the middle, the hood along the bottom"
+ },
+ "cinematography": {
+  "camera_motion": "Static while the car waits, then moving slowly forward from just after 0:04",
+  "framing": "Wide forward view through the windscreen",
+  "camera_angle": "Eye level from inside a car, about 1.3 m above the road",
+  "depth_of_field": "Deep",
+  "focus": "Everything in focus",
+  "lens_focal_length": "Wide-angle dashcam lens, about 100 degrees"
+ },
+ "style_medium": "Dashcam footage, photoreal live-action",
+ "artistic_style": "Realistic in-car dashcam video",
+ "segments": [
+  {
+   "segment_index": 0,
+   "time_range": "0:00-0:07",
+   "description": "One continuous dashcam shot from the waiting car",
+   "key_changes": "Pedestrians cross ahead; cars cross in front; the light ahead turns green; the car moves forward",
+   "camera": "Dashcam fixed to the car, moves with it"
+  }
+ ],
+ "transitions": []
+}

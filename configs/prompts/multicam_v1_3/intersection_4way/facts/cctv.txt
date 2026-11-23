@@ -1,0 +1,10 @@
+camera cctv: 15.0 m up, looks south-west (tilt -41.1 deg), static
+  car_red: 1.0-7.0 s, right to left, up to 0.22 of frame width | 1.0 s bottom right (w 0.07); 4.0 s top centre (w 0.07); 7.0 s top left (w 0.04)
+  car_white: 0.0-3.75 s, left to right, up to 0.19 of frame width | 0.0 s top left (w 0.06); 1.88 s middle centre (w 0.1); 3.75 s bottom right (w 0.04)
+  car_ego: 0.0-7.0 s, left to right, up to 0.18 of frame width | 0.0 s bottom left (w 0.18); 3.5 s bottom left (w 0.18); 7.0 s bottom centre (w 0.13)
+  car_blue: 0.0-7.0 s, stays about in place, up to 0.1 of frame width | 0.0 s middle right (w 0.08); 3.5 s middle right (w 0.08); 7.0 s middle centre (w 0.1)
+  ped_red: 0.0-7.0 s, stays about in place, up to 0.02 of frame width | 0.0 s bottom centre (w 0.02); 3.5 s middle centre (w 0.02); 7.0 s middle centre (w 0.01)
+  ped_white: 0.0-7.0 s, stays about in place, up to 0.03 of frame width | 0.0 s middle centre (w 0.02); 3.5 s bottom centre (w 0.02); 7.0 s bottom centre (w 0.02)
+  ped_phone: 0.0-7.0 s, stays about in place, up to 0.02 of frame width | 0.0 s middle left (w 0.02); 3.5 s middle left (w 0.02); 7.0 s middle left (w 0.02)
+  static at first frame: sidewalk 44.5% x 0.0-1.0; road 31.0% x 0.0-1.0; building 4 6.5% x 0.0-0.18; building 0 6.2% x 0.41-0.69; markings 4.9% x 0.14-0.97; building 2 1.4% x 0.91-1.0; building 1 1.3% x 0.67-0.78; backdrop 0.5% x 0.01-0.22; signal tl_NS head south_in 0.4% x 0.52-0.62
+  static at last frame: sidewalk 44.4% x 0.0-1.0; road 31.6% x 0.0-1.0; building 4 6.5% x 0.0-0.18; building 0 6.2% x 0.41-0.69; markings 4.5% x 0.14-0.97; building 2 1.4% x 0.91-1.0; building 1 1.3% x 0.67-0.78; backdrop 0.5% x 0.01-0.22; signal tl_NS head south_in 0.4% x 0.52-0.62

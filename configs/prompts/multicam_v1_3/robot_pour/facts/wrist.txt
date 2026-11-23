@@ -1,0 +1,8 @@
+camera wrist: 1.12 m up, looks south (tilt -28.0 deg), moves 0.66 m between 0.44 s and 5.25 s, ends looking south
+  robot: not on screen
+  pitcher: 0.0-7.0 s, stays about in place, up to 0.55 of frame width | 0.0 s bottom centre (w 0.55); 3.5 s bottom centre (w 0.55); 7.0 s bottom centre (w 0.55)
+  glass: 0.0-7.0 s, stays about in place, up to 0.24 of frame width, out of view 2x in between | 0.0 s bottom centre (w 0.08); 3.5 s top centre (w 0.21); 7.0 s bottom centre (w 0.07)
+  water_stream: 2.25-4.81 s, stays about in place, up to 0.09 of frame width | 2.25 s middle centre (w 0.04); 3.56 s middle centre (w 0.08); 4.81 s middle centre (w 0.07)
+  water_glass: 1.94-5.25 s, stays about in place, up to 0.17 of frame width | 1.94 s middle centre (w 0.08); 3.62 s top centre (w 0.13); 5.25 s middle centre (w 0.13)
+  static at first frame: walls 42.0% x 0.0-1.0; table 29.6% x 0.0-1.0; floor 13.4% x 0.0-1.0
+  static at last frame: walls 41.9% x 0.0-1.0; table 29.5% x 0.0-1.0; floor 13.7% x 0.0-1.0

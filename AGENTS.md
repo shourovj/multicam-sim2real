@@ -1,5 +1,9 @@
 # Agent notes
 
+## Server
+
+- Claude Code for this project runs on the lab server in the tmux session `claude-sim2real`. Reattach with `tmux attach -t claude-sim2real`.
+
 ## Git
 
 - Start every branch name with the owner's name or GitHub handle and a slash, i.e. `<name>/<topic>` such as `spsharan/lit-survey`, so it's clear whose branch it is. If you don't know whose work it is, ask before creating the branch.

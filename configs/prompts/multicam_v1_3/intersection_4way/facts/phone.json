@@ -1,0 +1,303 @@
+{
+ "_about": "Simulator facts for intersection_4way camera phone, from gen/camera_facts.py; world.npz sha256 202cf7c8a89b",
+ "camera": {
+  "height_m": [
+   1.68,
+   1.68
+  ],
+  "looks": [
+   "north",
+   "north"
+  ],
+  "tilt_deg": [
+   -1.8,
+   -2.9
+  ],
+  "path_m": 0.35,
+  "moving_s": null
+ },
+ "objects": {
+  "car_red": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 2.81,
+   "frames": 45,
+   "gaps": 1,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "middle centre",
+     "x": 0.54,
+     "y": 0.49,
+     "width": 0.06
+    },
+    {
+     "t_s": 1.38,
+     "at": "middle centre",
+     "x": 0.39,
+     "y": 0.5,
+     "width": 0.12
+    },
+    {
+     "t_s": 2.81,
+     "at": "middle left",
+     "x": 0.04,
+     "y": 0.57,
+     "width": 0.05
+    }
+   ],
+   "max_width": 0.19,
+   "moves": "right to left"
+  },
+  "car_white": {
+   "on_screen": true,
+   "from_s": 1.69,
+   "to_s": 7.0,
+   "frames": 86,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 1.69,
+     "at": "middle left",
+     "x": 0.06,
+     "y": 0.65,
+     "width": 0.05
+    },
+    {
+     "t_s": 4.38,
+     "at": "middle centre",
+     "x": 0.57,
+     "y": 0.49,
+     "width": 0.08
+    },
+    {
+     "t_s": 7.0,
+     "at": "middle centre",
+     "x": 0.66,
+     "y": 0.46,
+     "width": 0.04
+    }
+   ],
+   "max_width": 0.34,
+   "moves": "left to right"
+  },
+  "car_ego": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 7.0,
+   "frames": 113,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "middle right",
+     "x": 0.91,
+     "y": 0.62,
+     "width": 0.17
+    },
+    {
+     "t_s": 3.5,
+     "at": "middle right",
+     "x": 0.91,
+     "y": 0.62,
+     "width": 0.17
+    },
+    {
+     "t_s": 7.0,
+     "at": "middle centre",
+     "x": 0.42,
+     "y": 0.56,
+     "width": 0.31
+    }
+   ],
+   "max_width": 0.41,
+   "moves": "right to left"
+  },
+  "car_blue": {
+   "on_screen": false,
+   "hidden_from_camera": false
+  },
+  "ped_red": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 5.94,
+   "frames": 96,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "middle centre",
+     "x": 0.48,
+     "y": 0.53,
+     "width": 0.03
+    },
+    {
+     "t_s": 3.0,
+     "at": "middle centre",
+     "x": 0.34,
+     "y": 0.57,
+     "width": 0.06
+    },
+    {
+     "t_s": 5.94,
+     "at": "bottom left",
+     "x": 0.02,
+     "y": 0.76,
+     "width": 0.03
+    }
+   ],
+   "max_width": 0.13,
+   "moves": "right to left"
+  },
+  "ped_white": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 7.0,
+   "frames": 113,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "middle centre",
+     "x": 0.36,
+     "y": 0.65,
+     "width": 0.09
+    },
+    {
+     "t_s": 3.5,
+     "at": "middle centre",
+     "x": 0.56,
+     "y": 0.56,
+     "width": 0.04
+    },
+    {
+     "t_s": 7.0,
+     "at": "middle centre",
+     "x": 0.6,
+     "y": 0.5,
+     "width": 0.03
+    }
+   ],
+   "max_width": 0.09,
+   "moves": "left to right"
+  },
+  "ped_phone": {
+   "on_screen": false,
+   "hidden_from_camera": true
+  }
+ },
+ "static": {
+  "first": [
+   {
+    "what": "road",
+    "share": 0.206,
+    "x_from": 0.03,
+    "x_to": 1.0
+   },
+   {
+    "what": "backdrop",
+    "share": 0.195,
+    "x_from": 0.37,
+    "x_to": 0.81
+   },
+   {
+    "what": "sidewalk",
+    "share": 0.183,
+    "x_from": 0.0,
+    "x_to": 0.99
+   },
+   {
+    "what": "building 2",
+    "share": 0.17,
+    "x_from": 0.02,
+    "x_to": 0.37
+   },
+   {
+    "what": "building 6",
+    "share": 0.105,
+    "x_from": 0.81,
+    "x_to": 1.0
+   },
+   {
+    "what": "markings",
+    "share": 0.041,
+    "x_from": 0.03,
+    "x_to": 1.0
+   },
+   {
+    "what": "signal tl_EW head west_in",
+    "share": 0.022,
+    "x_from": 0.0,
+    "x_to": 0.03
+   },
+   {
+    "what": "signal tl_NS head south_in",
+    "share": 0.013,
+    "x_from": 0.35,
+    "x_to": 0.47
+   },
+   {
+    "what": "signal tl_EW head east_in",
+    "share": 0.008,
+    "x_from": 0.02,
+    "x_to": 0.13
+   }
+  ],
+  "last": [
+   {
+    "what": "sidewalk",
+    "share": 0.208,
+    "x_from": 0.0,
+    "x_to": 1.0
+   },
+   {
+    "what": "road",
+    "share": 0.202,
+    "x_from": 0.03,
+    "x_to": 1.0
+   },
+   {
+    "what": "backdrop",
+    "share": 0.19,
+    "x_from": 0.37,
+    "x_to": 0.81
+   },
+   {
+    "what": "building 2",
+    "share": 0.167,
+    "x_from": 0.01,
+    "x_to": 0.37
+   },
+   {
+    "what": "building 6",
+    "share": 0.104,
+    "x_from": 0.81,
+    "x_to": 1.0
+   },
+   {
+    "what": "markings",
+    "share": 0.039,
+    "x_from": 0.03,
+    "x_to": 1.0
+   },
+   {
+    "what": "signal tl_EW head west_in",
+    "share": 0.018,
+    "x_from": 0.0,
+    "x_to": 0.03
+   },
+   {
+    "what": "signal tl_NS head south_in",
+    "share": 0.012,
+    "x_from": 0.34,
+    "x_to": 0.47
+   },
+   {
+    "what": "signal tl_EW head east_in",
+    "share": 0.008,
+    "x_from": 0.02,
+    "x_to": 0.13
+   }
+  ]
+ }
+}

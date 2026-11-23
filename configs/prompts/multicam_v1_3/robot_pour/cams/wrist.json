@@ -1,0 +1,27 @@
+{
+ "_about": "Camera block, text-only: wrist (on the robot's hand, 1.1 m up, looking south and 28 degrees down along the gripper; moves 0.66 m with the hand between 0.44 s and 5.25 s; 87 degree lens). Placement from facts/wrist.txt: the arm itself is never in view; the pitcher fills the bottom centre (more than half the frame width) the whole clip; the glass is below it, small at first, rises to the top centre (a fifth of the width) during the pour; the stream is in the middle from 2.25 s to 4.81 s.",
+ "temporal_caption": "At 0:00 a camera on the robot's wrist looks forward and down along the gripper: the rim and spout of the light-blue pitcher, held by the gripper, fill the bottom centre of the frame, more than half the frame width; beyond it the wooden table, the pale wall and a strip of the checkered floor. The robot arm itself is never in view. From 0:00 to 0:01 the view moves as the arm carries the pitcher, and the clear glass appears small on the table just beyond the pitcher. From 0:01 to 0:02 the view tips forward as the pitcher tilts, and the glass rises in the frame and grows larger, to the top centre. From just after 0:02 to about 0:05 a thin stream of water runs from the pitcher's lip down the middle of the frame into the glass, and the water rises inside it. From 0:05 to 0:06 the view tips back up as the pitcher is set upright and the stream stops, and from 0:06 to 0:07 the glass slides back down and away to the bottom of the frame.",
+ "aesthetics": {
+  "composition": "The pitcher's rim across the lower half of the frame, the glass beyond it, the table and wall behind"
+ },
+ "cinematography": {
+  "camera_motion": "Moves with the robot's hand: forward, then tips forward and back",
+  "framing": "Close view over the gripper",
+  "camera_angle": "Looking forward and down from the robot's wrist",
+  "depth_of_field": "Deep",
+  "focus": "The pitcher rim and the glass in focus",
+  "lens_focal_length": "Wide-angle wrist camera, about 87 degrees"
+ },
+ "style_medium": "Robot wrist-camera video, photoreal live-action",
+ "artistic_style": "Realistic egocentric robot video",
+ "segments": [
+  {
+   "segment_index": 0,
+   "time_range": "0:00-0:07",
+   "description": "One continuous wrist-camera shot of the pour",
+   "key_changes": "The view tips forward for the pour and back",
+   "camera": "Camera on the robot's wrist, moves with the hand"
+  }
+ ],
+ "transitions": []
+}

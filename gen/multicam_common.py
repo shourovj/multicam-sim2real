@@ -54,10 +54,11 @@ def jobs(exp):
     for scene in exp["scenes"]:
         spec = scene_spec(exp, scene)
         views = [(c["id"], "cam") for c in spec["cameras"]] + [(k, "cut") for k in exp.get("cuts", {}).get(scene, {})]
-        for seed in exp["seeds"]:
+        for seed in sorted({s for c in exp["conditions"] for s in exp.get("seeds_by_condition", {}).get(c, exp["seeds"])}):
             for view, kind in views:
                 for cond, cs in exp["conditions"].items():
-                    out.append(dict(scene=scene, view=view, kind=kind, cond=cond, cond_spec=cs, seed=seed, probe=None))
+                    if seed in exp.get("seeds_by_condition", {}).get(cond, exp["seeds"]):   # optional per-condition seeds
+                        out.append(dict(scene=scene, view=view, kind=kind, cond=cond, cond_spec=cs, seed=seed, probe=None))
     for p in exp.get("probes", []):
         if "cond_spec" in p:                    # a named condition on a few views only: {name, scene, views, seed, cond, cond_spec}
             for view in p["views"]:
@@ -143,6 +144,11 @@ def compose_prompt(exp, j):
     return cap
 
 
+def negative_prompt_path(exp):
+    """The experiment's negative prompt file; transfer runs use the frozen cookbook copy."""
+    return os.path.join(REPO, exp.get("negative_prompt", "configs/prompts/cosmos3_negative_prompt.json"))
+
+
 def recipe(exp, j):
     """Everything that decides a run's output, as hashes. A finished run is current only if this still matches."""
     r = scene_root(exp, j["scene"])
@@ -152,13 +158,13 @@ def recipe(exp, j):
            "source_rgb": [sha256_file(p) for p in src],
            "cut_schedule": sha256_obj(exp["cuts"][j["scene"]][j["view"]]) if j["kind"] == "cut" else None,
            "prompt": sha256_obj(compose_prompt(exp, j)), "cond": sha256_obj(j["cond_spec"]),
-           "negative_prompt": sha256_file(os.path.join(REPO, "configs/prompts/cosmos3_negative_prompt.json")),
+           "negative_prompt": sha256_file(negative_prompt_path(exp)),
            "model": sha256_obj(exp["model"]), "video": sha256_obj(exp["video"]), "sampler": sha256_obj(exp["sampler"]),
            "first_frame": exp["first_frame"], "seed": j["seed"], "input_code_version": INPUT_CODE_VERSION,
            "code": {f: sha256_file(os.path.join(REPO, "gen", f)) for f in ("multicam_inputs.py", "multicam_common.py")}}
-    hints = [h for h in j["cond_spec"] if h != "blur"]
+    hints = {h: ("rgb" if c.get("from") == "rgb" else h) for h, c in j["cond_spec"].items() if h != "blur"}
     if hints:
-        rec["controls"] = {h: [sha256_file(p) for p in control_sources(exp, j, h)] for h in hints}
+        rec["controls"] = {h: [sha256_file(p) for p in control_sources(exp, j, src)] for h, src in hints.items()}
     return rec
 
 

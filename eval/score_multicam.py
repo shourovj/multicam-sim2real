@@ -3,7 +3,7 @@
   $S2R_ROOT/envs/eval/.venv/bin/python eval/score_multicam.py --exp configs/experiments/multicam_v1.yaml [--only scene=...]
 
 For every finished run it reads the generated video and the simulator's instance masks for that view (a camera's
-bundle, or the cut's frames joined by the same schedule) and writes to <scene>/r<rev>/scores/:
+bundle, or the cut's frames joined by the same schedule) and writes to <scene>/r<rev>/scores/<experiment>/:
   colour.csv   per run x object (x shot for cuts): the colour name of the generated pixels inside the object's eroded
                simulator mask, next to the colour name of the simulator render's own pixels there
   lights.csv   per run x signal head (intersection): the lit lamp read from the generated pixels vs the simulator's state,
@@ -204,7 +204,7 @@ def main():
         print(f"[score] {mc.run_id(exp, j)}: colour {sum(r['match'] for r in rows)}/{len(rows)}"
               + (f", lights {sum(l['match'] for l in lights)}/{len(lights)}" if lights else ""))
     for scene, s in by_scene.items():
-        out = os.path.join(mc.scene_root(exp, scene), "scores")
+        out = os.path.join(mc.scene_root(exp, scene), "scores", exp["experiment"])   # one folder per experiment: several share a rev
         os.makedirs(out, exist_ok=True)
         for name, rows in (("colour", s["colour"]), ("lights", s["lights"])):
             if rows:

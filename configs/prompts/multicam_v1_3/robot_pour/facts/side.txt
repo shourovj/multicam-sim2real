@@ -1,0 +1,8 @@
+camera side: 1.15 m up, looks north (tilt -8.1 deg), static
+  robot: 0.0-7.0 s, stays about in place, up to 0.49 of frame width | 0.0 s middle centre (w 0.44); 3.5 s middle centre (w 0.49); 7.0 s middle centre (w 0.45)
+  pitcher: 0.0-7.0 s, stays about in place, up to 0.04 of frame width | 0.0 s middle centre (w 0.04); 3.5 s middle centre (w 0.04); 7.0 s middle centre (w 0.04)
+  glass: 0.0-7.0 s, stays about in place, up to 0.04 of frame width | 0.0 s middle centre (w 0.04); 3.5 s middle centre (w 0.04); 7.0 s middle centre (w 0.04)
+  water_stream: 2.69-4.81 s, stays about in place, up to 0.01 of frame width | 2.69 s middle centre (w 0.0); 3.75 s middle centre (w 0.01); 4.81 s middle centre (w 0.01)
+  water_glass: not on screen
+  static at first frame: walls 45.1% x 0.0-1.0; table 24.5% x 0.0-0.92; cabinet 12.4% x 0.25-0.78; floor 9.3% x 0.0-1.0
+  static at last frame: walls 45.2% x 0.0-1.0; table 24.5% x 0.0-0.92; cabinet 12.2% x 0.25-0.78; floor 9.3% x 0.0-1.0

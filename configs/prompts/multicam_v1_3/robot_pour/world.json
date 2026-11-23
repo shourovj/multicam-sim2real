@@ -1,0 +1,81 @@
+{
+ "_about": "World block for robot_pour, text-only (multicam_v1.3): shared word for word by every view and the cut video. Written by Claude Code (claude-opus-5-5) on 2026-11-20 from multicam_v1's world block, changed so text alone can carry the scene: the room layout from the simulator (5 x 5 m room; table 1.2 x 0.8 m in the middle; robot base on the table's west edge facing east; the glass in front of it; a low wooden cabinet with a counter and two shelves of jars on the north wall; a window on the east wall; sim/world/blender/room.py), one name per object, the pour times (2.25 s to 4.88 s, glass 57 % full), and nothing in the room beyond the simulated objects.",
+ "subjects": [
+  {
+   "description": "The robot arm: a white seven-joint robot arm with black joint accents and a two-finger gripper",
+   "appearance_details": "Smooth white links, a white gripper, its base mounted on the west edge of the table",
+   "relationship": "Holds the pitcher and pours from it into the glass",
+   "action": "Carries the pitcher over the glass, tilts it to pour, tilts it back upright and moves it away",
+   "state_changes": "Moves smoothly and slowly; the wrist tilts forward to about 75 degrees and back",
+   "number_of_subjects": 1,
+   "number_of_arms": 1,
+   "number_of_legs": 0
+  },
+  {
+   "description": "The pitcher: a light-blue glossy ceramic pitcher with a small pouring lip",
+   "appearance_details": "About 16 cm tall, held near its rim by the gripper",
+   "relationship": "Held by the robot arm",
+   "action": "Tipped forward so water pours from its lip, then set upright again",
+   "state_changes": "Upright, tilted, upright",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  },
+  {
+   "description": "The glass: a clear drinking glass standing on the table",
+   "appearance_details": "Plain transparent glass tumbler, about 11 cm tall",
+   "relationship": "Receives the water",
+   "action": "Stands still while it fills",
+   "state_changes": "Empty at first, more than half full of water at the end",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  },
+  {
+   "description": "The water: a thin stream of clear water",
+   "appearance_details": "Transparent, catching the light",
+   "relationship": "Flows from the pitcher's lip into the glass",
+   "action": "Falls in a smooth arc from the lip into the glass",
+   "state_changes": "Starts just after 0:02, steady until about 0:05, then thins and stops",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  }
+ ],
+ "background_setting": "A bright, clean lab room about 5 m square: a wooden table, 1.2 m long and 0.8 m wide, stands in the middle; the robot arm's base is fixed on the table's west edge and the arm reaches east over the table, with the glass on the table in front of it. Along the north wall stands a low brown wooden cabinet with a counter, and above it two wooden shelves of small colourful jars. A window with daylight is set in the east wall. Pale plaster walls, a grey and white checkered tile floor and soft ceiling light panels. The room is otherwise empty: no people and no other objects on the table.",
+ "lighting": {
+  "conditions": "Bright, even indoor light with daylight from the window",
+  "direction": "Soft light from above and from the east window",
+  "shadows": "Soft shadows under the robot arm, the pitcher and the glass",
+  "illumination_effect": "Highlights on the glossy pitcher, the glass and the water"
+ },
+ "aesthetics": {
+  "color_scheme": "White robot arm, light-blue pitcher, clear glass and water, warm wood, pale walls",
+  "mood_atmosphere": "Calm, precise robotics demonstration",
+  "patterns": "Checkered floor tiles"
+ },
+ "context": "Real-world footage of a robot arm pouring water into a glass. Realistic real-world video, natural lighting and motion, not a rendering.",
+ "actions": [
+  {
+   "time": "0:00-0:01",
+   "description": "The robot arm carries the upright pitcher from beside the glass to just above it."
+  },
+  {
+   "time": "0:01-0:02",
+   "description": "The arm tilts the pitcher forward until water reaches the lip."
+  },
+  {
+   "time": "0:02-0:05",
+   "description": "A thin, steady stream of water pours from the pitcher's lip into the glass, which fills to more than half."
+  },
+  {
+   "time": "0:05-0:06",
+   "description": "The arm tilts the pitcher back upright and the stream stops."
+  },
+  {
+   "time": "0:06-0:07",
+   "description": "The arm moves the pitcher away from the glass."
+  }
+ ],
+ "text_and_signage_elements": []
+}

@@ -1,0 +1,27 @@
+{
+ "_about": "Camera block, text-only: side (on a tripod south of the table, 1.15 m up, looking north and slightly down, static, 60 degree lens). Placement from facts/side.txt: the arm's box spans the left and centre (centre x 0.35, half the frame width), the pitcher and glass are small near the centre, the table fills the lower quarter, the cabinet stands behind.",
+ "temporal_caption": "At 0:00 a static side view, just above table height from the south side of the room, looks north across the wooden table, which fills the lower part of the frame. The white robot arm stands on the left of the table and reaches to the right, filling about half the frame width; its gripper holds the light-blue pitcher in the air near the centre of the frame, and the clear empty glass stands on the table just below it. Behind, against the back wall, is the low brown wooden cabinet with its counter and the two shelves of small colourful jars. From 0:00 to 0:01 the arm carries the pitcher over the glass. From 0:01 to 0:02 it tilts the pitcher forward. From just after 0:02 to about 0:05 a thin stream of water falls from the lip into the glass and the water level rises. From 0:05 to 0:06 the pitcher tilts back upright and the stream stops. From 0:06 to 0:07 the arm moves the pitcher away from the glass.",
+ "aesthetics": {
+  "composition": "Table across the lower part of the frame, the robot arm on the left reaching right, the pitcher and glass near the centre, the cabinet behind"
+ },
+ "cinematography": {
+  "camera_motion": "Static",
+  "framing": "Medium-wide shot of the table and robot arm",
+  "camera_angle": "Slightly above table height, from the side",
+  "depth_of_field": "Deep",
+  "focus": "The robot arm, pitcher and glass in focus",
+  "lens_focal_length": "Standard lens, about 60 degrees"
+ },
+ "style_medium": "Lab video on a tripod, photoreal live-action",
+ "artistic_style": "Realistic robotics demonstration video",
+ "segments": [
+  {
+   "segment_index": 0,
+   "time_range": "0:00-0:07",
+   "description": "One continuous side shot of the pour",
+   "key_changes": "The pitcher tilts, pours and tilts back",
+   "camera": "Fixed tripod camera"
+  }
+ ],
+ "transitions": []
+}

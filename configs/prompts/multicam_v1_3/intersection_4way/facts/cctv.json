@@ -1,0 +1,359 @@
+{
+ "_about": "Simulator facts for intersection_4way camera cctv, from gen/camera_facts.py; world.npz sha256 202cf7c8a89b",
+ "camera": {
+  "height_m": [
+   15.0,
+   15.0
+  ],
+  "looks": [
+   "south-west",
+   "south-west"
+  ],
+  "tilt_deg": [
+   -41.1,
+   -41.1
+  ],
+  "path_m": 0.0,
+  "moving_s": null
+ },
+ "objects": {
+  "car_red": {
+   "on_screen": true,
+   "from_s": 1.0,
+   "to_s": 7.0,
+   "frames": 97,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 1.0,
+     "at": "bottom right",
+     "x": 0.96,
+     "y": 0.98,
+     "width": 0.07
+    },
+    {
+     "t_s": 4.0,
+     "at": "top centre",
+     "x": 0.39,
+     "y": 0.32,
+     "width": 0.07
+    },
+    {
+     "t_s": 7.0,
+     "at": "top left",
+     "x": 0.22,
+     "y": 0.1,
+     "width": 0.04
+    }
+   ],
+   "max_width": 0.22,
+   "moves": "right to left"
+  },
+  "car_white": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 3.75,
+   "frames": 61,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "top left",
+     "x": 0.29,
+     "y": 0.27,
+     "width": 0.06
+    },
+    {
+     "t_s": 1.88,
+     "at": "middle centre",
+     "x": 0.45,
+     "y": 0.52,
+     "width": 0.1
+    },
+    {
+     "t_s": 3.75,
+     "at": "bottom right",
+     "x": 0.81,
+     "y": 0.99,
+     "width": 0.04
+    }
+   ],
+   "max_width": 0.19,
+   "moves": "left to right"
+  },
+  "car_ego": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 7.0,
+   "frames": 113,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "bottom left",
+     "x": 0.24,
+     "y": 0.93,
+     "width": 0.18
+    },
+    {
+     "t_s": 3.5,
+     "at": "bottom left",
+     "x": 0.24,
+     "y": 0.93,
+     "width": 0.18
+    },
+    {
+     "t_s": 7.0,
+     "at": "bottom centre",
+     "x": 0.47,
+     "y": 0.73,
+     "width": 0.13
+    }
+   ],
+   "max_width": 0.18,
+   "moves": "left to right"
+  },
+  "car_blue": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 7.0,
+   "frames": 113,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "middle right",
+     "x": 0.67,
+     "y": 0.36,
+     "width": 0.08
+    },
+    {
+     "t_s": 3.5,
+     "at": "middle right",
+     "x": 0.67,
+     "y": 0.36,
+     "width": 0.08
+    },
+    {
+     "t_s": 7.0,
+     "at": "middle centre",
+     "x": 0.58,
+     "y": 0.45,
+     "width": 0.1
+    }
+   ],
+   "max_width": 0.1,
+   "moves": "stays about in place"
+  },
+  "ped_red": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 7.0,
+   "frames": 113,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "bottom centre",
+     "x": 0.5,
+     "y": 0.78,
+     "width": 0.02
+    },
+    {
+     "t_s": 3.5,
+     "at": "middle centre",
+     "x": 0.42,
+     "y": 0.62,
+     "width": 0.02
+    },
+    {
+     "t_s": 7.0,
+     "at": "middle centre",
+     "x": 0.36,
+     "y": 0.53,
+     "width": 0.01
+    }
+   ],
+   "max_width": 0.02,
+   "moves": "stays about in place"
+  },
+  "ped_white": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 7.0,
+   "frames": 113,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "middle centre",
+     "x": 0.35,
+     "y": 0.62,
+     "width": 0.02
+    },
+    {
+     "t_s": 3.5,
+     "at": "bottom centre",
+     "x": 0.43,
+     "y": 0.79,
+     "width": 0.02
+    },
+    {
+     "t_s": 7.0,
+     "at": "bottom centre",
+     "x": 0.48,
+     "y": 0.9,
+     "width": 0.02
+    }
+   ],
+   "max_width": 0.03,
+   "moves": "stays about in place"
+  },
+  "ped_phone": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 7.0,
+   "frames": 113,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "middle left",
+     "x": 0.22,
+     "y": 0.55,
+     "width": 0.02
+    },
+    {
+     "t_s": 3.5,
+     "at": "middle left",
+     "x": 0.22,
+     "y": 0.55,
+     "width": 0.02
+    },
+    {
+     "t_s": 7.0,
+     "at": "middle left",
+     "x": 0.22,
+     "y": 0.55,
+     "width": 0.02
+    }
+   ],
+   "max_width": 0.02,
+   "moves": "stays about in place"
+  }
+ },
+ "static": {
+  "first": [
+   {
+    "what": "sidewalk",
+    "share": 0.445,
+    "x_from": 0.0,
+    "x_to": 1.0
+   },
+   {
+    "what": "road",
+    "share": 0.31,
+    "x_from": 0.0,
+    "x_to": 1.0
+   },
+   {
+    "what": "building 4",
+    "share": 0.065,
+    "x_from": 0.0,
+    "x_to": 0.18
+   },
+   {
+    "what": "building 0",
+    "share": 0.062,
+    "x_from": 0.41,
+    "x_to": 0.69
+   },
+   {
+    "what": "markings",
+    "share": 0.049,
+    "x_from": 0.14,
+    "x_to": 0.97
+   },
+   {
+    "what": "building 2",
+    "share": 0.014,
+    "x_from": 0.91,
+    "x_to": 1.0
+   },
+   {
+    "what": "building 1",
+    "share": 0.013,
+    "x_from": 0.67,
+    "x_to": 0.78
+   },
+   {
+    "what": "backdrop",
+    "share": 0.005,
+    "x_from": 0.01,
+    "x_to": 0.22
+   },
+   {
+    "what": "signal tl_NS head south_in",
+    "share": 0.004,
+    "x_from": 0.52,
+    "x_to": 0.62
+   }
+  ],
+  "last": [
+   {
+    "what": "sidewalk",
+    "share": 0.444,
+    "x_from": 0.0,
+    "x_to": 1.0
+   },
+   {
+    "what": "road",
+    "share": 0.316,
+    "x_from": 0.0,
+    "x_to": 1.0
+   },
+   {
+    "what": "building 4",
+    "share": 0.065,
+    "x_from": 0.0,
+    "x_to": 0.18
+   },
+   {
+    "what": "building 0",
+    "share": 0.062,
+    "x_from": 0.41,
+    "x_to": 0.69
+   },
+   {
+    "what": "markings",
+    "share": 0.045,
+    "x_from": 0.14,
+    "x_to": 0.97
+   },
+   {
+    "what": "building 2",
+    "share": 0.014,
+    "x_from": 0.91,
+    "x_to": 1.0
+   },
+   {
+    "what": "building 1",
+    "share": 0.013,
+    "x_from": 0.67,
+    "x_to": 0.78
+   },
+   {
+    "what": "backdrop",
+    "share": 0.005,
+    "x_from": 0.01,
+    "x_to": 0.22
+   },
+   {
+    "what": "signal tl_NS head south_in",
+    "share": 0.004,
+    "x_from": 0.52,
+    "x_to": 0.62
+   }
+  ]
+ }
+}

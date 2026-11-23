@@ -114,7 +114,8 @@ def main():
             from world_git import git_state
             snap = None
             if os.path.exists(os.path.join(d, "run.log")):
-                m = re.search(r"models--nvidia--Cosmos3-Nano/snapshots/([0-9a-f]{40})", open(os.path.join(d, "run.log"), errors="ignore").read())
+                pat = "models--" + re.escape(exp["model"]["hf"].replace("/", "--")) + r"/snapshots/([0-9a-f]{40})"
+                m = re.search(pat, open(os.path.join(d, "run.log"), errors="ignore").read())
                 snap = m.group(1) if m else None
             row = {**info, "model_snapshot": snap, "model_snapshot_matches_pin": snap == exp["model"]["revision"], "status": "done" if ok else "failed", "returncode": r["proc"].returncode, "gpu": gi, "gpu_name": names.get(gi),
                    "started": r["started"], "finished": time.strftime("%Y-%m-%d %H:%M:%S"), "wall_s": round(time.time() - r["t0"]),
@@ -149,7 +150,8 @@ def main():
                     os.replace(os.path.join(d, "out_video.mp4"), os.path.join(d, f"out_video.stale_{time.strftime('%Y%m%d_%H%M%S')}.mp4"))
                 env = dict(os.environ, EXP=os.path.relpath(exp_path, REPO), SCENE=j["scene"], VIEW=j["view"], COND=j["cond"],
                            SEED=str(j["seed"]), CUDA_VISIBLE_DEVICES=str(pick))
-                proc = subprocess.Popen(["bash", os.path.join(REPO, "gen", "run_cosmos_multicam.sh")], env=env,
+                script = "run_cosmos_simtransfer_multicam.sh" if exp["model"].get("family") == "sim-transfer" else "run_cosmos_multicam.sh"
+                proc = subprocess.Popen(["bash", os.path.join(REPO, "gen", script)], env=env,
                                         stdout=open(os.path.join(d, "launcher.log"), "w"), stderr=subprocess.STDOUT)
                 open(os.path.join(d, ".running"), "w").write(str(proc.pid))
                 running[pick] = {"job": j, "proc": proc, "t0": time.time(), "started": time.strftime("%Y-%m-%d %H:%M:%S"), "peak": 0.0}

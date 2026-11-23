@@ -1,0 +1,27 @@
+{
+ "_about": "Camera block, text-only: cctv (in the room's north-west ceiling corner, 2.6 m up, looking south-east and 27 degrees down, static, 65 degree lens). Placement from facts/cctv.txt: walls fill the upper half and the floor the lower; the table is in the centre (x 0.35-0.63), the arm a fifth of the frame width; the pitcher and glass are tiny; the stream is too thin to see; the cabinet shows at the left edge.",
+ "temporal_caption": "At 0:00 a static security camera high in the north-west corner of the room looks down across the checkered floor at the wooden table in the centre of the frame. The white robot arm on the table holds the light-blue pitcher beside the glass; at this distance the arm is a fifth of the frame width and the pitcher and glass are small. The end of the brown wooden cabinet shows at the left edge, the pale walls fill the upper half of the frame and the floor the lower half; the east window glows on the far wall. From 0:00 to 0:01 the arm moves the pitcher over the glass. From 0:01 to 0:05 it tilts the pitcher and pours; the stream is too thin to see from here. From 0:05 to 0:07 it tilts the pitcher back upright and moves it away.",
+ "aesthetics": {
+  "composition": "The table and robot arm small in the centre of the room, walls above and floor below"
+ },
+ "cinematography": {
+  "camera_motion": "Static",
+  "framing": "Wide shot of the room",
+  "camera_angle": "High angle from a ceiling corner, about 2.6 m up",
+  "depth_of_field": "Deep",
+  "focus": "Everything in focus",
+  "lens_focal_length": "Wide-angle, about 65 degrees"
+ },
+ "style_medium": "CCTV security camera footage, photoreal live-action",
+ "artistic_style": "Realistic surveillance video",
+ "segments": [
+  {
+   "segment_index": 0,
+   "time_range": "0:00-0:07",
+   "description": "One continuous fixed security-camera shot of the room",
+   "key_changes": "The robot arm pours and moves the pitcher away",
+   "camera": "Fixed CCTV camera in a ceiling corner"
+  }
+ ],
+ "transitions": []
+}

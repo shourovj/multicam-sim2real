@@ -1,0 +1,198 @@
+{
+ "_about": "Simulator facts for robot_pour camera wrist, from gen/camera_facts.py; world.npz sha256 fb34071856cc",
+ "camera": {
+  "height_m": [
+   1.12,
+   1.11
+  ],
+  "looks": [
+   "south",
+   "south"
+  ],
+  "tilt_deg": [
+   -28.0,
+   -28.0
+  ],
+  "path_m": 0.66,
+  "moving_s": [
+   0.44,
+   5.25
+  ]
+ },
+ "objects": {
+  "robot": {
+   "on_screen": false,
+   "hidden_from_camera": false
+  },
+  "pitcher": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 7.0,
+   "frames": 113,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "bottom centre",
+     "x": 0.5,
+     "y": 0.8,
+     "width": 0.55
+    },
+    {
+     "t_s": 3.5,
+     "at": "bottom centre",
+     "x": 0.5,
+     "y": 0.8,
+     "width": 0.55
+    },
+    {
+     "t_s": 7.0,
+     "at": "bottom centre",
+     "x": 0.5,
+     "y": 0.8,
+     "width": 0.55
+    }
+   ],
+   "max_width": 0.55,
+   "moves": "stays about in place"
+  },
+  "glass": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 7.0,
+   "frames": 80,
+   "gaps": 2,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "bottom centre",
+     "x": 0.39,
+     "y": 0.67,
+     "width": 0.08
+    },
+    {
+     "t_s": 3.5,
+     "at": "top centre",
+     "x": 0.5,
+     "y": 0.24,
+     "width": 0.21
+    },
+    {
+     "t_s": 7.0,
+     "at": "bottom centre",
+     "x": 0.39,
+     "y": 0.68,
+     "width": 0.07
+    }
+   ],
+   "max_width": 0.24,
+   "moves": "stays about in place"
+  },
+  "water_stream": {
+   "on_screen": true,
+   "from_s": 2.25,
+   "to_s": 4.81,
+   "frames": 42,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 2.25,
+     "at": "middle centre",
+     "x": 0.5,
+     "y": 0.56,
+     "width": 0.04
+    },
+    {
+     "t_s": 3.56,
+     "at": "middle centre",
+     "x": 0.5,
+     "y": 0.43,
+     "width": 0.08
+    },
+    {
+     "t_s": 4.81,
+     "at": "middle centre",
+     "x": 0.5,
+     "y": 0.4,
+     "width": 0.07
+    }
+   ],
+   "max_width": 0.09,
+   "moves": "stays about in place"
+  },
+  "water_glass": {
+   "on_screen": true,
+   "from_s": 1.94,
+   "to_s": 5.25,
+   "frames": 54,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 1.94,
+     "at": "middle centre",
+     "x": 0.5,
+     "y": 0.6,
+     "width": 0.08
+    },
+    {
+     "t_s": 3.62,
+     "at": "top centre",
+     "x": 0.5,
+     "y": 0.28,
+     "width": 0.13
+    },
+    {
+     "t_s": 5.25,
+     "at": "middle centre",
+     "x": 0.5,
+     "y": 0.58,
+     "width": 0.13
+    }
+   ],
+   "max_width": 0.17,
+   "moves": "stays about in place"
+  }
+ },
+ "static": {
+  "first": [
+   {
+    "what": "walls",
+    "share": 0.42,
+    "x_from": 0.0,
+    "x_to": 1.0
+   },
+   {
+    "what": "table",
+    "share": 0.296,
+    "x_from": 0.0,
+    "x_to": 1.0
+   },
+   {
+    "what": "floor",
+    "share": 0.134,
+    "x_from": 0.0,
+    "x_to": 1.0
+   }
+  ],
+  "last": [
+   {
+    "what": "walls",
+    "share": 0.419,
+    "x_from": 0.0,
+    "x_to": 1.0
+   },
+   {
+    "what": "table",
+    "share": 0.295,
+    "x_from": 0.0,
+    "x_to": 1.0
+   },
+   {
+    "what": "floor",
+    "share": 0.137,
+    "x_from": 0.0,
+    "x_to": 1.0
+   }
+  ]
+ }
+}

@@ -1,0 +1,129 @@
+{
+ "_about": "World block for intersection_4way, text-only (multicam_v1.3): shared word for word by every view and the cut video. Written by Claude Code (claude-opus-5-5) on 2026-11-20 from multicam_v1's world block, changed so text alone can carry the scene: each corner's two buildings are named with the height and wall the simulator gave them (building k = corner SW 0-1, NW 2-3, SE 4-5, NE 6-7; walls brick / pale tiles / plaster, sim/world/blender/street.py, seed 3); one name per object; the simulator's event times (world.json events: N-S amber 3.0 s, red 4.0 s, E-W green 4.5 s, the waiting cars move at 4.62 s); and no traffic or people beyond the simulated ones.",
+ "subjects": [
+  {
+   "description": "The red sedan: a red four-door sedan",
+   "appearance_details": "Glossy red paint, dark tinted windows, silver five-spoke wheels",
+   "relationship": "Has the green light",
+   "action": "Drives south straight through the intersection and leaves",
+   "state_changes": "Moves at a steady city speed",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  },
+  {
+   "description": "The white SUV: a white sport utility vehicle",
+   "appearance_details": "White paint, dark windows, black bumpers",
+   "relationship": "Has the green light, opposite direction to the red sedan",
+   "action": "Drives north straight through the intersection and leaves",
+   "state_changes": "Moves at a steady city speed",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  },
+  {
+   "description": "The dark grey hatchback: a dark grey five-door hatchback",
+   "appearance_details": "Charcoal grey paint, dark windows",
+   "relationship": "Waits at the red light on the east side, behind the east crosswalk, facing west",
+   "action": "Waits, then pulls forward slowly when its light turns green",
+   "state_changes": "Stopped until just after 0:04, then accelerating gently",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  },
+  {
+   "description": "The blue sedan: a dark blue four-door sedan",
+   "appearance_details": "Deep blue paint, dark windows",
+   "relationship": "Waits at the red light on the west side, facing the dark grey hatchback across the intersection",
+   "action": "Waits, then drives forward when its light turns green",
+   "state_changes": "Stopped until just after 0:04, then accelerating gently",
+   "number_of_subjects": 1,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  },
+  {
+   "description": "The pedestrian in the red jacket",
+   "clothing": "Red jacket, dark trousers, dark shoes",
+   "relationship": "Crosses in front of the waiting dark grey hatchback",
+   "action": "Walks south across the zebra crosswalk on the east side of the intersection",
+   "pose": "Walking",
+   "state_changes": "Steps up onto the south-east corner at about 0:05",
+   "gender": "Unknown",
+   "age": "Adult",
+   "number_of_subjects": 1,
+   "number_of_arms": 2,
+   "number_of_legs": 2
+  },
+  {
+   "description": "The pedestrian in the white shirt",
+   "clothing": "White long-sleeve shirt, blue jeans, white sneakers",
+   "relationship": "Crosses the same crosswalk in the other direction",
+   "action": "Walks north across the zebra crosswalk on the east side of the intersection",
+   "pose": "Walking",
+   "state_changes": "Steps up onto the north-east corner at about 0:05",
+   "gender": "Unknown",
+   "age": "Adult",
+   "number_of_subjects": 1,
+   "number_of_arms": 2,
+   "number_of_legs": 2
+  },
+  {
+   "description": "The pedestrian in the green hoodie",
+   "clothing": "Green hoodie, khaki trousers",
+   "relationship": "A bystander filming the intersection",
+   "action": "Stands still on the south-east corner holding a phone up in both hands, filming north",
+   "pose": "Standing, both hands raised to chest height holding a phone",
+   "state_changes": "No significant change.",
+   "gender": "Unknown",
+   "age": "Adult",
+   "number_of_subjects": 1,
+   "number_of_arms": 2,
+   "number_of_legs": 2
+  },
+  {
+   "description": "The traffic lights: black three-lamp signal heads on metal poles at the corners, one facing each approach",
+   "appearance_details": "Red lamp on top, amber in the middle, green at the bottom",
+   "action": "The north-south lights are green, turn amber at 0:03 and red at 0:04; the east-west lights are red and turn green just after 0:04",
+   "state_changes": "One light change on each road",
+   "number_of_subjects": 4,
+   "number_of_arms": 0,
+   "number_of_legs": 0
+  }
+ ],
+ "background_setting": "A four-way city intersection on a clear afternoon, one lane each way: grey asphalt, white zebra crosswalks on all four sides, white stop lines and double yellow centre lines; concrete sidewalks with two old-style black street lamps, a red fire hydrant, a metal trash can and a grey utility box. Each corner has two buildings, the same in every view. North-east corner: a seven-storey red-brick building with a small security camera high on its corner, and beside it to the east a five-storey building faced in pale tiles. North-west corner: a seven-storey building in light grey-blue plaster, and beside it to the west a six-storey red-brick building. South-west corner: a five-storey red-brick building, and beside it to the west a five-storey building faced in pale tiles. South-east corner: a five-storey building faced in pale tiles, and beside it to the east a four-storey building in pale pink plaster. Every building has shop windows on the ground floor and rows of windows above. The four roads run straight out of the intersection with more buildings in the distance. There are no other vehicles, no parked cars, no cyclists and no other people: only the four cars and three pedestrians described.",
+ "lighting": {
+  "conditions": "Natural daylight, clear afternoon",
+  "direction": "Sun high in the south-east",
+  "shadows": "Soft-edged shadows of the cars, people and poles on the road",
+  "illumination_effect": "Lit traffic lamps glowing red, amber or green"
+ },
+ "aesthetics": {
+  "color_scheme": "Grey asphalt, white road markings, red-brick, pale-tile, grey-blue and pale pink buildings; one red car, one white car, one dark grey car and one blue car",
+  "mood_atmosphere": "A quiet moment at a city intersection",
+  "patterns": "Zebra crosswalk stripes"
+ },
+ "context": "Real-world footage of a signalised intersection with light traffic: exactly four cars and three pedestrians. Realistic real-world video, natural lighting and motion, not a rendering.",
+ "actions": [
+  {
+   "time": "0:00-0:03",
+   "description": "The north-south lights are green. The red sedan drives south and the white SUV drives north through the intersection, passing each other in the middle at about 0:02. The dark grey hatchback and the blue sedan wait at red lights on the east and west sides."
+  },
+  {
+   "time": "0:00-0:05",
+   "description": "The pedestrian in the red jacket walks south and the pedestrian in the white shirt walks north across the zebra crosswalk on the east side, just in front of the waiting dark grey hatchback."
+  },
+  {
+   "time": "0:03-0:04",
+   "description": "The north-south lights turn amber at 0:03, then red at 0:04."
+  },
+  {
+   "time": "0:04-0:07",
+   "description": "Just after 0:04 the east-west lights turn green. The dark grey hatchback and the blue sedan pull away slowly and cross their stop lines at about 0:06."
+  },
+  {
+   "time": "0:00-0:07",
+   "description": "The pedestrian in the green hoodie stands on the south-east corner filming north with a phone."
+  }
+ ],
+ "text_and_signage_elements": []
+}

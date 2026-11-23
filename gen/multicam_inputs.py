@@ -23,7 +23,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 import multicam_common as mc  # noqa: E402
 from world.controls import CONTROLS, read_mp4  # noqa: E402
 
-NEG = os.path.join(mc.REPO, "configs/prompts/cosmos3_negative_prompt.json")   # frozen copy of the cookbook negative prompt
 
 
 def write_mp4(path, frames, fps, crf=12):
@@ -95,7 +94,7 @@ def prepare(exp_path, scene, view, cond, seed):
     os.makedirs(inp, exist_ok=True)
     cap = mc.compose_prompt(exp, j)
     json.dump(cap, open(os.path.join(inp, "prompt.json"), "w"), indent=1)
-    hints = {}
+    hints, vision = {}, None
     for hint, cfg in j["cond_spec"].items():
         if hint == "blur":                     # built here with Cosmos's own blur code, from the render
             ctrl = os.path.join(inp, f"control_{cond}.mp4")
@@ -103,6 +102,12 @@ def prepare(exp_path, scene, view, cond, seed):
                 rgb = np.load(mc.source_rgb(exp, j))
                 assert len(rgb) == exp["video"]["num_frames"], f"{view}: {len(rgb)} frames, expected {exp['video']['num_frames']}"
                 write_mp4(ctrl, blur_control(rgb, cfg.get("preset_blur_strength", "none")), exp["video"]["fps"])
+        elif hint == "edge" and cfg.get("from") == "rgb":   # Cosmos computes Canny itself from the render, after resizing
+            vision = mc.control_path(exp, j, "rgb")
+            assert os.path.exists(vision), f"missing {vision}; export the bundle again (sim/export_world.py)"
+            hints[hint] = {"preset_edge_threshold": cfg.get("preset_edge_threshold", "medium"),
+                           **({"weight": cfg["weight"]} if "weight" in cfg else {})}
+            continue
         elif hint in ("depth", "seg", "edge"):  # exact simulator controls, exported with the bundle (sim/world/controls.py)
             ctrl = mc.control_path(exp, j, hint)
             assert os.path.exists(ctrl), f"missing {ctrl}; export the bundle again (sim/export_world.py)"
@@ -112,17 +117,39 @@ def prepare(exp_path, scene, view, cond, seed):
     out = mc.run_dir(exp, j)
     os.makedirs(out, exist_ok=True)
     json.dump(cap, open(os.path.join(out, "prompt.json"), "w"), indent=1)
-    open(os.path.join(out, "negative_prompt.json"), "w").write(open(NEG).read())
+    neg = mc.negative_prompt_path(exp)          # frozen copy in the repo (transfer: the cookbook's; text2video: the default)
+    open(os.path.join(out, "negative_prompt.json"), "w").write(open(neg).read())
     v, s = exp["video"], exp["sampler"]
-    req = dict(name="out", seed=int(seed), resolution=v["resolution"], aspect_ratio=v["aspect_ratio"], fps=v["fps"], num_frames=v["num_frames"],
-               model_mode="video2video", shift=s["shift"], num_steps=s["num_steps"], guidance=s["guidance"],
-               control_guidance=s["control_guidance"], num_video_frames_per_chunk=121, num_conditional_frames=1,
-               num_first_chunk_conditional_frames=0, share_vision_temporal_positions=True, negative_metadata_mode="none",
-               negative_prompt_keep_metadata=False, negative_prompt_file="negative_prompt.json", emphasize_control_in_prompt=False,
-               prompt_path="prompt.json", **hints)
+    if exp.get("mode") == "text2video":
+        # Text only: no control, no first frame. Sampler = Nano's text-to-video defaults, written out so the request
+        # says what ran. The negative prompt is passed as the same compact JSON string the defaults would load.
+        assert not hints and vision is None, f"{cond}: a text2video run takes no control"
+        req = dict(name="out", seed=int(seed), resolution=v["resolution"], aspect_ratio=v["aspect_ratio"], fps=v["fps"],
+                   num_frames=v["num_frames"], model_mode="text2video", num_steps=s["num_steps"], guidance=s["guidance"],
+                   shift=s["shift"], negative_prompt=json.dumps(json.load(open(neg))), prompt_path="prompt.json")
+    elif exp["model"].get("family") == "sim-transfer":
+        # Cosmos3-Nano-Sim-Transfer: the rest comes from NVIDIA's defaults file (sample_args.json), passed by the launcher.
+        # One control; guidance 1 means no classifier-free guidance, so the negative prompt is unused (defaults: "").
+        assert len(hints) == 1, f"{cond}: Sim-Transfer takes exactly one control"
+        req = dict(name="out", seed=int(seed), resolution=v["resolution"], aspect_ratio=v["aspect_ratio"], fps=v["fps"],
+                   num_frames=v["num_frames"], max_frames=v["num_frames"], model_mode="video2video", num_steps=s["num_steps"],
+                   guidance=s["guidance"], control_guidance=s["control_guidance"], shift=s["shift"],
+                   num_first_chunk_conditional_frames=0, num_conditional_frames=0, transfer_resize_mode="direct_resize",
+                   transfer_output_size="model", prompt_path="prompt.json", **hints)
+    else:
+        req = dict(name="out", seed=int(seed), resolution=v["resolution"], aspect_ratio=v["aspect_ratio"], fps=v["fps"], num_frames=v["num_frames"],
+                   model_mode="video2video", shift=s["shift"], num_steps=s["num_steps"], guidance=s["guidance"],
+                   control_guidance=s["control_guidance"], num_video_frames_per_chunk=121, num_conditional_frames=1,
+                   num_first_chunk_conditional_frames=0, share_vision_temporal_positions=True, negative_metadata_mode="none",
+                   negative_prompt_keep_metadata=False, negative_prompt_file="negative_prompt.json", emphasize_control_in_prompt=False,
+                   prompt_path="prompt.json", **hints)
+    if vision:
+        req["vision_path"] = vision      # source of the edge map only; with no conditional frames it is not a first frame
     json.dump(req, open(os.path.join(out, "request.json"), "w"), indent=1)
     files = {"prompt.json": mc.sha256_file(os.path.join(out, "prompt.json")), "request.json": mc.sha256_file(os.path.join(out, "request.json"))}
-    files.update({f"control_{h}": mc.sha256_file(c["control_path"]) for h, c in hints.items()})
+    files.update({f"control_{h}": mc.sha256_file(c["control_path"]) for h, c in hints.items() if "control_path" in c})
+    if vision:
+        files["vision_rgb"] = mc.sha256_file(vision)
     json.dump({"run_id": mc.run_id(exp, j), "job": {k: j[k] for k in ("scene", "view", "kind", "cond", "cond_spec", "seed", "probe")},
                "recipe": mc.recipe(exp, j), "files": files}, open(os.path.join(out, "inputs.json"), "w"), indent=1)
     print(f"[multicam_inputs] {mc.run_id(exp, j)} -> {out}")

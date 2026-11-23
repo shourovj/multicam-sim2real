@@ -1,0 +1,27 @@
+{
+ "_about": "Camera block, text-only: phone (held by the pedestrian in the green hoodie on the south-east corner, 1.7 m up, looking north along the east crosswalk, slight hand shake, 70 degree lens). Placement from facts/phone.txt. multicam_v1 had the two crossing pedestrians the wrong way round for this camera; the facts fix it: the pedestrian in the red jacket comes toward the camera, the one in white walks away.",
+ "temporal_caption": "At 0:00 a handheld phone video, at eye level from the south-east corner, looks north along the zebra crosswalk on the east side of the intersection. On the left rises the north-west corner's tall grey-blue plaster building and on the right the north-east corner's tall red-brick building; between them the road runs north into the distance. The dark grey hatchback waits in the middle right, side-on, behind the crosswalk. On the crosswalk the pedestrian in the white shirt walks away from the camera and the pedestrian in the red jacket walks toward it. From 0:00 to 0:03 the red sedan comes down the road from the distance, grows larger, and passes out of the frame on the left. From 0:02 the white SUV enters from the left and drives away up the road, growing smaller in the middle of the frame. The pedestrian in the red jacket comes closer and walks out of the frame at the bottom left at about 0:06, while the pedestrian in the white shirt grows small in the distance. Just after 0:04 the dark grey hatchback pulls forward from the middle right into the middle of the frame, crossing in front of the camera.",
+ "aesthetics": {
+  "composition": "Eye-level view up the crosswalk and the road; tall buildings on both sides"
+ },
+ "cinematography": {
+  "camera_motion": "Handheld with slight natural shake, no panning",
+  "framing": "Medium-wide shot",
+  "camera_angle": "Eye level from a pedestrian on the sidewalk, about 1.7 m up",
+  "depth_of_field": "Deep",
+  "focus": "Everything in focus",
+  "lens_focal_length": "Smartphone main camera, about 70 degrees"
+ },
+ "style_medium": "Smartphone video, photoreal live-action",
+ "artistic_style": "Realistic handheld phone video",
+ "segments": [
+  {
+   "segment_index": 0,
+   "time_range": "0:00-0:07",
+   "description": "One continuous handheld phone shot from the corner",
+   "key_changes": "Pedestrians cross close by; cars pass; the waiting car drives off",
+   "camera": "Handheld phone, slight shake"
+  }
+ ],
+ "transitions": []
+}

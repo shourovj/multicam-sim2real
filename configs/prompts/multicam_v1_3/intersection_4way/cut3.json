@@ -1,0 +1,44 @@
+{
+ "_about": "Cut block, text-only: cut3 (output frames 0-36 cctv, 37-76 dashcam, 77-112 phone; hard cuts at 2.31 s and 4.81 s). One clock: each shot shows the world at the same times it shows in its own camera's video. Placement from facts/<camera>.txt within each shot's time range.",
+ "temporal_caption": "From 0:00 to 0:02 a static security camera, 15 m up on the north-east red-brick building, looks steeply down over the whole intersection: the dark grey hatchback waits at the bottom left, the blue sedan in the middle right, the pedestrian in the green hoodie stands on the corner in the middle left and the two crossing pedestrians are small near the bottom centre; the white SUV comes down through the middle from the top left and the red sedan enters at the bottom right. At 0:02 a hard cut to the dashcam inside the waiting dark grey hatchback, looking west with its hood along the bottom of the frame, the red-brick building on the left and the grey-blue plaster building on the right: the white SUV crosses close in front from left to right and the red sedan further away from right to left, the two pedestrians walk apart across the crosswalk ahead, the north-south lights turn amber at 0:03 and red at 0:04, and just after 0:04 the light ahead turns green. At 0:05 a hard cut to the handheld phone of the pedestrian in the green hoodie on the south-east corner, looking north between the grey-blue plaster building and the red-brick building: the pedestrian in the red jacket walks toward the camera and out at the bottom left, the pedestrian in white is small in the distance, the white SUV is far up the road, and the dark grey hatchback pulls forward from the right into the middle of the frame.",
+ "aesthetics": {
+  "composition": "Three framings of the same intersection: high wide, in-car forward, eye-level handheld"
+ },
+ "cinematography": {
+  "camera_motion": "Three shots joined by hard cuts: a fixed security camera, a dashcam in a waiting car, a handheld phone",
+  "framing": "Wide, then wide forward, then medium-wide",
+  "camera_angle": "High angle 15 m up, then eye level from a car, then eye level from the sidewalk",
+  "depth_of_field": "Deep",
+  "focus": "Everything in focus",
+  "lens_focal_length": "Wide-angle in all three"
+ },
+ "style_medium": "Real-world footage edited from three cameras: CCTV, dashcam and a phone; photoreal live-action",
+ "artistic_style": "Realistic multi-camera edit of one traffic scene",
+ "segments": [
+  {
+   "segment_index": 0,
+   "time_range": "0:00-0:02",
+   "description": "CCTV view from 15 m up: the north-south cars come through on green; pedestrians crossing",
+   "key_changes": "The white SUV and the red sedan enter the intersection",
+   "camera": "Fixed CCTV camera high on the north-east building's corner"
+  },
+  {
+   "segment_index": 1,
+   "time_range": "0:02-0:05",
+   "description": "Dashcam view looking west: cars cross in front; the lights change; the light ahead turns green",
+   "key_changes": "Light change",
+   "camera": "Dashcam in the waiting dark grey hatchback"
+  },
+  {
+   "segment_index": 2,
+   "time_range": "0:05-0:07",
+   "description": "Phone view looking north: the waiting car drives off",
+   "key_changes": "The dark grey hatchback moves",
+   "camera": "Bystander's handheld phone on the south-east corner"
+  }
+ ],
+ "transitions": [
+  "Hard cut at 0:02 from the CCTV view to the dashcam view",
+  "Hard cut at 0:05 from the dashcam view to the phone view"
+ ]
+}

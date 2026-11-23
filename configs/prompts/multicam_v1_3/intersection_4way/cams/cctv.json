@@ -1,0 +1,27 @@
+{
+ "_about": "Camera block, text-only: cctv (on the north-east building's corner, 15 m up, looking south-west and 41 degrees down, static, 90 degree lens). Placement from facts/cctv.txt (frame thirds and widths of each object's box at entry, middle and exit).",
+ "temporal_caption": "At 0:00 a static security camera, 15 m up on the corner of the north-east red-brick building, looks south-west and steeply down over the whole intersection, which crosses the frame diagonally. On the left edge stands the south-east corner's pale-tiled building, in the top middle the south-west corner's red-brick building with its pale-tiled neighbour to its right, and at the right edge part of the north-west corner's grey-blue plaster building. The dark grey hatchback waits at the bottom left, the largest car in the frame; the blue sedan waits in the middle right; the white SUV is small at the top left, coming up the road; the two pedestrians are small figures on the crosswalk near the bottom centre, and the pedestrian in the green hoodie stands still on the corner in the middle left. At 0:01 the red sedan enters at the bottom right and drives up through the middle of the frame while the white SUV comes down through the middle; they pass each other in the centre at about 0:02, and the white SUV leaves at the bottom right just before 0:04. The red sedan grows smaller toward the top and is small at the top left by 0:07. The traffic light in the middle of the frame turns amber at 0:03 and red at 0:04. Just after 0:04 the dark grey hatchback pulls forward from the bottom left toward the bottom centre and the blue sedan starts moving, while the two pedestrians reach the sidewalks.",
+ "aesthetics": {
+  "composition": "High wide view of the whole intersection, roads crossing diagonally; buildings at the left edge, top middle and right edge"
+ },
+ "cinematography": {
+  "camera_motion": "Static",
+  "framing": "Wide shot",
+  "camera_angle": "High angle looking down about 40 degrees, from a security camera on a building corner 15 m up",
+  "depth_of_field": "Deep",
+  "focus": "Everything in focus",
+  "lens_focal_length": "Wide-angle, about 90 degrees"
+ },
+ "style_medium": "CCTV security camera footage, photoreal live-action",
+ "artistic_style": "Realistic surveillance video",
+ "segments": [
+  {
+   "segment_index": 0,
+   "time_range": "0:00-0:07",
+   "description": "One continuous fixed security-camera shot of the intersection",
+   "key_changes": "The north-south cars cross; the lights change; the east-west cars start",
+   "camera": "Fixed CCTV camera, no motion"
+  }
+ ],
+ "transitions": []
+}

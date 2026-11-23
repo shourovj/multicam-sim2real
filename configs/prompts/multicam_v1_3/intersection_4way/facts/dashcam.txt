@@ -1,0 +1,10 @@
+camera dashcam: 1.34 m up, looks west (tilt 4.0 deg), moves 7.73 m between 4.5 s and 7.0 s, ends looking west
+  car_red: 0.62-4.25 s, right to left, up to 0.2 of frame width, out of view 1x in between | 0.62 s middle right (w 0.03); 2.38 s middle centre (w 0.07); 4.25 s middle left (w 0.03)
+  car_white: 0.81-4.0 s, left to right, up to 0.27 of frame width | 0.81 s middle left (w 0.03); 2.44 s middle centre (w 0.23); 4.0 s middle right (w 0.03)
+  car_ego: 0.0-7.0 s, stays about in place, up to 1.0 of frame width | 0.0 s bottom centre (w 1.0); 3.5 s bottom centre (w 1.0); 7.0 s bottom centre (w 1.0)
+  car_blue: 0.0-7.0 s, stays about in place, up to 0.2 of frame width, out of view 1x in between | 0.0 s middle centre (w 0.04); 3.81 s middle centre (w 0.04); 7.0 s middle left (w 0.2)
+  ped_red: 0.0-5.75 s, right to left, up to 0.07 of frame width | 0.0 s middle centre (w 0.06); 2.88 s middle centre (w 0.03); 5.75 s middle left (w 0.02)
+  ped_white: 0.0-5.94 s, left to right, up to 0.1 of frame width | 0.0 s middle left (w 0.1); 3.0 s middle centre (w 0.08); 5.94 s middle right (w 0.02)
+  ped_phone: not on screen
+  static at first frame: building 2 17.9% x 0.59-0.93; building 0 16.8% x 0.0-0.36; road 11.7% x 0.0-0.98; sidewalk 10.5% x 0.0-1.0; backdrop 5.7% x 0.0-0.99; markings 4.4% x 0.0-0.97; signal tl_EW head west_in 1.7% x 0.16-0.32; building 1 1.2% x 0.36-0.4; signal tl_NS head south_in 1.1% x 0.6-0.64; building 3 1.0% x 0.57-0.6; prop metal_trash_can 0.7% x 0.89-1.0; prop street_lamp_01 0.6% x 0.01-0.08
+  static at last frame: building 2 22.8% x 0.62-1.0; building 0 17.3% x 0.0-0.33; road 15.9% x 0.0-1.0; sidewalk 5.3% x 0.0-1.0; backdrop 4.9% x 0.38-0.59; markings 3.2% x 0.0-1.0; building 1 2.1% x 0.32-0.38; signal tl_NS head north_in 2.0% x 0.02-0.21; building 3 1.3% x 0.58-0.62; signal tl_EW head east_in 1.2% x 0.49-0.63

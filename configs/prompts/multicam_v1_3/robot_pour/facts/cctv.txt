@@ -1,0 +1,8 @@
+camera cctv: 2.6 m up, looks south-east (tilt -27.0 deg), static
+  robot: 0.0-7.0 s, stays about in place, up to 0.19 of frame width | 0.0 s middle centre (w 0.19); 3.5 s middle centre (w 0.15); 7.0 s middle centre (w 0.19)
+  pitcher: 0.0-7.0 s, stays about in place, up to 0.03 of frame width, out of view 3x in between | 0.0 s middle centre (w 0.01); 3.44 s middle centre (w 0.03); 7.0 s middle centre (w 0.02)
+  glass: 0.0-7.0 s, stays about in place, up to 0.01 of frame width | 0.0 s middle centre (w 0.01); 3.5 s middle centre (w 0.01); 7.0 s middle centre (w 0.01)
+  water_stream: not on screen
+  water_glass: not on screen
+  static at first frame: walls 52.5% x 0.0-1.0; floor 39.4% x 0.02-1.0; table 4.2% x 0.35-0.63; cabinet 2.4% x 0.0-0.13
+  static at last frame: walls 52.5% x 0.0-1.0; floor 39.4% x 0.02-1.0; table 4.2% x 0.35-0.63; cabinet 2.4% x 0.0-0.13

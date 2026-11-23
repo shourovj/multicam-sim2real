@@ -1,0 +1,179 @@
+{
+ "_about": "Simulator facts for robot_pour camera cctv, from gen/camera_facts.py; world.npz sha256 fb34071856cc",
+ "camera": {
+  "height_m": [
+   2.6,
+   2.6
+  ],
+  "looks": [
+   "south-east",
+   "south-east"
+  ],
+  "tilt_deg": [
+   -27.0,
+   -27.0
+  ],
+  "path_m": 0.0,
+  "moving_s": null
+ },
+ "objects": {
+  "robot": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 7.0,
+   "frames": 113,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "middle centre",
+     "x": 0.49,
+     "y": 0.51,
+     "width": 0.19
+    },
+    {
+     "t_s": 3.5,
+     "at": "middle centre",
+     "x": 0.51,
+     "y": 0.48,
+     "width": 0.15
+    },
+    {
+     "t_s": 7.0,
+     "at": "middle centre",
+     "x": 0.49,
+     "y": 0.51,
+     "width": 0.19
+    }
+   ],
+   "max_width": 0.19,
+   "moves": "stays about in place"
+  },
+  "pitcher": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 7.0,
+   "frames": 72,
+   "gaps": 3,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "middle centre",
+     "x": 0.44,
+     "y": 0.48,
+     "width": 0.01
+    },
+    {
+     "t_s": 3.44,
+     "at": "middle centre",
+     "x": 0.45,
+     "y": 0.48,
+     "width": 0.03
+    },
+    {
+     "t_s": 7.0,
+     "at": "middle centre",
+     "x": 0.45,
+     "y": 0.48,
+     "width": 0.02
+    }
+   ],
+   "max_width": 0.03,
+   "moves": "stays about in place"
+  },
+  "glass": {
+   "on_screen": true,
+   "from_s": 0.0,
+   "to_s": 7.0,
+   "frames": 113,
+   "gaps": 0,
+   "where": [
+    {
+     "t_s": 0.0,
+     "at": "middle centre",
+     "x": 0.48,
+     "y": 0.5,
+     "width": 0.01
+    },
+    {
+     "t_s": 3.5,
+     "at": "middle centre",
+     "x": 0.48,
+     "y": 0.5,
+     "width": 0.01
+    },
+    {
+     "t_s": 7.0,
+     "at": "middle centre",
+     "x": 0.48,
+     "y": 0.5,
+     "width": 0.01
+    }
+   ],
+   "max_width": 0.01,
+   "moves": "stays about in place"
+  },
+  "water_stream": {
+   "on_screen": false,
+   "hidden_from_camera": false
+  },
+  "water_glass": {
+   "on_screen": false,
+   "hidden_from_camera": false
+  }
+ },
+ "static": {
+  "first": [
+   {
+    "what": "walls",
+    "share": 0.525,
+    "x_from": 0.0,
+    "x_to": 1.0
+   },
+   {
+    "what": "floor",
+    "share": 0.394,
+    "x_from": 0.02,
+    "x_to": 1.0
+   },
+   {
+    "what": "table",
+    "share": 0.042,
+    "x_from": 0.35,
+    "x_to": 0.63
+   },
+   {
+    "what": "cabinet",
+    "share": 0.024,
+    "x_from": 0.0,
+    "x_to": 0.13
+   }
+  ],
+  "last": [
+   {
+    "what": "walls",
+    "share": 0.525,
+    "x_from": 0.0,
+    "x_to": 1.0
+   },
+   {
+    "what": "floor",
+    "share": 0.394,
+    "x_from": 0.02,
+    "x_to": 1.0
+   },
+   {
+    "what": "table",
+    "share": 0.042,
+    "x_from": 0.35,
+    "x_to": 0.63
+   },
+   {
+    "what": "cabinet",
+    "share": 0.024,
+    "x_from": 0.0,
+    "x_to": 0.13
+   }
+  ]
+ }
+}
