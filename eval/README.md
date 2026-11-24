@@ -79,10 +79,10 @@ Measured on 2026-11-23, camera views averaged, seed 0 (one seed: an illustration
 
 | Scene | Clips | `depth` | `mask_iou` | `track` | `object_colour` | `surface_colour` |
 | --- | --- | --- | --- | --- | --- | --- |
-| intersection_4way | Textured render | 0.83 | 0.85 | 0.63 | 0.92 | 0.95 |
-| intersection_4way | Sim-Transfer, depth control | 0.87 | 0.78 | 0.59 | 0.36 | 0.59 |
-| robot_pour | Textured render | 0.88 | 0.89 | 0.73 | 0.95 | 0.92 |
-| robot_pour | Sim-Transfer, depth control | 0.88 | 0.84 | 0.77 | 0.38 | 0.48 |
+| intersection_4way | Textured render | 0.83 | 0.85 | 0.63 | 0.92 | 0.97 |
+| intersection_4way | Sim-Transfer, depth control | 0.87 | 0.78 | 0.59 | 0.38 | 0.62 |
+| robot_pour | Textured render | 0.88 | 0.89 | 0.73 | 0.95 | 0.91 |
+| robot_pour | Sim-Transfer, depth control | 0.88 | 0.84 | 0.77 | 0.37 | 0.54 |
 
 Per camera the generated clips sit at the render's level; across cameras they fall far below it.
 

@@ -470,7 +470,8 @@ This writes `configs/prompts/multicam_v1_3/<scene>/facts/<camera>.{json,txt}`. T
 | `surface_colour` | Is the same surface point the same colour in every camera? | Depth and camera poses, which give exact pixel pairs | Colour at the pairs |
 
 - **Eval2, per camera.** `eval2` is the harmonic mean of `depth`, `mask_iou` and `track`, each averaged over the cameras first.
-- **Eval3, across cameras.** `object_colour` and `surface_colour` compare the separate camera views of one condition and seed.
+- **Eval3, across cameras.** `object_colour` and `surface_colour` compare the separate camera views of one condition and seed. They count only objects and surfaces that are where the simulator puts them in both cameras, and report that share (`object_in_place`, `surface_in_place`).
+- **One table across experiments.** [`eval/summarize.py`](eval/summarize.py) lists every model and condition from the densest control to text only.
 - **Ceilings.** `--on-render` scores the simulator's own render with the same readers. Read the generated clips' scores against it: the readers are not perfect even on a clip that follows the simulator exactly.
 
 Also in the repo: [`eval/score_multicam.py`](eval/score_multicam.py), the earlier scorer, names each object's colour and reads the traffic-light state per frame (`colour.csv`, `lights.csv`). The light check is specific to scenes with signals and belongs with text → sim.
