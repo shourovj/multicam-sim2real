@@ -1,0 +1,13 @@
+control,model,condition,scenes x seeds,depth,mask_iou,track,eval2,object_colour,object_in_place,surface_colour,surface_in_place
+"(reference: one world, by construction)",simulator render,render,2,0.856,0.868,0.679,0.791,0.935,0.987,0.938,0.783
+the render itself,cosmos3-nano,V,4,0.844,0.851,0.642,0.765,0.859,0.983,0.94,0.706
+"the render, blurred (high)",cosmos3-nano,V_blur-high,1,0.967,0.659,0.703,0.755,,,,
+"the render, blurred (low)",cosmos3-nano,V_blur-low,1,0.97,0.747,0.751,0.811,,,,
+"the render, blurred (medium)",cosmos3-nano,V_blur-medium,1,0.954,0.7,0.729,0.779,,,,
+"the render, blurred (very_low)",cosmos3-nano,V_blur-very_low,1,0.965,0.734,0.762,0.808,,,,
+depth + seg,cosmos3-nano,G,4,0.758,0.58,0.563,0.621,0.442,0.614,0.388,0.598
+depth,cosmos3-nano-sim-transfer,D,4,0.872,0.802,0.672,0.771,0.406,0.914,0.606,0.789
+depth,ltx25-distilled,D,4,0.835,0.611,0.618,0.673,0.354,0.75,0.565,0.725
+seg,cosmos3-nano-sim-transfer,S,4,0.848,0.813,0.616,0.741,0.205,0.925,0.668,0.757
+edge,cosmos3-nano-sim-transfer,E,2,0.276,0.326,0.407,0.306,0.233,0.191,0.599,0.088
+text only,cosmos3-nano,T,4,0.274,0.148,0.341,0.214,1.0,0.003,0.418,0.046

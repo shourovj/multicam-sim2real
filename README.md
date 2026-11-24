@@ -459,7 +459,7 @@ This writes `configs/prompts/multicam_v1_3/<scene>/facts/<camera>.{json,txt}`. T
 
 ### 4.2 Sim → video
 
-[`eval/run_eval.py`](eval/run_eval.py) scores every finished run of an experiment. The five scores are the same for every scene, because every reference comes from the camera bundles. All are in [0, 1], 1 best. Definitions, files and limits: [`eval/README.md`](eval/README.md).
+[`eval/run_eval.py`](eval/run_eval.py) scores every finished run of an experiment. The five scores are the same for every scene, because every reference comes from the camera bundles. All are in [0, 1], 1 best. Definitions, files and limits: [`eval/README.md`](eval/README.md). Equations, figures and first results: the [evaluation report](docs/2026-11-24-1158-eval-report.md).
 
 | Score | Question | Simulator reference | Read from the video with |
 | --- | --- | --- | --- |
@@ -517,7 +517,7 @@ $S2R_DATA/<out_root>/                   poc/multi-cam for the experiments so far
 
 ## Docs
 
-Design docs and findings carried over from Sim2Real-VideoGen are in [`docs/`](docs/). The most relevant here: the [multi-camera v1 design](docs/2026-11-18-1739-multicam-v1-design.md), [round 2 findings](docs/2026-11-11-0845-round2-findings.md) and the [literature review synthesis](docs/lit-review/2026-11-09-1750-lit-review-synthesis.md). The original repo's README is kept as [docs/2026-11-22-1956-sim2real-videogen-readme.md](docs/2026-11-22-1956-sim2real-videogen-readme.md).
+The [evaluation report](docs/2026-11-24-1158-eval-report.md) explains Eval2 with its equations, figures and first results. Design docs and findings carried over from Sim2Real-VideoGen are in [`docs/`](docs/). The most relevant here: the [multi-camera v1 design](docs/2026-11-18-1739-multicam-v1-design.md), [round 2 findings](docs/2026-11-11-0845-round2-findings.md) and the [literature review synthesis](docs/lit-review/2026-11-09-1750-lit-review-synthesis.md). The original repo's README is kept as [docs/2026-11-22-1956-sim2real-videogen-readme.md](docs/2026-11-22-1956-sim2real-videogen-readme.md).
 
 | Local draft | Google Doc tab |
 | --- | --- |

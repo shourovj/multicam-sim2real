@@ -48,4 +48,4 @@ cuts:
 
 seeds: [0, 1]
 
-gpu: {min_free_gib: 70, max_parallel: 4, launch_gap_s: 180, retries: 1}     # not measured yet: all weights on the GPU
+gpu: {min_free_gib: 45, max_parallel: 4, launch_gap_s: 60, retries: 1}      # measured 2026-11-24: 36.5 GiB peak, 49 s per clip, all weights on the GPU

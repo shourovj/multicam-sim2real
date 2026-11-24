@@ -6,6 +6,7 @@ Five scores, the same for every scene. Three are per camera (Eval2: does the cli
 eval/
   run_eval.py              the five scores for an experiment's finished runs
   summarize.py             one table across experiments, ordered from the densest control to text only
+  make_figures.py          pictures of the per-camera scores for one scene, and a chart of a summary table
   score_multicam.py        earlier scorer: colour names per object and traffic-light state (kept; scene-specific)
   grid.py                  side-by-side grid video for the single-camera rounds
   common/
