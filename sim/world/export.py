@@ -84,6 +84,8 @@ def main(spec_path, world_dir, out):
             if len(local) == 0:
                 continue
             M = np.asarray(p["local2world"])                                     # [T, 4, 4]
+            if tl.get("track_points_frame") != "part":      # a render from before 2026-11-23: points relative to the last pose
+                local = local @ M[-1, :3, :3].T + M[-1, :3, 3]
             world = np.einsum("tij,nj->nti", M[:, :3, :3], local) + M[None, :, :3, 3]
             uv, z = project(K, c2w, world)
             ui = np.clip(np.round(uv[..., 0]).astype(int), 0, W - 1)

@@ -1,10 +1,10 @@
 """Run Wan2.1-VACE (14B or 1.3B) through diffusers on one prompt and, optionally, one VACE-style source video + mask.
 
-Same inputs and outputs as gen/vacefun_launch.py, so the two models can be compared on identical files.
-This route needs far less GPU memory than the original VACE code (gen/run_vace.sh): each part of the model is on
-the GPU only while it is in use. Called by gen/run_vace_diffusers.sh, in an env with torch and diffusers >= 0.34:
+Same inputs and outputs as gen/wan22_vace_fun/launch.py, so the two models can be compared on identical files.
+This route needs far less GPU memory than the original VACE code (gen/wan21_vace/singlecam_run.sh): each part of the model is on
+the GPU only while it is in use. Called by gen/wan21_vace/singlecam_run_diffusers.sh, in an env with torch and diffusers >= 0.34:
 
-  python gen/vace_diffusers_launch.py --ckpt Wan-AI/Wan2.1-VACE-14B-diffusers --prompt "..." --seed 0 \
+  python gen/wan21_vace/diffusers_launch.py --ckpt Wan-AI/Wan2.1-VACE-14B-diffusers --prompt "..." --seed 0 \
       --save_dir <dir> [--src_video src_video.mp4 --src_mask src_mask.mp4]
 
   no source             text only (A, A+)
@@ -20,7 +20,7 @@ import time
 
 import torch
 
-# Wan's default negative prompt, the same string gen/vacefun_launch.py uses.
+# Wan's default negative prompt, the same string gen/wan22_vace_fun/launch.py uses.
 NEGATIVE = ("色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，"
             "多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走")
 H, W, FRAMES, FPS = 480, 832, 81, 16

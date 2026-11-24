@@ -1,4 +1,5 @@
-"""Run every scene x condition x seed in configs/matrix.yaml, a few at a time, on whichever GPUs have room.
+"""Single-camera rounds 1 and 2 (the multi-camera runner is gen/run_multicam.py).
+Run every scene x condition x seed in configs/matrix.yaml, a few at a time, on whichever GPUs have room.
 
   source env.sh; $S2R_ROOT/envs/eval/.venv/bin/python gen/run_matrix.py [--status] [--only-seed 0] [--dry-run]
 
@@ -13,44 +14,26 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 import time
 
 import yaml
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "common"))
+from gpus import free_gib, my_gpus  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(os.environ["S2R_DATA"], "poc")
 SCENES = os.path.join(DATA, "single-cam")   # one folder per scene; the manifest, logs and STOP stay in DATA
 # model name in the matrix -> (run script, extra environment). The name is also the output folder prefix.
-RUNNERS = {"vacefun-a14b": ("gen/run_vacefun.sh", {}),                         # Wan2.2-VACE-Fun-A14B (VideoX-Fun)
-           "vace21-14B": ("gen/run_vace_diffusers.sh", {"MODEL": "14B"}),      # Wan2.1-VACE-14B (diffusers)
-           "vace21-1.3B": ("gen/run_vace_diffusers.sh", {"MODEL": "1.3B"}),    # Wan2.1-VACE-1.3B (diffusers)
-           "cosmos3-nano": ("gen/run_cosmos_nano.sh", {})}                     # Cosmos3-Nano base; keeps its own step counts
+RUNNERS = {"vacefun-a14b": ("gen/wan22_vace_fun/singlecam_run.sh", {}),                         # Wan2.2-VACE-Fun-A14B (VideoX-Fun)
+           "vace21-14B": ("gen/wan21_vace/singlecam_run_diffusers.sh", {"MODEL": "14B"}),       # Wan2.1-VACE-14B (diffusers)
+           "vace21-1.3B": ("gen/wan21_vace/singlecam_run_diffusers.sh", {"MODEL": "1.3B"}),     # Wan2.1-VACE-1.3B (diffusers)
+           "cosmos3-nano": ("gen/cosmos3_nano/singlecam_run.sh", {})}                           # Cosmos3-Nano base; keeps its own step counts
 
 
 def out_dir(tag, scene, cond, seed):
     return os.path.join(SCENES, scene, cond, tag, f"seed{seed}")
-
-
-def my_gpus():
-    """GPUs that already hold a compute process of this user, e.g. a job from an earlier runner."""
-    q = lambda what, fields: subprocess.run(["nvidia-smi", f"--query-{what}={fields}", "--format=csv,noheader,nounits"],
-                                            capture_output=True, text=True, check=True).stdout.strip().splitlines()
-    index = dict(line.split(", ")[::-1] for line in q("gpu", "index,uuid"))
-    mine = set()
-    for line in q("compute-apps", "gpu_uuid,pid"):
-        uuid, pid = line.split(", ")
-        try:
-            if os.stat(f"/proc/{pid}").st_uid == os.getuid():
-                mine.add(int(index[uuid]))
-        except OSError:
-            pass
-    return mine
-
-
-def free_gib():
-    out = subprocess.run(["nvidia-smi", "--query-gpu=index,memory.total,memory.used", "--format=csv,noheader,nounits"],
-                         capture_output=True, text=True, check=True).stdout
-    return {int(i): (int(t) - int(u)) / 1024 for i, t, u in (line.split(", ") for line in out.strip().splitlines())}
 
 
 def log(row):

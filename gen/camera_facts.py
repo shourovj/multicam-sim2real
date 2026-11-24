@@ -14,10 +14,12 @@ be checked against them. Reads the rendered bundles: cams/<camera>/bundle/{boxes
 import argparse
 import json
 import os
+import sys
 
 import numpy as np
 
-import multicam_common as mc
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "common"))
+import multicam_common as mc  # noqa: E402
 
 MIN_PX = 150          # an object counts as on screen from this many pixels (about a 12 x 12 px patch)
 MIN_SHARE = 0.004     # a static part is listed from 0.4 % of the frame

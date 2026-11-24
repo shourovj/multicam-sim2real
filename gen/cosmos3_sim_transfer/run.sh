@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# One multicam run on Cosmos3-Nano-Sim-Transfer: build its inputs (gen/multicam_inputs.py), then generate with NVIDIA's
+# One multicam run on Cosmos3-Nano-Sim-Transfer: build its inputs and request (gen/cosmos3_nano/request.py: the two
+# Cosmos checkpoints share cosmos-framework and its request format), then generate with NVIDIA's
 # Stage 3 recipe (.agents/skills/cosmos3-nano-sim-transfer/inference/SKILL.md): its defaults file, 4 fixed steps,
 # text and control guidance 1, autoregressive with full history (no cache window, no attention sink), eager mode.
 # Guardrails are off, as in every other run here (the guardrail model is gated).
-#   EXP=configs/experiments/multicam_v1_2.yaml SCENE=intersection_4way VIEW=cctv COND=D SEED=0 bash gen/run_cosmos_simtransfer_multicam.sh
+#   EXP=configs/experiments/multicam_v1_2.yaml SCENE=intersection_4way VIEW=cctv COND=D SEED=0 bash gen/cosmos3_sim_transfer/run.sh
 # Model, tokenizer and VAE are pinned (the revisions below match the experiment file); HF_HUB_OFFLINE keeps them from moving.
 set -euo pipefail
-REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 EXP=${EXP:?}; SCENE=${SCENE:?}; VIEW=${VIEW:?}; COND=${COND:?}; SEED=${SEED:-0}
 source "$REPO/env.sh"
 HUB=${COSMOS_HF_CACHE:-/mnt/Data/sj37434/hf/hub}
@@ -18,7 +19,7 @@ TOK=$HUB/models--nvidia--Cosmos3-Nano/snapshots/e59a53c25979a090fa8706c9acc0c254
 VAE=$HUB/models--Wan-AI--Wan2.2-TI2V-5B/snapshots/921dbaf3f1674a56f47e83fb80a34bac8a8f203e/Wan2.2_VAE.pth
 for f in "$CKPT/config.json" "$TOK/tokenizer.json" "$VAE"; do [[ -e $f ]] || { echo "missing $f"; exit 1; }; done
 cd "$S2R_ROOT/cosmos-framework"
-OUT=$(.venv/bin/python "$REPO/gen/multicam_inputs.py" "$REPO/$EXP" "$SCENE" "$VIEW" "$COND" "$SEED" | sed -n 's/.*-> //p')
+OUT=$(.venv/bin/python "$REPO/gen/cosmos3_nano/request.py" "$REPO/$EXP" "$SCENE" "$VIEW" "$COND" "$SEED" | sed -n 's/.*-> //p')
 echo "[cosmos3-nano-sim-transfer multicam] $SCENE $VIEW $COND seed $SEED -> $OUT (CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES-<unset>})"
 .venv/bin/python -m cosmos_framework.scripts.inference -i "$OUT/request.json" -o "$OUT/raw" \
   --checkpoint-path "$CKPT" --config-file "$CKPT/config.json" --credential-path "" \

@@ -61,7 +61,9 @@ def sample_points(objs, n, seed):
     for ob in objs:
         me = ob.data
         me.calc_loop_triangles()
-        M = np.asarray(ob.matrix_local)
+        # matrix_basis, not matrix_local: the part's empty has just been keyframed to its last pose and the scene not
+        # re-evaluated, so matrix_local would come out relative to that pose and every moving part's points be misplaced
+        M = np.asarray(ob.matrix_basis)
         v = np.array([vv.co[:] for vv in me.vertices])
         if len(v) == 0:
             continue
@@ -241,7 +243,7 @@ def main():
                 "times_s": [wj["times_s"][f] for f in frames],
                 "camera": {"id": a.camera, "K": K.tolist(), "cam2world_blender": c2w[frames].tolist(),
                            "convention": "Blender camera: looks down -Z, +Y up; one cam2world per frame"},
-                "objects": objects_tl, "events": wj["events"],
+                "objects": objects_tl, "track_points_frame": "part", "events": wj["events"],
                 "signals": {sid: [STATE_NAMES[int(s)] for s in wz[f"signals/{sid}"][frames]] for sid in lamps}}
     json.dump(timeline, open(os.path.join(a.out, "timeline.json"), "w"))
     meta = {"spec": os.path.abspath(a.spec), "spec_sha256": sha, "camera": a.camera, "preview": bool(a.frames), "style": style,

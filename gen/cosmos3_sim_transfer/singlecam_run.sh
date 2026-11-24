@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Cosmos3-Nano-Sim-Transfer runner for the PoC (plan §6), condition D: depth control + text, 153 frames.
 # Reuses smoke/cosmos_simtransfer_153.sh with the scene's control and frozen base prompt.
-#   SCENE=drones_air SEED=0 bash gen/run_cosmos.sh
+#   SCENE=drones_air SEED=0 bash gen/cosmos3_sim_transfer/singlecam_run.sh
 set -euo pipefail
-REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 SCENE=${SCENE:?}
 source "$REPO/env.sh"
 D=$S2R_DATA/poc/single-cam/$SCENE

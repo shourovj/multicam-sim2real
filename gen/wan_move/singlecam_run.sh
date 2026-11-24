@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Wan-Move-14B runner for the PoC (plan §6), condition E: frame 0 + tracks + text.
 # Tracks/visibility come from sim/controls.py ($S2R_DATA/poc/single-cam/<scene>/E/inputs/).
-#   SCENE=drones_air SEED=0 bash gen/run_wanmove.sh
+#   SCENE=drones_air SEED=0 bash gen/wan_move/singlecam_run.sh
 set -euo pipefail
-REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 SCENE=${SCENE:?}; SEED=${SEED:-0}
 source "$REPO/env.sh"
 D=$S2R_DATA/poc/single-cam/$SCENE

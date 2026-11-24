@@ -1,12 +1,15 @@
-"""Shared by gen/run_multicam.py (eval env) and gen/multicam_inputs.py (Cosmos env): the job list, the folder layout,
-prompt composition and the input recipe whose hashes decide whether a finished run is still current. Stdlib + yaml.
+"""Shared by everything in gen/ and by eval/score_multicam.py: the job list, the folder layout, the model families,
+prompt composition and the input recipe whose hashes decide whether a finished run is still current. Stdlib + yaml,
+so it imports in every env (eval, Cosmos, VideoX-Fun, LTX).
 
 Layout under $S2R_DATA/<out_root>/<scene>/r<rev>/:
   world/                       simulate_world.py
   cams/<cam>/bundle/           render_world.py + export_world.py (rgb.npy, instance.npy, ...)
   cut/<cut>/                   rgb.npy, instance.npy, depth.npy, rgb.mp4, schedule.json   (multicam_inputs.py)
   inputs/<view>/               prompt.json, control_<cond>.mp4                              (multicam_inputs.py)
-  gen/<view>/<cond>/<model>/seed<k>/   request.json, prompt.json, out_video.mp4, run.log, inputs.json, run.json
+  gen/<view>/<cond>/<model>/seed<k>/   request.json, prompt.json or prompt.txt, out_video.mp4, run.log, inputs.json, run.json
+Several experiments (one per model) can share an out_root: they then share the world, the bundles and the cuts, and
+their runs sit side by side under gen/<view>/<cond>/<model name>/.
 """
 
 import copy
@@ -16,8 +19,28 @@ import os
 
 import yaml
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _sha_cache = {}
+
+# model.family in an experiment file -> the folder under gen/ that runs it (its run.sh does one job) and the prompt
+# format the model takes: "caption" = Cosmos3's structured JSON caption, "prose" = one plain paragraph.
+# An experiment file with no model.family is Cosmos3-Nano (the files written before families existed).
+FAMILIES = {
+    "cosmos3-nano":   {"dir": "cosmos3_nano",         "prompt": "caption"},
+    "sim-transfer":   {"dir": "cosmos3_sim_transfer", "prompt": "caption"},
+    "wan22-vace-fun": {"dir": "wan22_vace_fun",       "prompt": "prose"},
+    "ltx25":          {"dir": "ltx25",                "prompt": "prose"},
+}
+
+
+def family(exp):
+    f = exp["model"].get("family", "cosmos3-nano")
+    assert f in FAMILIES, f"unknown model.family {f!r}; known: {sorted(FAMILIES)}"
+    return f
+
+
+def run_script(exp):
+    return os.path.join(REPO, "gen", FAMILIES[family(exp)]["dir"], "run.sh")
 
 
 def load_exp(path):
@@ -113,8 +136,18 @@ def control_sources(exp, j, hint):
     return [os.path.join(r, "cams", s["cam"], "bundle", "controls", f"{hint}.mp4") for s in exp["cuts"][j["scene"]][j["view"]]]
 
 
-INPUT_CODE_VERSION = 1   # bump when gen/multicam_inputs.py changes what it builds; file hashes are recorded, not compared
+INPUT_CODE_VERSION = 1   # bump when the input code changes what it builds; file hashes are recorded, not compared
 NOT_COMPARED = ("code",)
+
+
+def _code_hashes(exp):
+    """sha256 of the shared input code and of every file in the model's folder (provenance only)."""
+    d = os.path.join(REPO, "gen", FAMILIES[family(exp)]["dir"])
+    files = [os.path.join(REPO, "gen", "common", f) for f in ("multicam_inputs.py", "multicam_common.py")]
+    files += sorted(os.path.join(d, f) for f in os.listdir(d) if f.endswith((".py", ".sh")))
+    if family(exp) == "sim-transfer":                      # its run.sh builds the request with the Cosmos3-Nano folder's code
+        files.append(os.path.join(REPO, "gen", "cosmos3_nano", "request.py"))
+    return {os.path.relpath(f, os.path.join(REPO, "gen")): sha256_file(f) for f in files}
 
 
 def _strip(d):
@@ -144,9 +177,45 @@ def compose_prompt(exp, j):
     return cap
 
 
+def prose_prompt(exp, j):
+    """The same world and camera blocks as one plain paragraph, for the models that take prose (Wan, LTX). In order:
+    what happens in this view (the camera or cut block's temporal_caption, which names every object by its colour),
+    the setting, the lighting, the medium, and the world block's realism sentence. Nothing is added or reworded, so a
+    prose model and a caption model are told the same things about a view."""
+    cap = compose_prompt(exp, j)
+    lighting = cap.get("lighting", "")
+    parts = [cap["temporal_caption"], cap.get("background_setting", ""),
+             *(lighting.values() if isinstance(lighting, dict) else [lighting]), cap.get("style_medium", ""), cap.get("context", "")]
+    parts = [p.strip() for p in parts if p and p.strip()]
+    return " ".join(p if p.endswith((".", "!", "?")) else p + "." for p in parts)
+
+
+def prompt_kind(exp):
+    return FAMILIES[family(exp)]["prompt"]
+
+
+def model_prompt(exp, j):
+    """What this experiment's model is given as its prompt: the structured caption (dict) or the paragraph (str)."""
+    return compose_prompt(exp, j) if prompt_kind(exp) == "caption" else prose_prompt(exp, j)
+
+
+def composed_path(exp, j):
+    """The tracked copy of model_prompt: <prompts dir>/composed/<view>.json (caption) or .txt (prose)."""
+    ext = "json" if prompt_kind(exp) == "caption" else "txt"
+    return os.path.join(REPO, exp["scenes"][j["scene"]]["prompts"], "composed", f"{j['view']}.{ext}")
+
+
+def read_composed(path):
+    if not os.path.exists(path):
+        return None
+    return json.load(open(path)) if path.endswith(".json") else open(path).read().strip()
+
+
 def negative_prompt_path(exp):
-    """The experiment's negative prompt file; transfer runs use the frozen cookbook copy."""
-    return os.path.join(REPO, exp.get("negative_prompt", "configs/prompts/cosmos3_negative_prompt.json"))
+    """The experiment's negative prompt file, or None for `negative_prompt: none` (a model run without guidance).
+    Default: the frozen copy of the Cosmos cookbook's, which every Cosmos transfer run uses."""
+    p = exp.get("negative_prompt", "configs/prompts/cosmos3_negative_prompt.json")
+    return None if p in (None, "none") else os.path.join(REPO, p)
 
 
 def recipe(exp, j):
@@ -157,11 +226,11 @@ def recipe(exp, j):
     rec = {"spec": sha256_file(spec_path), "world_npz": sha256_file(os.path.join(r, "world", "world.npz")),
            "source_rgb": [sha256_file(p) for p in src],
            "cut_schedule": sha256_obj(exp["cuts"][j["scene"]][j["view"]]) if j["kind"] == "cut" else None,
-           "prompt": sha256_obj(compose_prompt(exp, j)), "cond": sha256_obj(j["cond_spec"]),
-           "negative_prompt": sha256_file(negative_prompt_path(exp)),
+           "prompt": sha256_obj(model_prompt(exp, j)), "cond": sha256_obj(j["cond_spec"]),
+           "negative_prompt": sha256_file(negative_prompt_path(exp)) if negative_prompt_path(exp) else None,
            "model": sha256_obj(exp["model"]), "video": sha256_obj(exp["video"]), "sampler": sha256_obj(exp["sampler"]),
            "first_frame": exp["first_frame"], "seed": j["seed"], "input_code_version": INPUT_CODE_VERSION,
-           "code": {f: sha256_file(os.path.join(REPO, "gen", f)) for f in ("multicam_inputs.py", "multicam_common.py")}}
+           "code": _code_hashes(exp)}
     hints = {h: ("rgb" if c.get("from") == "rgb" else h) for h, c in j["cond_spec"].items() if h != "blur"}
     if hints:
         rec["controls"] = {h: [sha256_file(p) for p in control_sources(exp, j, src)] for h, src in hints.items()}

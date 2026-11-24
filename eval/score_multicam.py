@@ -22,7 +22,7 @@ import sys
 import cv2
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "gen"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "gen", "common"))
 import multicam_common as mc  # noqa: E402
 
 MIN_PX = 150           # an object counts on a frame with at least this many (eroded) mask pixels

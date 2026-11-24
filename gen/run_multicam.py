@@ -1,4 +1,5 @@
-"""Run every job of a multicam experiment (configs/experiments/*.yaml) on whichever GPUs have room.
+"""Run every job of a multicam experiment (configs/experiments/*.yaml) on whichever GPUs have room. One experiment
+file is one model: its model.family picks the folder under gen/ whose run.sh does one job (multicam_common.FAMILIES).
 
   source ~/.sim2real.env; $S2R_ROOT/envs/eval/.venv/bin/python gen/run_multicam.py --exp configs/experiments/multicam_v1.yaml \
       [--status] [--dry-run] [--only scene=..,view=..,cond=..,seed=..] [--rerun-stale]
@@ -16,34 +17,15 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 
-import multicam_common as mc
-from run_matrix import free_gib, my_gpus
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "common"))
+import multicam_common as mc  # noqa: E402
+from gpus import free_gib, gpu_names, my_gpus, our_mem_gib  # noqa: E402
+from world_git import git_state  # noqa: E402
 
 REPO = mc.REPO
-
-
-def gpu_names():
-    out = subprocess.run(["nvidia-smi", "--query-gpu=index,name", "--format=csv,noheader"], capture_output=True, text=True).stdout
-    return {int(i): n.strip() for i, n in (l.split(",", 1) for l in out.strip().splitlines())}
-
-
-def our_mem_gib():
-    """Memory (GiB) of this user's compute processes, per GPU index."""
-    q = lambda what, fields: subprocess.run(["nvidia-smi", f"--query-{what}={fields}", "--format=csv,noheader,nounits"],
-                                            capture_output=True, text=True).stdout.strip().splitlines()
-    index = dict(l.split(", ")[::-1] for l in q("gpu", "index,uuid"))
-    mem = {}
-    for l in q("compute-apps", "gpu_uuid,pid,used_memory"):
-        uuid, pid, used = l.split(", ")
-        try:
-            if os.stat(f"/proc/{pid}").st_uid == os.getuid():
-                g = int(index[uuid])
-                mem[g] = mem.get(g, 0) + int(used) / 1024
-        except (OSError, KeyError, ValueError):
-            pass
-    return mem
 
 
 def state(exp, j):
@@ -111,7 +93,6 @@ def main():
                 os.remove(os.path.join(d, ".running"))
             ok = r["proc"].returncode == 0 and os.path.exists(os.path.join(d, "out_video.mp4"))
             info = json.load(open(os.path.join(d, "inputs.json"))) if os.path.exists(os.path.join(d, "inputs.json")) else {}
-            from world_git import git_state
             snap = None
             if os.path.exists(os.path.join(d, "run.log")):
                 pat = "models--" + re.escape(exp["model"]["hf"].replace("/", "--")) + r"/snapshots/([0-9a-f]{40})"
@@ -139,8 +120,8 @@ def main():
             pick = next((gi for gi, f in sorted(free.items(), key=lambda x: -x[1]) if gi not in busy and f >= g["min_free_gib"]), None)
             if pick is not None:
                 j = queue.pop(0)
-                cp = os.path.join(REPO, exp["scenes"][j["scene"]]["prompts"], "composed", f"{j['view']}.json")
-                if not os.path.exists(cp) or json.load(open(cp)) != mc.compose_prompt(exp, j):
+                cp = mc.composed_path(exp, j)
+                if mc.read_composed(cp) != mc.model_prompt(exp, j):
                     print(f"[multicam] SKIP {mc.run_id(exp, j)}: {os.path.relpath(cp, REPO)} is missing or out of date; "
                           f"run gen/compose_prompts.py and commit it", flush=True)
                     continue
@@ -150,8 +131,7 @@ def main():
                     os.replace(os.path.join(d, "out_video.mp4"), os.path.join(d, f"out_video.stale_{time.strftime('%Y%m%d_%H%M%S')}.mp4"))
                 env = dict(os.environ, EXP=os.path.relpath(exp_path, REPO), SCENE=j["scene"], VIEW=j["view"], COND=j["cond"],
                            SEED=str(j["seed"]), CUDA_VISIBLE_DEVICES=str(pick))
-                script = "run_cosmos_simtransfer_multicam.sh" if exp["model"].get("family") == "sim-transfer" else "run_cosmos_multicam.sh"
-                proc = subprocess.Popen(["bash", os.path.join(REPO, "gen", script)], env=env,
+                proc = subprocess.Popen(["bash", mc.run_script(exp)], env=env,
                                         stdout=open(os.path.join(d, "launcher.log"), "w"), stderr=subprocess.STDOUT)
                 open(os.path.join(d, ".running"), "w").write(str(proc.pid))
                 running[pick] = {"job": j, "proc": proc, "t0": time.time(), "started": time.strftime("%Y-%m-%d %H:%M:%S"), "peak": 0.0}
