@@ -147,7 +147,7 @@ Arguments: `o` an object (or a part, where allowed), `c` a camera, `n` a number,
 | `leaks_from(o, o or part)` | the particles come from that object or part: an emitter on it with its nozzle on its surface, and the first particles at its surface |
 | `in_front_of(a, b)`, `behind(a, b)`, `left_of(a, b)`, `right_of(a, b)` | a's centre beyond b's extent along b's own axes |
 | `above(a, b)`, `on(a, b)`, `inside(a, b)` | a's lowest point above b's top / resting on it / a's centre inside b's bounds |
-| `visible(c, o, [px=24])` | the camera sees the object, unoccluded and at least px pixels tall |
+| `visible(c, o, [px=24])` | the camera sees the object: at least px pixels tall, and at least 40% of the side facing the camera unhidden |
 | `in_frame(c, o)` | the object is inside the camera's frame (occlusion ignored) |
 
 - `since=` takes an atom (the anchor is the first frame it holds), or a number of seconds. The default is t = 0.

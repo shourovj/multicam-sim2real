@@ -157,8 +157,12 @@ def main():
     ap.add_argument("--answer-tokens", type=int, default=10000, help="tokens for the scene JSON itself")
     ap.add_argument("--no-audit", action="store_true")
     ap.add_argument("--reflect", action="store_true", help="update agent/lessons.md from this run afterwards")
+    ap.add_argument("--reflect-only", action="store_true", help="only update the lessons from the finished run in run_dir")
     a = ap.parse_args()
     rd = os.path.abspath(a.run_dir)
+    if a.reflect_only:
+        reflect(a, rd, json.load(open(os.path.join(rd, "result.json")))["iterations"])
+        return 0
     os.makedirs(rd, exist_ok=True)
     env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(a.gpu))
     log = []
@@ -247,14 +251,29 @@ def main():
         note(f"it{it}: gen {gen_s:.0f} s ({entry.get('tokens')} tok), sim {entry.get('sim_s', '-')} s, "
              f"status {entry.get('status', 'no X')}, eval1 {entry.get('eval1', '-')}, physics {entry.get('physics', '-')}, "
              f"requirements {entry.get('requirements_held', '-')}/{entry.get('requirements', '-')}; {budget.used():.0f} s used")
+        worse = None
         if "eval1" in entry:
             key = (entry["status"] == "PASS", entry["eval1"] + entry["physics"], it)
             if best is None or key > best[0]:
                 best = (key, it)
+                best_turn = (text, feedback)
+            else:
+                worse = f"eval1 {entry['eval1']}, physics {entry['physics']}"
+        elif best is not None:
+            worse = "no simulation"
         if entry.get("status") == "PASS":
             note("PASS")
             break
-        # Keep the conversation short: the system prompt, the prompt, the last S and its report.
+        # Keep the conversation short: the system prompt, the prompt, the last S and its report. An iteration that
+        # did worse than the best so far is set aside: the agent continues from the best scene and its report, told
+        # what the discarded attempt did, so fixes for the prompt do not drift into broken physics.
+        if worse:
+            b = best[1]
+            hb = history[b - 1]
+            text, feedback = best_turn[0], (
+                f"Iteration {it} did worse ({worse}) than iteration {b} (eval1 {hb['eval1']}, physics {hb['physics']}), so it is "
+                f"set aside. What it got wrong, in short:\n\n{feedback[:2500]}\n\n---\n\nContinue from iteration {b}'s scene "
+                f"(your previous answer above) and its report:\n\n{best_turn[1]}")
         messages = messages[:2] + [{"role": "assistant", "content": text},
                                    {"role": "user", "content": feedback + f"\n\nIteration {it + 1}: answer with the complete corrected scene JSON "
                                                                           f"(meta.iteration {it + 1}). Time left: {budget.left() / 60:.1f} min."}]
@@ -293,7 +312,7 @@ def main():
     return 0
 
 
-REFLECT = """You are improving the standing advice given to a SceneAgent that writes physics scenes for the p2s simulator. Below are the current lessons and the history of one run: the prompt, and for each iteration the checker's failing findings and the scores. Update the lessons: keep what still holds, add what this run teaches about getting a scene right faster (modelling choices, keys that fix recurring failures, order of fixes), drop what is wrong or redundant. Each lesson is one line starting with "- ", concrete and general (not about this prompt's objects by name), at most 40 lines. Answer with the lessons only."""
+REFLECT = """You are improving the standing advice given to a SceneAgent that writes physics scenes for the p2s simulator. Below are the current lessons and the history of one run: the prompt, and for each iteration the checker's failing findings and the scores. Update the lessons: keep what still holds, add what this run teaches about getting a scene right faster (modelling choices, keys that fix recurring failures, order of fixes), drop what is wrong or redundant. Each lesson is one line starting with "- ", concrete and general (not about this prompt's objects by name), at most 40 lines. Name only scene keys that exist in the SceneAgent manual. Never advise weakening an expectation or the prompt spec to pass (wider regions, lower thresholds): the fix is always in the scene. Answer with the lessons only."""
 
 
 def reflect(a, rd, history):
@@ -311,7 +330,7 @@ def reflect(a, rd, history):
                       + "\n  ".join(fails[:25]))
     text, _, _ = chat(a.url, a.model, [{"role": "system", "content": REFLECT},
                                        {"role": "user", "content": f"Current lessons:\n{lessons}\n\nRun:\n" + "\n".join(runlog)}],
-                      8000, 900)
+                      8000, 900, think_budget=3000)
     lines = [l for l in text.splitlines() if l.startswith("- ")][:40]
     if lines:
         if os.path.exists(LESSONS):

@@ -733,7 +733,7 @@ private:
             const auto ids = ents(o1);
             if (ids.empty() || !cam) return unbound(o1);
             const double px = number(a, 0, 24);
-            double bestH = 0;
+            double bestH = 0, worstShown = 0;  // worstShown: the largest unhidden share seen in any frame
             int bestF = 0;
             out.v = perEntity(ids, [&](const std::string& id) {
                 std::vector<double> v(n_);
@@ -741,12 +741,19 @@ private:
                     const View& w = vis_.at(*cam, id, int(f));
                     if (p == "in_frame") { v[f] = w.inFrame > 0 ? 1 : -1; continue; }
                     if (w.heightPx > bestH) bestH = w.heightPx, bestF = int(f);
-                    v[f] = w.visible <= 0 ? (w.inFrame > 0 ? -0.5 : -1.0) : std::clamp((w.heightPx - px) / px, -0.4, 1.0);
-                    if (w.visible > 0 && w.heightPx >= px && v[f] <= 0) v[f] = 1e-3;
+                    // Seen: at least 24 px tall (video models lose smaller things) and at most 60% of what faces
+                    // the camera hidden (a sliver of a car behind a bus is not "the camera shows the car").
+                    const double shown = w.inFrame > 0 ? w.visible / w.inFrame : 0;
+                    v[f] = w.visible <= 0 ? (w.inFrame > 0 ? -0.5 : -1.0)
+                                          : std::clamp(std::min((w.heightPx - px) / px, (shown - 0.4) / 0.3), -0.4, 1.0);
+                    if (w.visible > 0 && w.heightPx >= px && shown >= 0.4 && v[f] <= 0) v[f] = 1e-3;
+                    worstShown = std::max(worstShown, w.visible > 0 ? shown : 0.0);
                 }
                 return v;
             });
-            if (p == "visible") note << "tallest on screen " << fmt(bestH) << " px at t=" << fmt(run_.time(bestF)) << " s (needs " << fmt(px) << " px)";
+            if (p == "visible")
+                note << "tallest on screen " << fmt(bestH) << " px at t=" << fmt(run_.time(bestF)) << " s (needs " << fmt(px)
+                     << " px); at most " << fmt(100 * worstShown) << "% of it unhidden in a frame (needs 40%)";
             out.note = note.str();
             return out;
         }

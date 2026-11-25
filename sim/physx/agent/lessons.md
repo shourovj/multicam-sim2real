@@ -1,25 +1,40 @@
-- Resolve scene validity first: fix attach-box errors and unknown/unused keys before tuning dynamics or prompt checks.
+- Resolve scene validity first: fix walker idle_at format, refine.between endpoint types, attach-box errors, unknown/unused keys, and invalid values before tuning dynamics.
+- For walkers, idle_at must be a 2D [x, y] point, not a 3D vector.
+- refine.between endpoints must be rigid entities; do not reference deformable parts there.
 - Define deformable-part attach boxes in the host's local frame and ensure each box contains at least one host vertex.
-- Do not add unsupported keys such as per-vehicle ccd; if tunneling occurs, use thicker collision shapes or a smaller timestep.
-- Start all bodies separated and with non-overlapping collision shapes; check t=0 penetration before tuning dynamics.
-- If mechanical energy spikes, inspect the body gaining energy and its contacts at the peak; remove unintended contacts, reduce restitution, add damping, and cap actuator forces.
+- Do not add unsupported keys; if tunneling occurs, use thicker collision shapes or a smaller timestep.
+- Keep the scene minimal: remove unused keys, duplicate vehicles, and extra props that cause overlaps or absorb the intended impact.
+- Start all bodies separated, above ground, and with non-overlapping collision shapes; check t=0 penetration, below-ground wheels, and small bodies near poles and cameras.
+- If dynamic penetration occurs, reduce impact speed, increase clearance, or adjust collision-shape sizes so surfaces do not overlap beyond tolerance.
+- If mechanical energy spikes, inspect the body gaining energy and its contacts/actuators at the peak; remove unintended contacts, fix actuator direction, reduce restitution, add damping, and cap forces.
 - Keep actuator work within the energy budget; if energy rise exceeds the allowed amount, reduce forces, remove hidden contacts, or increase dissipation.
 - Keep brake decelerations at or below about 1.2 g by lowering brake force or lengthening the braking interval.
 - If a vehicle becomes unrealistically fast, suspect energy injection or missing collision; constrain speed, increase friction/damping, and avoid thin collision walls.
+- Calibrate initial speed and initial gap together so the intended contact occurs inside the expected event window.
+- If contact is too early, reduce striker speed or increase the initial gap; if contact is too late or never happens, increase striker speed or reduce the gap.
+- Verify that the intended contact actually occurs before tuning deformation, spin, particles, or reactions; if no contact, fix paths, initial gaps, speeds, and collision shapes first.
+- If the closest distance remains positive, the collision shapes are not aligned or the gap is too large; extend the striking front shape or reduce the gap.
+- For rear-end impacts, make the striker’s front collision shape reach the struck vehicle’s rear collision shape and keep the striker directly behind it.
+- If a struck vehicle fails a minimum lurch speed, increase impact speed or reduce its mass/braking; do not lower the expected lurch.
 - Prevent FEM inversion by reducing impact energy, increasing stiffness, and avoiding compression beyond the expected permanent deformation.
-- Calibrate permanent deformation to the expected range: too little means the part is not deformable, not hit, or too stiff; too much means impact energy is too high or material is too soft.
-- For side-impact caving, make the impacted side a deformable part with enough mass and stiffness to cave but not shatter.
-- Ensure the primary collision actually deforms the intended part: the hit part must be deformable, correctly attached, and in the impact path.
-- Place cameras outside all solids and with clear line of sight; verify target screen size and occlusion during the event window.
-- Check camera placement at t=0 and during motion; a camera inside a building or prop blocks its own view.
-- Assign appearance.class to every prompt-visible object, including people and support props.
+- Calibrate permanent deformation to the target range: too little means the part is not hit, too stiff, or impact energy is too low; too much means impact energy is too high or material is too soft.
+- If a deformable part deforms before contact, it is sagging or flopping under host motion or weight; increase stiffness, reduce mass, constrain it more rigidly, or reduce host acceleration before impact.
+- Ensure the primary collision deforms the intended part: the hit part must be deformable, correctly attached, in the impact path, and not pre-deformed.
+- For side-impact caving, make the impacted side a deformable part with enough mass and stiffness to cave but not shatter or sag early.
+- For T-bone or side impacts, align the striking front collision shape with the struck side collision shape and use enough lateral offset to hit the side, not the corner or miss.
+- To make a vehicle spin, hit it far from its centre of mass and verify the heading change; if spin is too small, increase offset or impact energy, and if it flips, reduce offset or energy.
+- If a vehicle becomes upside down or exceeds upright tolerance, reduce impact offset, impact energy, or add damping/constraints to keep it stable.
+- For traffic-light crossing relations, place the vehicle before the stop line with enough speed and time to pass during the green window; verify stop-line crossing time.
+- Place cameras outside all solids and with clear line of sight; verify target screen size and occlusion during the event window, not only at t=0.
+- For mounted cameras, keep the lens within the required mount distance from the pole or host, above and away from hoods, windshields, and nearby props so the target remains visible.
+- If a dashcam misses the crash, move or aim it so the contact point is in front of the lens and inside the frame at contact time.
+- If a camera view is mostly occluded, relocate the camera or move/remove the occluding prop; do not rely on a target being visible only at t=0.
+- Assign an appearance class to every prompt-visible object, including people and support props.
 - For leak particles, attach the emitter to the leaking surface in the host frame, close enough to satisfy the leak relation, and orient it outward.
-- Make leak particles land in the intended region by giving them ground collision, appropriate gravity/lifetime, and a region that matches the ground surface.
-- Ensure particle region tests use a region large enough and at the correct height above the ground.
-- Ensure final rest by applying brakes/friction after impact and checking speed in the rest window.
-- Use rest constraints or brakes to hold vehicles at rest after the event, not just low speed.
-- Avoid high-speed impacts that exceed expected deformation; scale initial speed to produce the desired crush and stop.
-- If a checker says a relation is false because a subcondition never holds, fix the subcondition directly (deformation, visibility, leak source) rather than only the contact.
-- Order fixes: scene validity, t=0 placement/camera, energy/speed/brakes, deformation, particles, then prompt-level relations.
-- For vehicles, model collision shapes robustly: avoid thin walls that can be tunneled, and ensure front/side collision geometry matches the visible body.
-- Keep the scene minimal: remove unused keys and objects that cause checker failures.
+- Make leak particles land in the intended region by giving them ground collision, low initial speed, appropriate gravity/lifetime, and a region that matches the ground surface.
+- If particles miss the region, check where they land (they pile on whatever is under the nozzle, e.g. the vehicle's own frame) and move the emitter so they fall clear onto the ground; do not enlarge the region.
+- If no particles appear, verify the emitter is active, attached to the correct host, and not disabled by missing contact or invalid placement.
+- Ensure final rest by applying brakes/friction after impact and checking speed in the rest window; if speed hovers above threshold, add a final brake or lock.
+- If a checker says a relation is false because a subcondition never holds, fix the subcondition directly (deformation, visibility, leak source, stop-line crossing) rather than only the contact.
+- Keep pedestrians clear of vehicle paths and static props; for a startled step-back, keep them stationary before impact and move them away after impact.
+- Order fixes: scene validity (idle_at, refine.between, attach boxes), remove unused/duplicate entities, t=0 placement/penetration/below-ground, contact occurrence and window, speed/brakes/lurch, deformation/spin/upright, cameras, particles, then prompt-level relations.
