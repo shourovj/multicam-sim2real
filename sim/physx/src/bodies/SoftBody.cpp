@@ -45,6 +45,13 @@ SoftBody::SoftBody(const Spec& s, World& w) : Entity(s.str("id"), "soft_body") {
 
 void SoftBody::link(World& w) { build(w); }
 
+double SoftBody::linkOrder() const {
+    const Vec3 e = shape_.bounds().extent();
+    const double longest = std::max({e.x, e.y, e.z});
+    const double r = resolution_;
+    return std::max(1.0, r * e.x / longest) * std::max(1.0, r * e.y / longest) * std::max(1.0, r * e.z / longest);
+}
+
 void SoftBody::build(World& w) {
     PxPhysics& ph = w.physics();
     PxCudaContextManager& cuda = w.runtime().cuda();

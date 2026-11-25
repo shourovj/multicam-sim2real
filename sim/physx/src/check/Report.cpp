@@ -26,7 +26,7 @@ const char* severityName(Severity s) {
 // physics before expectations, which often pass once the physics is right.
 int fixOrder(const std::string& check) {
     static const std::vector<std::string> order = {
-        "simulation", "finite", "physx_errors", "initial_overlap", "below_ground", "penetration", "particles_in_solids",
+        "simulation", "finite", "physx_errors", "initial_overlap", "deformed_early", "below_ground", "penetration", "particles_in_solids",
         "escaped", "fem_inverted", "energy", "acceleration", "speed", "jitter", "actuator", "expect_coverage"};
     const auto it = std::find(order.begin(), order.end(), check);
     return it != order.end() ? int(it - order.begin()) : int(order.size());

@@ -39,8 +39,9 @@ const std::map<std::string, Advice>& advice() {
           "(a 600 t body against 1 t armour will push through)."}},
         {"below_ground",
          {"Part of a body went below the ground.",
-          "Start bodies above the ground; for vehicles check wheels.radius_m and suspension.travel_m; for fast falls "
-          "raise substeps or enable ccd."}},
+          "Start bodies above the ground; for vehicles check wheels.radius_m and suspension.travel_m. A vehicle whose "
+          "wheels sink after a hit has usually rolled over: lower its com (about a third of its height) or check the "
+          "'upright' numbers. For fast falls raise substeps or enable ccd."}},
         {"escaped",
          {"A body or particles left the scene (very far away or far below the ground).",
           "Usually an explosion from overlap at t=0, a huge impulse, or particles leaking through thin geometry. "
@@ -64,9 +65,14 @@ const std::map<std::string, Advice>& advice() {
          {"A body that should be resting keeps vibrating.",
           "Raise solver_iterations, lower max_depenetration_mps, make sure it does not start overlapping its support."}},
         {"fem_inverted",
-         {"A soft body's tetrahedra turned inside out: the FEM solve failed.",
-          "Lower the impact speed or raise youngs_pa / solver_iterations / resolution; use plastic for permanent dents "
-          "instead of very soft elastic material."}},
+         {"Most of a soft body's tetrahedra turned inside out (over 10%): the FEM solve failed. A few percent at a "
+          "crush face is normal and only a warning.",
+          "Raise youngs_pa and yield_strain so it dents less deep, make the crumple zone bigger than the impact patch, "
+          "and add a refine window for the pair; use plastic for permanent dents instead of very soft elastic material."}},
+        {"deformed_early",
+         {"A soft body deformed before it touched anything: it sags or flops under its own weight and its host's "
+          "acceleration. This makes its vehicle or host behave erratically and later checks fail for no visible reason.",
+          "Raise youngs_pa and yield_strain about tenfold, or lower its mass_kg; a crumple zone keeps its shape until hit."}},
         {"particles_in_solids",
          {"Many particles ended up inside solid bodies (leaking or tunnelling).",
           "Thicken walls to >= 2 particle spacings, lower emitter speed_mps, raise substeps."}},

@@ -158,7 +158,11 @@ void World::build(const Spec& s) {
             index_[id] = entities_.size();
             entities_.push_back(factory(e, *this));
         }
-    for (auto& e : entities_) e->link(*this);
+    std::vector<Entity*> linkOrder;  // non-owning view of entities_
+    for (auto& e : entities_) linkOrder.push_back(e.get());
+    std::stable_sort(linkOrder.begin(), linkOrder.end(),
+                     [](const Entity* a, const Entity* b) { return a->linkOrder() < b->linkOrder(); });
+    for (Entity* e : linkOrder) e->link(*this);
 
     for (const Spec& t : s.items("triggers")) {
         Trigger trig(t);

@@ -227,10 +227,21 @@ void checkEnergy(const RunData& run, Report& r) {
         }
     r.fact("energy_j", {{"initial", sig3(e0)}, {"final", sig3(e.back()[0] + e.back()[1])},
                         {"actuator_work_in", sig3(e.back()[3] - e[0][3])}, {"max_unexplained_gain", sig3(worst)}});
+    // The likeliest source: the body whose kinetic energy rose most over the half second before the peak.
+    std::string culprit;
+    double gain = 0;
+    const int f0 = std::max(0, when - int(run.fps() / 2));
+    for (const auto& [id, ent] : run.entities())
+        if (!ent.velocity.empty() && ent.mass > 0) {
+            const double d = 0.5 * ent.mass * (ent.velocity[size_t(when)].norm2() - ent.velocity[size_t(f0)].norm2());
+            if (d > gain) gain = d, culprit = id;
+        }
     if (worst > allowed)
         r.add({"energy", kinematicPush ? Severity::Warn : Severity::Fail, "",
                "mechanical energy rose " + fmt(worst) + " J above the start plus all actuator work (allowed " + fmt(allowed) +
                    " J), peaking at t=" + fmt(run.time(when)) + " s" +
+                   (culprit.empty() ? "" : "; " + culprit + " gained the most kinetic energy just before (" + fmt(gain) +
+                                               " J): look at what it touches then") +
                    (kinematicPush ? "; kinematic bodies pushed others, which is unmetered work" : ""),
                "", {{"excess_j", worst}, {"t", run.time(when)}}});
     else
@@ -376,13 +387,16 @@ void checkSoftBodies(const RunData& run, Report& r) {
             for (size_t i = 0; i < ps.tets.size(); ++i) flipped += tetVolume(ps.frames[size_t(f)], ps.tets[i]) * restSign[i] < 0;
             if (flipped > worstFlipped) worstFlipped = flipped, worstFrame = f;
         }
-        // A few slivers at a contact patch are a local solver error; widespread inversion is a failed solve.
+        // Slivers at a crush face are a local solver error the rendered surface hides (a hard crash inverts a few
+        // percent); inverting a large share of the body is a failed solve.
         const double frac = double(worstFlipped) / double(ps.tets.size());
-        if (frac > 0.002)
-            r.add({"fem_inverted", frac > 0.02 ? Severity::Fail : Severity::Warn, ps.entity,
+        const bool failed = frac > 0.10;
+        if (frac > 0.005)
+            r.add({"fem_inverted", failed ? Severity::Fail : Severity::Warn, ps.entity,
                    std::to_string(worstFlipped) + " of " + std::to_string(ps.tets.size()) + " tetrahedra of " + ps.entity +
-                       " (" + fmt(100 * frac, 2) + "%) are inverted at t=" + fmt(run.time(worstFrame)) + " s (the worst frame)",
-                   frac > 0.02 ? "" : "local: acknowledge if the deformation numbers look right, else raise resolution"});
+                       " (" + fmt(100 * frac, 2) + "%) are inverted at t=" + fmt(run.time(worstFrame)) +
+                       " s (the worst frame; warning from 0.5%, failure above 10%)",
+                   failed ? "" : "local crush: acknowledge it if the deformation numbers look right"});
         // Permanent deformation at the end, measured in the host's frame (or the world's).
         const auto hostParts = run.partsOf(ps.host);
         const Pose hp = hostParts.empty() ? Pose{} : hostParts.front().get().poses.back();
@@ -394,6 +408,30 @@ void checkSoftBodies(const RunData& run, Report& r) {
         std::sort(disp.begin(), disp.end());
         const auto pct = [&](double q) { return sig3(disp[size_t(q * double(disp.size() - 1))]); };
         r.fact("deformation_m:" + ps.entity, {{"median", pct(0.5)}, {"p90", pct(0.9)}, {"p99", pct(0.99)}, {"max", pct(1)}});
+
+        // A crumple zone must keep its shape until something hits it: sagging under its own weight or the host's
+        // acceleration means the material is far too soft (or yields too early).
+        double firstTouch = run.time(run.frames() - 1);
+        for (const Json& c : run.x().at("contacts"))
+            if (c.at("a") == ps.entity || c.at("b") == ps.entity) firstTouch = std::min(firstTouch, c.at("first_t").get<double>());
+        const auto p90At = [&](int f) {
+            const auto bp = hostParts.empty() ? Pose{} : hostParts.front().get().poses[size_t(f)];
+            std::vector<double> d;
+            for (size_t i = 0; i < ps.frames[size_t(f)].size() && i < ps.rest.size(); ++i)
+                d.push_back(((ps.host.empty() ? ps.frames[size_t(f)][i] : bp.transformInv(ps.frames[size_t(f)][i])) - ps.rest[i]).norm());
+            std::sort(d.begin(), d.end());
+            return d.empty() ? 0.0 : d[size_t(0.9 * double(d.size() - 1))];
+        };
+        const int before = std::max(0, run.frameAt(firstTouch) - 1);
+        int when = -1;
+        for (int f = 0; f <= before && when < 0; f += std::max(1, run.frames() / 96))
+            if (p90At(f) > 0.05) when = f;
+        if (when >= 0)
+            r.add({"deformed_early", Severity::Fail, ps.entity,
+                   ps.entity + " deformed more than 5 cm (90th percentile) by t=" + fmt(run.time(when)) + " s and " +
+                       fmt(p90At(before)) + " m by t=" + fmt(run.time(before)) +
+                       " s, before it touched anything: it sags or flops under its own weight and its host's motion",
+                   "raise youngs_pa (x10) and yield_strain (x10), or lower its mass_kg; a crumple zone holds its shape until hit"});
     }
 }
 

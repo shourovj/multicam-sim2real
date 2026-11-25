@@ -32,6 +32,8 @@ public:
 
     // Resolve references to other entities, once every entity exists.
     virtual void link(World&) {}
+    // Entities are linked in ascending order of this key (stable: scene order otherwise); see SoftBody.
+    virtual double linkOrder() const { return 0; }
     // Controllers and external forces, before each physics step.
     virtual void beforeStep(World&, double /*dt*/) {}
     // Read back state, detect events, after each physics step.

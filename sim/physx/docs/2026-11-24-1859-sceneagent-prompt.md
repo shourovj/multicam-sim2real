@@ -208,6 +208,12 @@ All rigid-body keys (`shapes`, `pos`, `mass_kg`, `drag`) plus:
   brake per wheel; truck 7-15 t with 3000 N m and 6000 N m; r reports the result in W/kg and g so you can compare.
 - Verbs: `brake {level 0..1}` (the driver stamps on the brake: after a crash), `release` (lets go of everything),
   `set_speed {mps}`.
+- A driver without `signal` ignores the lights (it runs a red); one without `leader` ignores other vehicles and
+  drives into them: that is how a crash is staged.
+- `com` [x, y, z] (body frame) sets the centre of mass. A van or truck hit side-on rolls over unless it is low
+  (about a third of the body's height); lower it if r shows wheels `below_ground` after a side impact.
+- `substeps`: 20 at 24 fps suits cars; crash precision comes from a `refine` window (factor 8). Raising substeps and
+  the refine factor together makes the wheel suspension stiff and twitchy; change one at a time.
 
 ### 6.5 `tracked_vehicles`: tanks, bulldozers
 
@@ -272,6 +278,16 @@ human from their walk phase.
   metal, dough. Stiffness guide: rubber 1e6-1e7, crumple zone 2e7 (crushes ~0.3 m at 16 m/s), armour 5e8.
 - A soft body reports contacts like a rigid one and also as its host (`contact:tank:truck` fires when the truck's
   crumple zone touches the tank's armour).
+- Mesh density: `max_edge_m` sets the collision mesh (what r counts in `fem_inverted` and draws); `resolution` sets
+  the voxel grid the solver uses. Halving `max_edge_m` roughly quadruples the tetrahedra.
+- Size a crumple zone to the impact patch: `deformation` is the 90th percentile over all its vertices, so a whole
+  van side hit by a car nose reads as almost no deformation. Use a panel about as wide as what hits it.
+- Attach only the face that touches the host (a thin slab of the `attach` box); attaching most of the body makes it
+  rigid.
+- A crumple zone must hold its shape until something hits it. r fails `deformed_early` if it sags or flops before any
+  contact (too soft for its mass and the host's accelerations): raise `youngs_pa` and `yield_strain`.
+- `fem_inverted`: a few percent of inverted tetrahedra at a crush face is normal for a hard crash (warning from
+  0.5%; acknowledge it if the deformation numbers look right); above 10% the solve failed (failure).
 
 ### 6.9 `cloths`: flags, banners, tarps, sheets
 
@@ -384,9 +400,10 @@ fails with `expect_coverage` if a camera has none or there is no physical outcom
 | `min_gap` | `a`, `b`, `metres` | they never come closer |
 | `upright` | `entity`, `max_tilt_deg` 30 | it never tips further |
 | `spin` | `entity`, `during_s`, `min_rpm`, `max_rpm` | its rotation rate stays in range (rotors, wheels, tops) |
+| `turns` | `entity`, `during_s`, `min_deg`, `max_deg` | its heading changes that much in total (a car spinning out, a door swinging open) |
 | `deformation` | `entity`, `min_m`, `max_m` | a soft body's permanent crush (90th percentile) is in range |
 | `particles_in_region` | `entity`, `min`, `max`, `at_s`, `min_fraction` 0.8 | that share of particles is in the box |
-| `obeys_signals` | | no vehicle crosses its stop line on red |
+| `obeys_signals` | `vehicles` (optional list) | no vehicle (or none of those listed: leave out the one that runs the red) crosses its stop line on red |
 
 Give each expectation a unique `id`; findings are keyed `expect_<type>:<id>`.
 

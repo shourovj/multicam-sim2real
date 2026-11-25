@@ -258,9 +258,10 @@ public:
         if (type == "min_gap") return minGap(s);
         if (type == "upright") return upright(s);
         if (type == "spin") return spin(s);
+        if (type == "turns") return turns(s);
         if (type == "deformation") return deformation(s);
         if (type == "particles_in_region") return particlesInRegion(s);
-        return obeysSignals();
+        return obeysSignals(s);
     }
 
 private:
@@ -446,6 +447,25 @@ private:
         return {rmin >= lo && rmax <= hi, msg};
     }
 
+    // Total heading change of the main part about the vertical (a car spinning out, a door swinging).
+    Outcome turns(const Spec& s) {
+        const std::string ent = entityId(run_, s, "entity");
+        const auto parts = run_.partsOf(ent);
+        if (parts.empty()) s["entity"].fail(ent + " has no rigid body to measure its heading on");
+        const auto [f0, f1] = window(run_, s, "during_s");
+        const double lo = s.num("min_deg", 0), hi = s.num("max_deg", 1e9);
+        const auto& poses = parts.front().get().poses;
+        const auto heading = [&](int f) {
+            const Vec3 x = poses[size_t(f)].q.rotate({1, 0, 0});
+            return std::atan2(x.y, x.x);
+        };
+        double total = 0;
+        for (int f = f0 + 1; f <= f1; ++f) total += std::remainder(heading(f) - heading(f - 1), 2 * kPi);
+        const double deg = std::fabs(rad2deg(total));
+        return {deg >= lo && deg <= hi, ent + " turned " + fmt(deg) + " deg about the vertical between " + fmt(run_.time(f0)) +
+                                            " and " + fmt(run_.time(f1)) + " s (wanted " + fmt(lo) + "-" + fmt(hi) + " deg)"};
+    }
+
     Outcome upright(const Spec& s) {
         const std::string ent = entityId(run_, s, "entity");
         const double maxTilt = s.num("max_tilt_deg", 30);
@@ -488,13 +508,21 @@ private:
                                      " points in the region at t=" + fmt(run_.time(f)) + " s (wanted " + percent(minFrac) + ")"};
     }
 
-    Outcome obeysSignals() {
+    // Every vehicle, or only those listed (a scene where one car runs the red checks the others).
+    Outcome obeysSignals(const Spec& s) {
         Outcome out{true, ""};
+        std::set<std::string> only;
+        if (s.has("vehicles"))
+            for (const std::string& v : s.strings("vehicles")) {
+                if (!run_.hasEntity(v)) s["vehicles"].fail("no entity '" + v + "'");
+                only.insert(v);
+            }
         const std::string suffix = ":passes_stop_line";
         for (const Json& e : run_.x().at("events")) {
             const std::string n = e.at("name");
+            const std::string who = n.substr(0, n.find(':'));
             if (n.size() > suffix.size() && n.compare(n.size() - suffix.size(), suffix.size(), suffix) == 0 &&
-                e.value("data", Json::object()).value("light", "") == "red") {
+                (only.empty() || only.count(who)) && e.value("data", Json::object()).value("light", "") == "red") {
                 out.ok = false;
                 out.message += (out.message.empty() ? "" : "; ") + n + " on red at t=" + fmt(e.at("t").get<double>()) + " s";
             }
@@ -593,7 +621,7 @@ void runExpectations(const RunData& run, const Spec& scene, Report& r) {
         ++index;
         const std::string type = s.oneOf("type", {"event", "no_event", "event_order", "in_view", "enters_view", "leaves_view",
                                                   "event_in_view", "reaches", "speed", "at_rest", "min_gap", "upright",
-                                                  "spin", "deformation", "particles_in_region", "obeys_signals"});
+                                                  "spin", "turns", "deformation", "particles_in_region", "obeys_signals"});
         const std::string id = s.str("id", type + std::to_string(index));
         if (!ids.insert(id).second) s["id"].fail("duplicate expectation id '" + id + "'");
         if (s.has("camera")) camerasCovered.insert(s.str("camera"));

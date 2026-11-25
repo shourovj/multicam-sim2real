@@ -2,6 +2,7 @@
 // it back with the checker's RunData, so the whole S -> X path is exercised. Tolerances cover the integrator's
 // first-order error at the scene's step (dt = 1 / (fps * substeps)).
 #include <filesystem>
+#include <fstream>
 
 #include "check/Expectations.h"
 #include "check/PhysicsChecks.h"
@@ -172,6 +173,26 @@ TEST_CASE("plastic FEM stays crushed, elastic FEM springs back") {
     };
     CHECK(length(simulate("fem_elastic", e)) > 0.99);
     CHECK(length(simulate("fem_plastic", p)) < 0.97);
+}
+
+TEST_CASE("a car's crumple zone at rest keeps its shape next to a larger soft body (PhysX build-order bug)") {
+    // From the Sonnet T-bone trial (tests/data/fem_build_order.json): with the larger van panel added to the GPU
+    // scene first, the parked sedan's nose drifted 4 cm with nothing touching it. SoftBody::linkOrder avoids it.
+    std::ifstream in(std::filesystem::path(__FILE__).parent_path() / "data" / "fem_build_order.json");
+    REQUIRE(in);
+    const auto r = simulate("fem_build_order", Json::parse(in));
+    const PointSet* nose = nullptr;
+    for (const PointSet& p : r.pointSets())
+        if (p.entity == "sedan_nose") nose = &p;
+    REQUIRE(nose);
+    // In the car's frame (its driver pulls away), the nose may only flex a few millimetres.
+    const auto& car = r.partsOf("sedan").front().get().poses;
+    const int f = r.frameAt(0.33);
+    double worst = 0;
+    for (size_t i = 0; i < nose->frames.front().size(); ++i)
+        worst = std::max(worst, (car[size_t(f)].transformInv(nose->frames[size_t(f)][i]) -
+                                 car[0].transformInv(nose->frames.front()[i])).norm());
+    CHECK(worst < 0.015);
 }
 
 TEST_CASE("water at rest in a glass stays in it") {

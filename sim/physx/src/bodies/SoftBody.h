@@ -26,6 +26,10 @@ public:
     SoftBody(const Spec& s, World& w);
 
     void link(World& w) override;
+    // PhysX 5.9.1 on the GPU can silently corrupt a deformable volume added after a larger one (seen with particles
+    // and static scenery in the scene: tests/data/fem_build_order.json): it sags and drifts with nothing touching
+    // it. Adding them smallest first avoided it. The key is the voxel count (`resolution` along the longest side).
+    double linkOrder() const override;
     void afterStep(World& w, double dt) override;
     void record(World& w, Recorder& rec) override;
     Json describe() const override;
