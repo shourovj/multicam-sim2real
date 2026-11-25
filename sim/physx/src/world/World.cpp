@@ -69,7 +69,10 @@ CollisionFilter World::filterFor(const std::string& entityId, const std::string&
     f.ignores = ignores;
     const auto it = index_.find(entityId);
     f.entity = it == index_.end() ? uint32_t(entities_.size() + 1) : uint32_t(it->second + 1);
-    if (!assembly.empty()) f.assemblyId = assemblies_.try_emplace(assembly, uint32_t(assemblies_.size() + 1)).first->second;
+    if (!assembly.empty()) {
+        f.assemblyId = assemblies_.try_emplace(assembly, uint32_t(assemblies_.size() + 1)).first->second;
+        assemblyOf_[entityId] = assembly;
+    }
     return f;
 }
 
@@ -185,6 +188,64 @@ void World::step(double h) {
     t_ += h;
     ++steps_;
     for (auto& e : entities_) e->afterStep(*this, h);
+    detectDeformableContacts();
+}
+
+void World::detectDeformableContacts() {
+    constexpr double kTouch = 0.015;     // m: closer than this counts as touching (PhysX contact offsets are ~1 cm)
+    constexpr size_t kMaxPoints = 4000;  // points tested per deformable per step
+    const auto sameAssembly = [this](const std::string& a, const std::string& b) {
+        const auto ia = assemblyOf_.find(a), ib = assemblyOf_.find(b);
+        return ia != assemblyOf_.end() && ib != assemblyOf_.end() && ia->second == ib->second;
+    };
+    for (size_t ei = 0; ei < entities_.size(); ++ei) {
+        const Entity* e = entities_[ei].get();
+        const std::span<const Vec3> pts = e->contactPoints();
+        if (pts.empty()) continue;
+        const size_t stride = std::max<size_t>(1, pts.size() / kMaxPoints);
+        Aabb box;
+        for (const Vec3& p : pts) box.add(p);
+        for (size_t oi = 0; oi < entities_.size(); ++oi) {
+            const Entity* o = entities_[oi].get();
+            if (oi == ei || sameAssembly(e->id(), o->id()) || o->id() == e->contactAlias()) continue;
+            const std::span<const Vec3> other = o->contactPoints();
+            bool touching = false;
+            if (!other.empty()) {
+                if (oi < ei) continue;  // each deformable pair once
+                Aabb ob;
+                for (const Vec3& p : other) ob.add(p);
+                if (aabbGap(box, ob) > kTouch) continue;
+                // Spatial hash of the other body's points, cell = touch distance.
+                std::map<std::array<long, 3>, std::vector<Vec3>> grid;
+                const auto cell = [](const Vec3& p) {
+                    return std::array<long, 3>{long(std::floor(p.x / kTouch)), long(std::floor(p.y / kTouch)),
+                                               long(std::floor(p.z / kTouch))};
+                };
+                for (size_t i = 0; i < other.size(); i += std::max<size_t>(1, other.size() / kMaxPoints))
+                    grid[cell(other[i])].push_back(other[i]);
+                for (size_t i = 0; i < pts.size() && !touching; i += stride) {
+                    const auto c = cell(pts[i]);
+                    for (long dx = -1; dx <= 1 && !touching; ++dx)
+                        for (long dy = -1; dy <= 1 && !touching; ++dy)
+                            for (long dz = -1; dz <= 1 && !touching; ++dz) {
+                                const auto it = grid.find({c[0] + dx, c[1] + dy, c[2] + dz});
+                                if (it == grid.end()) continue;
+                                for (const Vec3& q : it->second)
+                                    if ((q - pts[i]).norm() < kTouch) touching = true;
+                            }
+                }
+            } else if (!o->shapes().empty()) {
+                if (aabbGap(box, worldBounds(*o)) > kTouch) continue;
+                const PosedShapes body{o->shapes(), o->pose()};
+                for (size_t i = 0; i < pts.size() && !touching; i += stride) touching = body.sdf(pts[i]) < kTouch;
+            }
+            if (!touching) continue;
+            contacts_.touch(e->id(), o->id(), t_);
+            const std::string a = e->contactAlias().empty() ? e->id() : e->contactAlias();
+            const std::string b = o->contactAlias().empty() ? o->id() : o->contactAlias();
+            if (a != e->id() || b != o->id()) contacts_.touch(a, b, t_);
+        }
+    }
 }
 
 void World::recordFrame(int frame, Recorder& rec) {

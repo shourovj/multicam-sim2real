@@ -24,10 +24,20 @@ public:
     void put(const std::string& key, std::span<const float> values, int width, bool variable = false);
     void put(const std::string& key, std::initializer_list<float> values) { put(key, std::span(values.begin(), values.size()), int(values.size())); }
 
+    // Data that does not change over the run (mesh triangles, tetrahedra, UVs), written once.
+    void putStatic(const std::string& key, std::vector<float> values, int width);
+    void putStatic(const std::string& key, std::vector<int32_t> values, int width);
+
     // Writes the stream files and returns their description for x.json.
     Json write(const std::string& dir) const;
 
 private:
+    struct Static {
+        int width = 0;
+        std::vector<float> floats;
+        std::vector<int32_t> ints;
+    };
+    std::map<std::string, Static> statics_;
     struct Stream {
         int width = 0;
         bool variable = false;
@@ -49,6 +59,7 @@ public:
     // Fixed stream: [frames][rows * width]. Variable stream: rows of frame f are rows[offsets[f] .. offsets[f+1]).
     std::vector<float> read(const std::string& key) const;
     std::vector<int32_t> counts(const std::string& key) const;
+    std::vector<int32_t> readInts(const std::string& key) const;  // static int32 data (triangles, tetrahedra)
 
 private:
     std::string dir_;

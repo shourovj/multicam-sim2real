@@ -78,6 +78,7 @@ public:
 private:
     void build(const Spec& scene);
     void step(double h);
+    void detectDeformableContacts();
     void recordFrame(int frame, Recorder& rec);
     bool refining();
     Json describe() const;
@@ -91,6 +92,7 @@ private:
     std::vector<std::unique_ptr<Entity>> entities_;
     std::map<std::string, size_t> index_;
     std::map<std::string, uint32_t> assemblies_;
+    std::map<std::string, std::string> assemblyOf_;  // entity id -> assembly name
     std::vector<std::unique_ptr<Camera>> cameras_;
     std::vector<Trigger> triggers_;
     std::vector<Refinement> refinements_;

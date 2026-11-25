@@ -93,7 +93,33 @@ Json Recorder::write(const std::string& dir) const {
         }
         desc[key] = d;
     }
+    for (const auto& [key, s] : statics_) {
+        const auto [it, fresh] = files.emplace(fileName(key), key);
+        if (!fresh) throw std::logic_error("streams " + it->second + " and " + key + " map to the same file");
+        const std::string base = "streams/" + fileName(key);
+        const bool ints = !s.ints.empty();
+        if (ints) writeFile(dir + "/" + base + ".i32", s.ints);
+        else writeFile(dir + "/" + base + ".f32", s.floats);
+        const size_t n = ints ? s.ints.size() : s.floats.size();
+        desc[key] = {{"file", base + (ints ? ".i32" : ".f32")}, {"width", s.width}, {"rows", n / size_t(s.width)},
+                     {"static", true}, {"dtype", ints ? "int32" : "float32"}};
+    }
     return desc;
+}
+
+void Recorder::putStatic(const std::string& key, std::vector<float> values, int width) {
+    if (width <= 0 || values.size() % size_t(width) != 0) throw std::logic_error("static " + key + ": bad width");
+    statics_[key] = {width, std::move(values), {}};
+}
+
+void Recorder::putStatic(const std::string& key, std::vector<int32_t> values, int width) {
+    if (width <= 0 || values.empty() || values.size() % size_t(width) != 0)
+        throw std::logic_error("static " + key + ": bad width");
+    statics_[key] = {width, {}, std::move(values)};
+}
+
+std::vector<int32_t> StreamReader::readInts(const std::string& key) const {
+    return readFile<int32_t>(dir_ + "/" + desc_.at(key).at("file").get<std::string>());
 }
 
 std::vector<float> StreamReader::read(const std::string& key) const {

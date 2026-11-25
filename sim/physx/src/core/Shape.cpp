@@ -442,6 +442,66 @@ Shape Shape::fromJson(const Json& j) {
     return s;
 }
 
+TriMesh Shape::surfaceMesh(int segments) const {
+    TriMesh m;
+    auto add = [&m](const Vec3& v) {
+        m.vertices.push_back(v);
+        return int(m.vertices.size() - 1);
+    };
+    // Rings around Z closed by a pole vertex at each end: covers sphere, capsule and cylinder.
+    auto lathe = [&](const std::vector<std::pair<double, double>>& profile, double zBottom, double zTop) {
+        const int bottom = add({0, 0, zBottom});  // profile: (radius, z) of each ring, bottom to top
+        int prev = -1;
+        for (const auto& [r, z] : profile) {
+            const int first = int(m.vertices.size());
+            for (int i = 0; i < segments; ++i)
+                add({r * std::cos(2 * kPi * i / segments), r * std::sin(2 * kPi * i / segments), z});
+            for (int i = 0; i < segments; ++i) {
+                const int j = (i + 1) % segments;
+                if (prev < 0) {
+                    m.triangles.push_back({bottom, first + j, first + i});
+                } else {
+                    m.triangles.push_back({prev + i, prev + j, first + j});
+                    m.triangles.push_back({prev + i, first + j, first + i});
+                }
+            }
+            prev = first;
+        }
+        const int top = add({0, 0, zTop});
+        for (int i = 0; i < segments; ++i) m.triangles.push_back({prev + i, prev + (i + 1) % segments, top});
+    };
+    switch (type) {
+        case ShapeType::Box: {
+            const Vec3& h = halfExtents;
+            for (int i = 0; i < 8; ++i) add({i & 1 ? h.x : -h.x, i & 2 ? h.y : -h.y, i & 4 ? h.z : -h.z});
+            m.triangles = {{0, 2, 3}, {0, 3, 1}, {4, 5, 7}, {4, 7, 6}, {0, 1, 5}, {0, 5, 4},
+                           {2, 6, 7}, {2, 7, 3}, {0, 4, 6}, {0, 6, 2}, {1, 3, 7}, {1, 7, 5}};
+            break;
+        }
+        case ShapeType::Cylinder:
+            lathe({{radius, -halfLength}, {radius, halfLength}}, -halfLength, halfLength);
+            break;
+        case ShapeType::Sphere:
+        case ShapeType::Capsule: {
+            // Latitude rings of a sphere; a capsule splits them at the equator by its straight half length.
+            const double hl = type == ShapeType::Capsule ? halfLength : 0.0;
+            const int rings = std::max(4, segments / 2);
+            std::vector<std::pair<double, double>> prof;
+            for (int i = 1; i < rings; ++i) {
+                const double a = -kPi / 2 + kPi * i / rings;
+                if (hl > 0 && a >= 0 && (prof.empty() || prof.back().second < 0)) prof.push_back({radius, -hl});
+                prof.push_back({radius * std::cos(a), radius * std::sin(a) + (a < 0 ? -hl : hl)});
+            }
+            lathe(prof, -radius - hl, radius + hl);
+            break;
+        }
+        default:
+            m.vertices = vertices;
+            m.triangles = triangles;
+    }
+    return m;
+}
+
 double PosedShapes::sdf(const Vec3& world) const {
     double d = 1e300;
     for (const Shape& s : shapes) d = std::min(d, s.sdf((pose * s.local).transformInv(world)));

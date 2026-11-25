@@ -26,6 +26,12 @@ struct Plane {
 
 enum class ShapeType { Box, Sphere, Capsule, Cylinder, Prism, Convex, Mesh };
 
+// A closed triangle surface, outward winding.
+struct TriMesh {
+    std::vector<Vec3> vertices;
+    std::vector<std::array<int, 3>> triangles;
+};
+
 class Shape {
 public:
     ShapeType type = ShapeType::Box;
@@ -58,6 +64,8 @@ public:
     std::vector<Vec3> surfaceSamples() const;  // points on the surface: corners, edges, faces
     Aabb bounds() const;
     double volume() const;
+    // The surface as triangles in the shape's own frame; curved shapes use `segments` around their axis.
+    TriMesh surfaceMesh(int segments = 24) const;
 
     Json toJson() const;
     static Shape fromJson(const Json& j);  // inverse of toJson (used by the checker and Blender)
