@@ -13,6 +13,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "core/Spec.h"
 
@@ -24,7 +25,8 @@ struct Intrinsics {
     double focalPx() const { return width / 2.0 / std::tan(deg2rad(fovDeg) / 2.0); }
 };
 
-// Rotation of a camera at `eye` looking at `target` (Blender convention), keeping world +Z up.
+// Rotation of a camera at `eye` looking at `target` (Blender convention), keeping world +Z up. Identity (looking
+// down) when eye and target coincide.
 Quat lookRotation(const Vec3& eye, const Vec3& target);
 
 class Camera {
@@ -41,10 +43,13 @@ public:
     Json toJson() const;
 
 private:
+    enum class Type { Fixed, Attached, Handheld, Orbit, Follow };
+
     Vec3 target(const PoseOf& poseOf) const;
     Pose shake(double t) const;
 
-    std::string id_, type_, parent_, lookEntity_, centerEntity_;
+    Type type_ = Type::Fixed;
+    std::string id_, typeName_, parent_, lookEntity_, centerEntity_;
     Json spec_;
     Intrinsics intr_;
     Vec3 position_, lookAt_, center_, offsetPos_;

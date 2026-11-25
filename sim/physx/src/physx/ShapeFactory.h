@@ -26,10 +26,12 @@ public:
     // Creates one exclusive PhysX shape per p2s shape on `actor`. `shapes` may be updated (cooked hulls).
     void attach(physx::PxRigidActor& actor, std::vector<Shape>& shapes, const CollisionFilter& filter,
                 const std::string& owner, double contactOffset = 0.02) const;
-    physx::PxConvexMesh* cookConvex(const std::vector<Vec3>& points) const;  // owned by PhysX's mesh refcount
+    // Shapes made from a mesh take their own reference, so the returned one may be dropped after attaching.
+    // Cooking failures are reported as scene errors against `owner`.
+    PxPtr<physx::PxConvexMesh> cookConvex(const std::vector<Vec3>& points, const std::string& owner) const;
 
 private:
-    void readHull(const physx::PxConvexMesh& mesh, Shape& shape) const;
+    PxPtr<physx::PxTriangleMesh> cookTriangleMesh(const Shape& mesh, const std::string& owner) const;
 
     Runtime& runtime_;
     const MaterialLibrary& materials_;

@@ -106,6 +106,13 @@ struct Aabb {
     }
     Vec3 center() const { return (lo + hi) * 0.5; }
     Vec3 extent() const { return hi - lo; }
+    // Bounds of this box's eight corners after `pose`.
+    Aabb transformed(const Pose& pose) const {
+        Aabb out;
+        if (empty()) return out;
+        for (int i = 0; i < 8; ++i) out.add(pose.transform({i & 1 ? hi.x : lo.x, i & 2 ? hi.y : lo.y, i & 4 ? hi.z : lo.z}));
+        return out;
+    }
 };
 
 }  // namespace p2s

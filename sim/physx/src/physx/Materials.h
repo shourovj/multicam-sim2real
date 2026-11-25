@@ -3,7 +3,9 @@
 #pragma once
 
 #include <map>
+#include <set>
 #include <string>
+#include <vector>
 
 #include "core/Spec.h"
 #include "physx/Px.h"
@@ -34,6 +36,7 @@ private:
     physx::PxPhysics& physics_;
     std::map<std::string, MaterialProps> props_;
     std::map<std::string, PxPtr<physx::PxMaterial>> materials_;
+    std::set<std::string> userDefined_;  // ids from the scene; a scene may redefine a preset once
 };
 
 }  // namespace p2s

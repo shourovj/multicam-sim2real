@@ -10,6 +10,8 @@ WindField::WindField(const Spec& s, unsigned seed) {
     turbulence_ = s.num("turbulence", 0.0);
     length_ = s.positive("turbulence_length_m", 1.0);
     airDensity_ = s.positive("air_density", 1.2);
+    if (gust_ < 0) s["gust"].fail("must be >= 0");
+    if (turbulence_ < 0) s["turbulence"].fail("must be >= 0");
     // Random plane-wave modes with amplitude perpendicular to the wave vector: each mode is divergence free.
     std::mt19937 rng(seed);
     std::normal_distribution<double> n(0.0, 1.0);

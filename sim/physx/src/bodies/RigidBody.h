@@ -26,8 +26,9 @@ std::vector<PoseKey> parseKeys(const Spec& s, const std::string& key = "keys");
 
 class RigidBody : public Entity {
 public:
-    RigidBody(const Spec& s, World& w);
-    RigidBody(std::string id, std::vector<Shape> shapes, const Pose& pose, World& w);  // static, from code (ground)
+    RigidBody(const Spec& s, World& w, std::string kind = "rigid_body");
+    // Static, from code (the ground). `category` is the collision category bit (2 = ground).
+    RigidBody(std::string id, std::vector<Shape> shapes, const Pose& pose, World& w, uint32_t category = 1);
 
     void beforeStep(World& w, double dt) override;
     void afterStep(World& w, double dt) override;
@@ -43,7 +44,7 @@ public:
     Pose pose() const override { return fromPx(actor_->getGlobalPose()); }
 
     double mass() const;
-    Vec3 velocity() const;
+    Vec3 velocity() const override;
     physx::PxRigidDynamic& dynamic();  // throws for static bodies
 
 private:

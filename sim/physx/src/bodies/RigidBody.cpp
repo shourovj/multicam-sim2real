@@ -11,12 +11,6 @@ double smoothstep(double u) {
     return u * u * (3 - 2 * u);
 }
 
-Vec3 jsonVec3(const Json& j, const Spec& at) {
-    if (!j.is_array() || j.size() != 3 || !j[0].is_number() || !j[1].is_number() || !j[2].is_number())
-        at.fail("expected [x, y, z]");
-    return {j[0].get<double>(), j[1].get<double>(), j[2].get<double>()};
-}
-
 }  // namespace
 
 Pose interpolateKeys(const std::vector<PoseKey>& keys, double t) {
@@ -39,7 +33,7 @@ std::vector<PoseKey> parseKeys(const Spec& s, const std::string& key) {
     return keys;
 }
 
-RigidBody::RigidBody(const Spec& s, World& w) : Entity(s.str("id"), "rigid_body") {
+RigidBody::RigidBody(const Spec& s, World& w, std::string kind) : Entity(s.str("id"), std::move(kind)) {
     type_ = s.oneOf("type", {"dynamic", "kinematic", "static"}, "dynamic");
     for (const Spec& sh : s.items("shapes"))
         for (Shape& x : Shape::parse(sh)) shapes_.push_back(std::move(x));
@@ -51,16 +45,21 @@ RigidBody::RigidBody(const Spec& s, World& w) : Entity(s.str("id"), "rigid_body"
 
     if (type_ == "static") {
         actor_.reset(w.physics().createRigidStatic(px(start)));
+        if (!actor_) s.fail("PhysX could not create the body (invalid pose?)");
         w.shapeFactory().attach(*actor_, shapes_, filter, id());
     } else {
         PxRigidDynamic* d = w.physics().createRigidDynamic(px(start));
+        if (!d) s.fail("PhysX could not create the body (invalid pose?)");
         actor_.reset(d);
         w.shapeFactory().attach(*actor_, shapes_, filter, id());
         if (s.has("mass_kg")) {
             PxRigidBodyExt::setMassAndUpdateInertia(*d, float(s.positive("mass_kg")));
-        } else {
-            const double density = s.positive("density", w.materials().props(shapes_.front().material).density);
-            PxRigidBodyExt::updateMassAndInertia(*d, float(density));
+        } else if (s.has("density")) {
+            PxRigidBodyExt::updateMassAndInertia(*d, float(s.positive("density")));
+        } else {  // each shape weighs what its material's density says
+            std::vector<PxReal> densities;
+            for (const Shape& sh : shapes_) densities.push_back(float(w.materials().props(sh.material).density));
+            PxRigidBodyExt::updateMassAndInertia(*d, densities.data(), PxU32(densities.size()));
         }
         if (type_ == "kinematic") d->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
         d->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_GYROSCOPIC_FORCES, true);
@@ -87,9 +86,9 @@ RigidBody::RigidBody(const Spec& s, World& w) : Entity(s.str("id"), "rigid_body"
         if (cd_ > 0) {
             Aabb b;
             for (const Shape& sh : shapes_) {
-                const Aabb sb = sh.bounds();
-                b.add(sh.local.transform(sb.lo));
-                b.add(sh.local.transform(sb.hi));
+                const Aabb sb = sh.bounds().transformed(sh.local);
+                b.add(sb.lo);
+                b.add(sb.hi);
             }
             const Vec3 e = b.extent();  // default frontal area: the largest face of the bounding box
             area_ = dr.positive("area_m2", std::max({e.x * e.y, e.y * e.z, e.x * e.z}));
@@ -98,10 +97,10 @@ RigidBody::RigidBody(const Spec& s, World& w) : Entity(s.str("id"), "rigid_body"
     w.scene().addActor(*actor_);
 }
 
-RigidBody::RigidBody(std::string id, std::vector<Shape> shapes, const Pose& pose, World& w)
+RigidBody::RigidBody(std::string id, std::vector<Shape> shapes, const Pose& pose, World& w, uint32_t category)
     : Entity(std::move(id), "rigid_body"), type_("static"), shapes_(std::move(shapes)) {
     actor_.reset(w.physics().createRigidStatic(px(pose)));
-    w.shapeFactory().attach(*actor_, shapes_, w.filterFor(this->id()), this->id());
+    w.shapeFactory().attach(*actor_, shapes_, w.filterFor(this->id(), "", category), this->id());
     w.scene().addActor(*actor_);
 }
 
@@ -167,7 +166,9 @@ void RigidBody::record(World&, Recorder& rec) {
 Json RigidBody::describe() const {
     Json shapes = Json::array();
     for (const Shape& s : shapes_) shapes.push_back(s.toJson());
-    Json j = {{"type", type_}, {"shapes", shapes}, {"streams", {{"pose", "body/" + id() + "/pose"}}}};
+    Json j = {{"type", type_},
+              {"parts", {{{"name", "body"}, {"shapes", shapes}, {"stream", "body/" + id() + "/pose"}, {"row", 0}}}},
+              {"streams", {{"pose", "body/" + id() + "/pose"}}}};
     if (type_ != "static") {
         j["mass_kg"] = mass();
         j["streams"]["vel"] = "body/" + id() + "/vel";
@@ -185,16 +186,20 @@ std::vector<std::string> RigidBody::verbs() const {
 void RigidBody::act(World& w, const Action& a) {
     PxRigidDynamic& d = dynamic();
     const Spec p = Spec::fromJson(a.params, id() + "." + a.verb);
+    const bool forceVerb = a.verb == "impulse" || a.verb == "push" || a.verb == "set_velocity";
+    if (forceVerb && type_ != "dynamic")
+        throw SpecError(id() + ": '" + a.verb + "' at t=" + std::to_string(w.time()) +
+                        " needs a dynamic body; it is kinematic (trigger 'release' first)");
     if (a.verb == "impulse") {  // N s, at the centre of mass or at a world point
-        const Vec3 j = jsonVec3(p.raw().at("vector"), p);
+        const Vec3 j = p.vec3("vector");
         if (p.has("point"))
-            PxRigidBodyExt::addForceAtPos(d, px(j), px(jsonVec3(p.raw().at("point"), p)), PxForceMode::eIMPULSE);
+            PxRigidBodyExt::addForceAtPos(d, px(j), px(p.vec3("point")), PxForceMode::eIMPULSE);
         else
             d.addForce(px(j), PxForceMode::eIMPULSE);
     } else if (a.verb == "push") {  // constant force for a while
-        push_ = Push{jsonVec3(p.raw().at("force"), p), w.time() + p.positive("duration_s")};
+        push_ = Push{p.vec3("force"), w.time() + p.positive("duration_s")};
     } else if (a.verb == "set_velocity") {
-        d.setLinearVelocity(px(jsonVec3(p.raw().at("velocity"), p)));
+        d.setLinearVelocity(px(p.vec3("velocity")));
     } else if (a.verb == "release") {  // kinematic -> dynamic: falls, gets knocked about
         d.setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, false);
         type_ = "dynamic";
@@ -204,6 +209,7 @@ void RigidBody::act(World& w, const Action& a) {
         type_ = "kinematic";
         keys_.clear();
     }
+    p.rejectUnknownKeys();
     w.events().emit(id() + ":" + a.verb, w.time());
 }
 
@@ -223,7 +229,7 @@ std::unique_ptr<Entity> makeGround(const Spec& s, World& w) {
     const double h = s.num("height", 0.0), half = s.positive("half_size_m", 2000);
     Shape slab = Shape::box({half, half, 1.0}, Pose{{0, 0, -1.0}, {}});
     slab.material = s.str("material", "concrete");
-    return std::make_unique<RigidBody>("ground", std::vector<Shape>{slab}, Pose{{0, 0, h}, {}}, w);
+    return std::make_unique<RigidBody>("ground", std::vector<Shape>{slab}, Pose{{0, 0, h}, {}}, w, 2);
 }
 
 }  // namespace p2s

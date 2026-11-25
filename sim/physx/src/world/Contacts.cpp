@@ -42,12 +42,14 @@ void ContactReporter::endStep(double dt) {
 
 void ContactReporter::onContact(const PxContactPairHeader& header, const PxContactPair* pairs, PxU32 n) {
     if (header.flags & (PxContactPairHeaderFlag::eREMOVED_ACTOR_0 | PxContactPairHeaderFlag::eREMOVED_ACTOR_1)) return;
-    std::array<PxContactPairPoint, 64> pts;
+    std::vector<PxContactPairPoint> pts;
     for (PxU32 i = 0; i < n; ++i) {
         const PxContactPair& cp = pairs[i];
+        if (cp.flags & (PxContactPairFlag::eREMOVED_SHAPE_0 | PxContactPairFlag::eREMOVED_SHAPE_1)) continue;
         const std::string a = nameOf_(cp.shapes[0]->getSimulationFilterData().word2);
         const std::string b = nameOf_(cp.shapes[1]->getSimulationFilterData().word2);
         double impulse = 0;
+        pts.resize(cp.contactCount);
         const PxU32 k = cp.extractContacts(pts.data(), PxU32(pts.size()));
         for (PxU32 j = 0; j < k; ++j) impulse += pts[j].impulse.magnitude();
         touch(a, b, t_, impulse);

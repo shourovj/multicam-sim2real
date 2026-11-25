@@ -27,9 +27,11 @@ public:
     static Spec load(const std::string& path);
     static Spec fromJson(Json doc, std::string rootName = "scene");
 
-    bool has(const std::string& key) const;
+    bool has(const std::string& key) const;  // fails unless this node is an object
     const std::string& path() const { return path_; }
     const Json& raw() const { return node_.get(); }
+    // The raw node, with its whole subtree exempt from rejectUnknownKeys (data passed through, such as "meta").
+    const Json& opaque() const;
     bool isArray() const { return node_.get().is_array(); }
     bool isObject() const { return node_.get().is_object(); }
     bool isString() const { return node_.get().is_string(); }
@@ -70,7 +72,8 @@ public:
 
 private:
     struct Usage {
-        std::set<std::string> read;  // full paths of keys that were read
+        std::set<std::string> read;    // full paths of keys that were read
+        std::set<std::string> opaque;  // full paths whose subtrees are not checked
     };
     Spec(std::shared_ptr<const Json> doc, const Json& node, std::string path, std::shared_ptr<Usage> usage);
     const Json& child(const std::string& key) const;

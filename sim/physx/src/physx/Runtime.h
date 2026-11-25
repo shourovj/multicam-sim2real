@@ -1,6 +1,7 @@
 // The process-wide PhysX objects: foundation, CUDA context, physics, CPU dispatcher. One per process.
 #pragma once
 
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -9,13 +10,15 @@
 namespace p2s {
 
 // Collects PhysX warnings and errors so they end up in the run log and the report, not only on stderr.
+// PhysX may report from its worker threads, hence the lock.
 class ErrorLog : public physx::PxErrorCallback {
 public:
     void reportError(physx::PxErrorCode::Enum code, const char* message, const char* file, int line) override;
-    const std::vector<std::string>& messages() const { return messages_; }
-    int errorCount() const { return errors_; }
+    std::vector<std::string> messages() const;
+    int errorCount() const;
 
 private:
+    mutable std::mutex mutex_;
     std::vector<std::string> messages_;
     int errors_ = 0;
 };
@@ -35,6 +38,9 @@ public:
     std::string deviceName() const;
 
 private:
+    void shutdown();
+
+    bool extensions_ = false, vehicles_ = false;
     ErrorLog errors_;
     physx::PxDefaultAllocator allocator_;
     PxPtr<physx::PxFoundation> foundation_;

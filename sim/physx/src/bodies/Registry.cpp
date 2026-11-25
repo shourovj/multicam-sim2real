@@ -1,6 +1,11 @@
 // Every scene list key and the entity class that builds its entries, in build order: things that others
 // refer to (bodies) come before things that refer to them (joints, attachments, controllers).
+#include "bodies/Joint.h"
+#include "bodies/Multirotor.h"
 #include "bodies/RigidBody.h"
+#include "bodies/Signal.h"
+#include "bodies/Vehicle.h"
+#include "bodies/Walker.h"
 
 namespace p2s {
 
@@ -16,6 +21,11 @@ World::Factory make() {
 World::FactoryList builtinEntities() {
     return {
         {"bodies", make<RigidBody>()},
+        {"multirotors", make<Multirotor>()},
+        {"walkers", make<Walker>()},
+        {"signals", make<TrafficSignal>()},
+        {"vehicles", make<Vehicle>()},
+        {"joints", make<Joint>()},
     };
 }
 

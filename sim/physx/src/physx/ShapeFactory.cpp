@@ -32,7 +32,7 @@ void setFilter(PxRigidActor& actor, const CollisionFilter& f) {
     }
 }
 
-PxConvexMesh* ShapeFactory::cookConvex(const std::vector<Vec3>& points) const {
+PxPtr<PxConvexMesh> ShapeFactory::cookConvex(const std::vector<Vec3>& points, const std::string& owner) const {
     std::vector<PxVec3> pts;
     for (const Vec3& p : points) pts.push_back(px(p));
     PxConvexMeshDesc desc;
@@ -41,12 +41,34 @@ PxConvexMesh* ShapeFactory::cookConvex(const std::vector<Vec3>& points) const {
     desc.points.data = pts.data();
     desc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
     desc.vertexLimit = 255;
-    PxConvexMesh* mesh = PxCreateConvexMesh(runtime_.cookingParams(), desc, runtime_.physics().getPhysicsInsertionCallback());
-    if (!mesh) throw std::runtime_error("convex hull cooking failed (degenerate or flat point set?)");
+    PxPtr<PxConvexMesh> mesh(
+        PxCreateConvexMesh(runtime_.cookingParams(), desc, runtime_.physics().getPhysicsInsertionCallback()));
+    if (!mesh) throw SpecError(owner + ": convex hull cooking failed (degenerate or flat point set?)");
     return mesh;
 }
 
-void ShapeFactory::readHull(const PxConvexMesh& mesh, Shape& shape) const {
+PxPtr<PxTriangleMesh> ShapeFactory::cookTriangleMesh(const Shape& s, const std::string& owner) const {
+    std::vector<PxVec3> v;
+    std::vector<PxU32> t;
+    for (const Vec3& p : s.vertices) v.push_back(px(p));
+    for (const auto& tri : s.triangles) t.insert(t.end(), {PxU32(tri[0]), PxU32(tri[1]), PxU32(tri[2])});
+    PxTriangleMeshDesc d;
+    d.points.count = PxU32(v.size());
+    d.points.stride = sizeof(PxVec3);
+    d.points.data = v.data();
+    d.triangles.count = PxU32(s.triangles.size());
+    d.triangles.stride = 3 * sizeof(PxU32);
+    d.triangles.data = t.data();
+    PxPtr<PxTriangleMesh> mesh(
+        PxCreateTriangleMesh(runtime_.cookingParams(), d, runtime_.physics().getPhysicsInsertionCallback()));
+    if (!mesh) throw SpecError(owner + ": triangle mesh cooking failed");
+    return mesh;
+}
+
+namespace {
+
+// Copies the cooked hull back into the p2s shape, so the checker and renderer see the hull PhysX collides.
+void readHull(const PxConvexMesh& mesh, Shape& shape) {
     const PxVec3* v = mesh.getVertices();
     const PxU8* idx = mesh.getIndexBuffer();
     shape.vertices.clear();
@@ -61,6 +83,8 @@ void ShapeFactory::readHull(const PxConvexMesh& mesh, Shape& shape) const {
             shape.triangles.push_back({idx[poly.mIndexBase], idx[poly.mIndexBase + k], idx[poly.mIndexBase + k + 1]});
     }
 }
+
+}  // namespace
 
 void ShapeFactory::attach(PxRigidActor& actor, std::vector<Shape>& shapes, const CollisionFilter& filter,
                           const std::string& owner, double contactOffset) const {
@@ -83,36 +107,21 @@ void ShapeFactory::attach(PxRigidActor& actor, std::vector<Shape>& shapes, const
             case ShapeType::Cylinder:
             case ShapeType::Prism:
             case ShapeType::Convex: {
-                const std::vector<Vec3> pts = s.type == ShapeType::Cylinder ? cylinderPoints(s.radius, s.halfLength, 32)
-                                                                            : s.vertices;
-                PxConvexMesh* mesh = cookConvex(pts);
-                shape = PxRigidActorExt::createExclusiveShape(actor, PxConvexMeshGeometry(mesh), mat);
+                const auto mesh = cookConvex(
+                    s.type == ShapeType::Cylinder ? cylinderPoints(s.radius, s.halfLength, 32) : s.vertices, owner);
+                shape = PxRigidActorExt::createExclusiveShape(actor, PxConvexMeshGeometry(mesh.get()), mat);
                 if (s.type == ShapeType::Convex) readHull(*mesh, s);
-                mesh->release();  // the shape holds its own reference
                 break;
             }
             case ShapeType::Mesh: {
                 if (actor.getConcreteType() != PxConcreteType::eRIGID_STATIC)
                     throw SpecError(owner + ": mesh shapes are only allowed on static bodies; use convex or prism");
-                std::vector<PxVec3> v;
-                std::vector<PxU32> t;
-                for (const Vec3& p : s.vertices) v.push_back(px(p));
-                for (const auto& tri : s.triangles) t.insert(t.end(), {PxU32(tri[0]), PxU32(tri[1]), PxU32(tri[2])});
-                PxTriangleMeshDesc d;
-                d.points.count = PxU32(v.size());
-                d.points.stride = sizeof(PxVec3);
-                d.points.data = v.data();
-                d.triangles.count = PxU32(s.triangles.size());
-                d.triangles.stride = 3 * sizeof(PxU32);
-                d.triangles.data = t.data();
-                PxTriangleMesh* mesh = PxCreateTriangleMesh(runtime_.cookingParams(), d,
-                                                            runtime_.physics().getPhysicsInsertionCallback());
-                if (!mesh) throw SpecError(owner + ": triangle mesh cooking failed");
-                shape = PxRigidActorExt::createExclusiveShape(actor, PxTriangleMeshGeometry(mesh), mat);
-                mesh->release();
+                const auto mesh = cookTriangleMesh(s, owner);
+                shape = PxRigidActorExt::createExclusiveShape(actor, PxTriangleMeshGeometry(mesh.get()), mat);
                 break;
             }
         }
+        if (!shape) throw SpecError(owner + ": PhysX rejected a " + s.typeName() + " shape");
         shape->setLocalPose(px(local));
         shape->setContactOffset(float(contactOffset));
         shape->setRestOffset(0.0f);

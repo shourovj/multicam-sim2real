@@ -27,10 +27,13 @@ Spec Spec::fromJson(Json doc, std::string rootName) {
 
 void Spec::fail(const std::string& message) const { throw SpecError(path_ + ": " + message); }
 
-bool Spec::has(const std::string& key) const { return node_.get().is_object() && node_.get().contains(key); }
+bool Spec::has(const std::string& key) const {
+    if (!node_.get().is_object()) fail("expected an object, got " + node_.get().dump());
+    return node_.get().contains(key);
+}
 
 const Json& Spec::child(const std::string& key) const {
-    if (!node_.get().is_object()) fail("expected an object");
+    if (!node_.get().is_object()) fail("expected an object, got " + node_.get().dump());
     const auto it = node_.get().find(key);
     if (it == node_.get().end()) fail("missing required key '" + key + "'");
     usage_->read.insert(childPath(key));
@@ -40,7 +43,8 @@ const Json& Spec::child(const std::string& key) const {
 Spec Spec::operator[](const std::string& key) const { return Spec(doc_, child(key), childPath(key), usage_); }
 
 Spec Spec::at(size_t i) const {
-    if (!node_.get().is_array() || i >= node_.get().size()) fail("index " + std::to_string(i) + " out of range");
+    if (!node_.get().is_array()) fail("expected an array");
+    if (i >= node_.get().size()) fail("index " + std::to_string(i) + " out of range");
     return Spec(doc_, node_.get()[i], path_ + "[" + std::to_string(i) + "]", usage_);
 }
 
@@ -83,7 +87,7 @@ double Spec::positive(const std::string& key, double fallback) const { return ha
 int Spec::integer(const std::string& key, int fallback) const {
     if (!has(key)) return fallback;
     const double v = num(key);
-    if (v != std::floor(v)) (*this)[key].fail("expected an integer");
+    if (v != std::floor(v) || std::fabs(v) > 1e9) (*this)[key].fail("expected an integer (|n| <= 1e9)");
     return static_cast<int>(v);
 }
 
@@ -143,6 +147,7 @@ Quat Spec::orientation() const {
     if (has("quat_xyzw")) {
         const auto q = numbers("quat_xyzw");
         if (q.size() != 4) (*this)["quat_xyzw"].fail("expected 4 numbers");
+        if (q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3] < 1e-12) (*this)["quat_xyzw"].fail("is zero");
         return Quat{q[0], q[1], q[2], q[3]}.normalized();
     }
     return Quat::fromYawPitchRoll(deg2rad(num("yaw_deg", 0)), deg2rad(num("pitch_deg", 0)),
@@ -151,7 +156,13 @@ Quat Spec::orientation() const {
 
 Pose Spec::pose(const Vec3& fallbackPos) const { return {vec3("pos", fallbackPos), orientation()}; }
 
+const Json& Spec::opaque() const {
+    usage_->opaque.insert(path_);
+    return node_.get();
+}
+
 void Spec::collectUnknown(const Json& node, const std::string& path, std::vector<std::string>& out) const {
+    if (usage_->opaque.count(path)) return;
     if (node.is_object()) {
         for (auto it = node.begin(); it != node.end(); ++it) {
             const std::string p = path + "." + it.key();

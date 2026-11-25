@@ -26,15 +26,16 @@ Trigger::Trigger(const Spec& s) {
     if (s.has("at_s")) at_ = s.num("at_s");
     onEvent_ = s.str("on_event", "");
     delay_ = s.num("delay_s", 0);
+    if (at_ && *at_ < 0) s["at_s"].fail("must be >= 0");
+    if (delay_ < 0) s["delay_s"].fail("must be >= 0");
     if (!at_ && onEvent_.empty()) s.fail("a trigger needs at_s or on_event");
     if (at_ && !onEvent_.empty()) s.fail("give either at_s or on_event, not both");
     action_.target = s.str("target");
     action_.verb = s.str("do");
-    if (s.has("params")) {
+    if (s.has("params")) {  // the target entity validates them when the trigger fires (Entity::act)
         const Spec p = s["params"];
         if (!p.isObject()) p.fail("expected an object");
-        action_.params = p.raw();
-        for (auto it = p.raw().begin(); it != p.raw().end(); ++it) (void)p[it.key()];  // entity validates the values
+        action_.params = p.opaque();
     }
 }
 

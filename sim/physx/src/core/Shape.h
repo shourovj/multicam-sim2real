@@ -45,8 +45,12 @@ public:
     static Shape capsule(double r, double halfLength, const Pose& local = {});
     static Shape cylinder(double r, double halfLength, const Pose& local = {});
     static Shape prism(const std::vector<std::array<double, 2>>& profile, double z0, double z1, const Pose& local = {});
-    static Shape convexFromHull(std::vector<Vec3> vertices, std::vector<Plane> planes, const Pose& local = {});
+    // The hull's planes and surface triangles are filled in when PhysX cooks it (ShapeFactory); until then sdf(),
+    // raycast() and volume() have nothing to work with.
+    static Shape convex(std::vector<Vec3> points, const Pose& local = {});
     static Shape mesh(std::vector<Vec3> vertices, std::vector<std::array<int, 3>> triangles, const Pose& local = {});
+
+    std::string typeName() const;  // "box", "sphere", ... as in the scene and in X
 
     // All in the shape's own frame (apply `local` and the body pose to get world quantities).
     double sdf(const Vec3& p) const;
@@ -59,7 +63,7 @@ public:
     static Shape fromJson(const Json& j);  // inverse of toJson (used by the checker and Blender)
 
 private:
-    void buildPolyhedronSurface();  // planes -> triangles over `vertices` (prism)
+    void buildPrismSurface();  // prism `vertices` (bottom cap, then top cap) -> planes and triangles
 };
 
 // A rigid set of shapes at a pose: what the checker needs to ask "how far is this point inside the body?".

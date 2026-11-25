@@ -20,9 +20,9 @@ Aabb worldBounds(const Entity& e) {
     Aabb box;
     const Pose p = e.pose();
     for (const Shape& s : e.shapes()) {
-        const Aabb b = s.bounds();
-        for (int i = 0; i < 8; ++i)
-            box.add((p * s.local).transform({i & 1 ? b.hi.x : b.lo.x, i & 2 ? b.hi.y : b.lo.y, i & 4 ? b.hi.z : b.lo.z}));
+        const Aabb b = s.bounds().transformed(p * s.local);
+        box.add(b.lo);
+        box.add(b.hi);
     }
     return box;
 }
@@ -48,7 +48,6 @@ World::World(Runtime& runtime, const Spec& scene)
 }
 
 World::~World() {
-    cameras_.clear();
     entities_.clear();  // actors and joints go before the scene
     scene_.reset();
 }
@@ -77,13 +76,14 @@ CollisionFilter World::filterFor(const std::string& entityId, const std::string&
 void World::build(const Spec& s) {
     if (s.integer("p2s_version", 1) != 1) s["p2s_version"].fail("only version 1 is supported");
     sceneInfo_ = {{"name", s.str("name")}};
-    if (s.has("meta")) sceneInfo_["meta"] = s["meta"].raw();
     for (const char* passthrough : {"meta", "expect", "acknowledge"})  // read by the checker, not the simulator
-        if (s.has(passthrough)) (void)s[passthrough].raw();
+        if (s.has(passthrough)) (void)s[passthrough].opaque();
+    if (s.has("meta")) sceneInfo_["meta"] = s["meta"].opaque();
 
     const Spec c = s["clock"];
     clock_.fps = c.positive("fps", 24);
     const double duration = c.positive("duration_s");
+    if (duration * clock_.fps > 1e5) c["duration_s"].fail("more than 100000 frames; shorten the clip or lower fps");
     clock_.frames = int(std::lround(duration * clock_.fps)) + 1;
     clock_.substeps = c.integer("substeps", 20);
     clock_.prerollS = c.num("preroll_s", 0);
@@ -110,8 +110,10 @@ void World::build(const Spec& s) {
     scene_.reset(runtime_.physics().createScene(sd));
     if (!scene_) throw std::runtime_error("createScene failed");
 
-    const bool ground = !w.has("ground") || !w["ground"].raw().is_boolean() || w.flag("ground", true);
-    if (ground) {
+    // world.ground: absent or true = default ground, an object = configured ground, false = none.
+    if (w.has("ground") && !w["ground"].isObject() && !w["ground"].raw().is_boolean())
+        w["ground"].fail("expected true, false or an object {material, height}");
+    if (!w.has("ground") || w["ground"].isObject() || w.flag("ground", true)) {
         index_["ground"] = 0;
         entities_.push_back(makeGround(w.has("ground") && w["ground"].isObject() ? w["ground"]
                                                                                  : Spec::fromJson(Json::object(), "ground"),
@@ -236,7 +238,9 @@ void World::run(const std::string& outDir, const Json& runInfo) {
     x["run"]["device"] = runtime_.deviceName();
     x["run"]["physx_messages"] = runtime_.errors().messages();
     x["run"]["physx_errors"] = runtime_.errors().errorCount();
-    std::ofstream(outDir + "/x.json") << x.dump(1);
+    std::ofstream out(outDir + "/x.json");
+    out << x.dump(1);
+    if (!out) throw std::runtime_error("failed writing " + outDir + "/x.json");
 }
 
 Json World::describe() const {

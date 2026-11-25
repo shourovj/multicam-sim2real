@@ -1,16 +1,20 @@
 #include "core/Shape.h"
 
+#include <span>
+#include <stdexcept>
+
 namespace p2s {
 
 namespace {
 
 constexpr double kTraceEps = 1e-4;
 constexpr int kTraceSteps = 128;
+constexpr std::array<const char*, 7> kTypeNames = {"box", "sphere", "capsule", "cylinder", "prism", "convex", "mesh"};
 
 double length2(double x, double y) { return std::sqrt(x * x + y * y); }
 
-// Signed distance to a convex CCW polygon in the plane.
-double polygonSdf(const std::vector<Vec3>& poly, double x, double y) {
+// Signed distance to a convex CCW polygon in the plane (z of the vertices is ignored).
+double polygonSdf(std::span<const Vec3> poly, double x, double y) {
     const size_t n = poly.size();
     double inside = -1e300, outside = 1e300;
     bool isInside = true;
@@ -90,7 +94,9 @@ std::vector<Shape> container(const Spec& s, const Pose& local) {
     const double r = s.positive("radius"), h = s.positive("height");
     const double wall = s.positive("wall", 0.006), base = s.positive("base", 0.01);
     const int segments = s.integer("segments", 16);
-    if (segments < 6) s["segments"].fail("needs at least 6 segments");
+    if (segments < 6 || segments > 256) s["segments"].fail("must be in 6..256");
+    if (wall >= r) s["wall"].fail("must be less than the radius");
+    if (base >= h) s["base"].fail("must be less than the height");
     std::vector<Shape> out;
     const double chord = 2.0 * r * std::sin(kPi / segments);
     for (int i = 0; i < segments; ++i) {
@@ -100,6 +106,54 @@ std::vector<Shape> container(const Spec& s, const Pose& local) {
         out.push_back(Shape::box({wall / 2, chord / 2 + wall / 2, h / 2}, local * seg));
     }
     out.push_back(Shape::cylinder(r, base / 2, local * Pose{{0, 0, base / 2}, {}}));
+    return out;
+}
+
+// A prism profile: at least three [x, y] points forming a convex, counter-clockwise, simple polygon.
+std::vector<std::array<double, 2>> parseProfile(const Spec& prof) {
+    if (!prof.isArray()) prof.fail("expected an array of [x, y]");
+    std::vector<std::array<double, 2>> pts;
+    for (size_t i = 0; i < prof.size(); ++i) {
+        const Spec xy = prof.at(i);
+        if (!xy.isArray() || xy.size() != 2) xy.fail("expected [x, y]");
+        pts.push_back({xy.at(0).asNum(), xy.at(1).asNum()});
+    }
+    const size_t n = pts.size();
+    if (n < 3) prof.fail("needs at least 3 points");
+    // Every turn must be to the left, and the turns must add up to one full revolution (a pentagram also turns
+    // left at every corner, but twice round).
+    double turning = 0, area2 = 0;
+    for (size_t i = 0; i < n; ++i) {
+        const auto& a = pts[i];
+        const auto& b = pts[(i + 1) % n];
+        const auto& c = pts[(i + 2) % n];
+        const double ex = b[0] - a[0], ey = b[1] - a[1], fx = c[0] - b[0], fy = c[1] - b[1];
+        if (length2(ex, ey) < 1e-9) prof.at((i + 1) % n).fail("repeats the previous point");
+        const double cross = ex * fy - ey * fx;
+        if (cross < -1e-12)
+            prof.fail("profile must be convex and counter-clockwise; split concave outlines into several prisms");
+        turning += std::atan2(cross, ex * fx + ey * fy);
+        area2 += a[0] * b[1] - b[0] * a[1];
+    }
+    if (area2 <= 1e-12) prof.fail("profile has no area");
+    if (std::fabs(turning - 2 * kPi) > 1e-6) prof.fail("profile must be a simple convex polygon, wound once");
+    return pts;
+}
+
+std::vector<std::array<int, 3>> parseTriangles(const Spec& tris, size_t vertexCount) {
+    if (!tris.isArray()) tris.fail("expected an array of [i, j, k]");
+    std::vector<std::array<int, 3>> out;
+    for (size_t i = 0; i < tris.size(); ++i) {
+        const Spec t = tris.at(i);
+        if (!t.isArray() || t.size() != 3) t.fail("expected [i, j, k]");
+        std::array<int, 3> tri{};
+        for (int k = 0; k < 3; ++k) {
+            const double v = t.at(k).asNum();
+            if (v != std::floor(v) || v < 0 || v >= double(vertexCount)) t.at(k).fail("vertex index out of range");
+            tri[k] = int(v);
+        }
+        out.push_back(tri);
+    }
     return out;
 }
 
@@ -140,16 +194,15 @@ Shape Shape::prism(const std::vector<std::array<double, 2>>& profile, double z0,
     s.local = local;
     for (double z : {z0, z1})
         for (const auto& p : profile) s.vertices.push_back({p[0], p[1], z});
-    s.buildPolyhedronSurface();
+    s.buildPrismSurface();
     return s;
 }
 
-Shape Shape::convexFromHull(std::vector<Vec3> vertices, std::vector<Plane> planes, const Pose& local) {
+Shape Shape::convex(std::vector<Vec3> points, const Pose& local) {
     Shape s;
     s.type = ShapeType::Convex;
     s.local = local;
-    s.vertices = std::move(vertices);
-    s.planes = std::move(planes);
+    s.vertices = std::move(points);
     return s;
 }
 
@@ -162,7 +215,7 @@ Shape Shape::mesh(std::vector<Vec3> vertices, std::vector<std::array<int, 3>> tr
     return s;
 }
 
-void Shape::buildPolyhedronSurface() {
+void Shape::buildPrismSurface() {
     const int n = static_cast<int>(vertices.size() / 2);
     const double z0 = vertices.front().z, z1 = vertices.back().z;
     planes = {{{0, 0, -1}, z0}, {{0, 0, 1}, -z1}};
@@ -199,49 +252,19 @@ std::vector<Shape> Shape::parse(const Spec& s) {
     } else if (type == "cylinder") {
         out.push_back(cylinder(s.positive("radius"), s.positive("half_length"), local));
     } else if (type == "prism") {
-        const Spec prof = s["profile"];
-        std::vector<std::array<double, 2>> pts;
-        for (size_t i = 0; i < prof.size(); ++i) {
-            const auto xy = prof.at(i).raw();
-            if (!xy.is_array() || xy.size() != 2) prof.at(i).fail("expected [x, y]");
-            pts.push_back({xy[0].get<double>(), xy[1].get<double>()});
-        }
-        if (pts.size() < 3) prof.fail("needs at least 3 points");
-        double area2 = 0;
-        for (size_t i = 0; i < pts.size(); ++i) {
-            const auto& a = pts[i];
-            const auto& b = pts[(i + 1) % pts.size()];
-            const auto& c = pts[(i + 2) % pts.size()];
-            const double cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
-            if (cross < -1e-12) prof.fail("profile must be convex and counter-clockwise; split concave outlines into several prisms");
-            area2 += a[0] * b[1] - b[0] * a[1];
-        }
-        if (area2 <= 0) prof.fail("profile has no area");
+        const auto profile = parseProfile(s["profile"]);
         const double z0 = s.num("z0"), z1 = s.num("z1");
         if (z1 <= z0) s["z1"].fail("z1 must be > z0");
-        out.push_back(prism(pts, z0, z1, local));
+        out.push_back(prism(profile, z0, z1, local));
     } else if (type == "convex") {
-        Shape c;
-        c.type = ShapeType::Convex;
-        c.local = local;
-        c.vertices = s.vec3s("points");
-        if (c.vertices.size() < 4) s["points"].fail("needs at least 4 points");
-        out.push_back(c);
+        std::vector<Vec3> points = s.vec3s("points");
+        if (points.size() < 4) s["points"].fail("needs at least 4 points");
+        out.push_back(convex(std::move(points), local));
     } else {
-        Shape m;
-        m.type = ShapeType::Mesh;
-        m.local = local;
-        m.vertices = s.vec3s("vertices");
-        const Spec tris = s["triangles"];
-        for (size_t i = 0; i < tris.size(); ++i) {
-            const auto t = tris.at(i).raw();
-            if (!t.is_array() || t.size() != 3) tris.at(i).fail("expected [i, j, k]");
-            std::array<int, 3> tri{t[0].get<int>(), t[1].get<int>(), t[2].get<int>()};
-            for (int v : tri)
-                if (v < 0 || v >= static_cast<int>(m.vertices.size())) tris.at(i).fail("vertex index out of range");
-            m.triangles.push_back(tri);
-        }
-        out.push_back(m);
+        std::vector<Vec3> verts = s.vec3s("vertices");
+        auto tris = parseTriangles(s["triangles"], verts.size());
+        if (tris.empty()) s["triangles"].fail("needs at least one triangle");
+        out.push_back(mesh(std::move(verts), std::move(tris), local));
     }
     const std::string material = s.str("material", "default");
     for (auto& sh : out) sh.material = material;
@@ -261,7 +284,7 @@ double Shape::sdf(const Vec3& p) const {
         case ShapeType::Cylinder:
             return extrude(length2(p.x, p.y) - radius, std::fabs(p.z) - halfLength);
         case ShapeType::Prism: {
-            const std::vector<Vec3> cap(vertices.begin(), vertices.begin() + vertices.size() / 2);
+            const std::span<const Vec3> cap(vertices.data(), vertices.size() / 2);
             const double z0 = vertices.front().z, z1 = vertices.back().z;
             return extrude(polygonSdf(cap, p.x, p.y), std::fabs(p.z - (z0 + z1) / 2) - (z1 - z0) / 2);
         }
@@ -343,6 +366,7 @@ std::vector<Vec3> Shape::surfaceSamples() const {
 Aabb Shape::bounds() const {
     Aabb box;
     switch (type) {
+        case ShapeType::Box: box.add(-halfExtents); box.add(halfExtents); break;
         case ShapeType::Sphere: box.add(Vec3{1, 1, 1} * -radius); box.add(Vec3{1, 1, 1} * radius); break;
         case ShapeType::Capsule:
         case ShapeType::Cylinder: {
@@ -352,7 +376,7 @@ Aabb Shape::bounds() const {
             break;
         }
         default:
-            for (const Vec3& v : surfaceSamples()) box.add(v);
+            for (const Vec3& v : vertices) box.add(v);
     }
     return box;
 }
@@ -371,9 +395,10 @@ double Shape::volume() const {
     }
 }
 
+std::string Shape::typeName() const { return kTypeNames[static_cast<size_t>(type)]; }
+
 Json Shape::toJson() const {
-    static const char* names[] = {"box", "sphere", "capsule", "cylinder", "prism", "convex", "mesh"};
-    Json j = {{"type", names[static_cast<int>(type)]},
+    Json j = {{"type", typeName()},
               {"pos", p2s::toJson(local.p)},
               {"quat_xyzw", p2s::toJson(local.q)},
               {"material", material}};
@@ -399,8 +424,9 @@ Shape Shape::fromJson(const Json& j) {
     const auto v3 = [](const Json& a) { return Vec3{a[0].get<double>(), a[1].get<double>(), a[2].get<double>()}; };
     Shape s;
     const std::string type = j.at("type").get<std::string>();
-    static const std::vector<std::string> names = {"box", "sphere", "capsule", "cylinder", "prism", "convex", "mesh"};
-    s.type = static_cast<ShapeType>(std::find(names.begin(), names.end(), type) - names.begin());
+    const auto it = std::find(kTypeNames.begin(), kTypeNames.end(), type);
+    if (it == kTypeNames.end()) throw std::runtime_error("unknown shape type '" + type + "'");
+    s.type = static_cast<ShapeType>(it - kTypeNames.begin());
     const auto& q = j.at("quat_xyzw");
     s.local = {v3(j.at("pos")), Quat{q[0].get<double>(), q[1].get<double>(), q[2].get<double>(), q[3].get<double>()}};
     s.material = j.value("material", "default");

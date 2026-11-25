@@ -3,6 +3,7 @@
 // also writes <key>.count.i32 with the rows per frame. x.json describes every stream (see XFormat.md).
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <span>
 #include <string>
@@ -17,7 +18,9 @@ public:
     void beginFrame(int frame);
     int frame() const { return frame_; }
 
-    // `values` holds rows of `width` floats. Fixed streams must get the same row count every frame.
+    // `values` holds rows of `width` floats. A fixed stream is put exactly once in every frame from frame 0, with
+    // the same row count each time. A variable stream may skip frames (zero rows) or be put several times in one
+    // frame (rows are appended).
     void put(const std::string& key, std::span<const float> values, int width, bool variable = false);
     void put(const std::string& key, std::initializer_list<float> values) { put(key, std::span(values.begin(), values.size()), int(values.size())); }
 
@@ -28,7 +31,8 @@ private:
     struct Stream {
         int width = 0;
         bool variable = false;
-        int rows = -1;  // rows per frame for fixed streams
+        int rows = -1;    // rows per frame for fixed streams
+        int frames = 0;   // frames put so far, for fixed streams
         std::vector<float> data;
         std::vector<int32_t> counts;
     };

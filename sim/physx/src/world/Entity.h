@@ -51,6 +51,7 @@ public:
     virtual physx::PxRigidActor& actor() { throw SpecError(id_ + " is not a rigid body"); }
     virtual const std::vector<Shape>& shapes() const { static const std::vector<Shape> none; return none; }
     virtual Pose pose() const { return {}; }
+    virtual Vec3 velocity() const { return {}; }
 
 private:
     std::string id_, kind_;
