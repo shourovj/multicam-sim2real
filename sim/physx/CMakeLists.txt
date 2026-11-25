@@ -42,6 +42,7 @@ file(GLOB CHECK_SRC CONFIGURE_DEPENDS src/check/*.cpp)
 if(CHECK_SRC)
   add_library(p2s_check_lib STATIC ${CHECK_SRC})
   target_link_libraries(p2s_check_lib PUBLIC p2s_core)
+  target_compile_definitions(p2s_check_lib PRIVATE P2S_SPEC_DIR="${CMAKE_CURRENT_SOURCE_DIR}/spec")
 endif()
 
 set(CMAKE_BUILD_RPATH ${PHYSX_LIB_DIR} ${CUDA_RT_DIR}/lib)

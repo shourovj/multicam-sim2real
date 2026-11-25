@@ -64,6 +64,7 @@ public:
     explicit RunData(const std::string& dir);
 
     const Json& x() const { return x_; }
+    const std::string& dir() const { return dir_; }
     int frames() const { return frames_; }
     double fps() const { return fps_; }
     double time(int f) const { return f / fps_; }

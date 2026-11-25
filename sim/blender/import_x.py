@@ -12,7 +12,8 @@ What it builds (all in X's world frame, Z up, metres; one Blender frame per X fr
   - every camera, keyframed, with X's field of view, clip range and resolution;
   - traffic signal heads as lamps whose colour follows the signal stream.
 Each object carries the custom property "p2s_entity" and a pass index per entity (1, 2, ...), so a segmentation pass
-can tell entities apart. Materials are plain clay with a per-material tint; appearance belongs to the video model.
+can tell entities apart. Materials are plain clay with a per-material tint, or the entity's appearance colour from S
+(tyres, rubber, tracks and glass keep their tint); everything else about appearance belongs to the video model.
 """
 
 import json
@@ -31,6 +32,31 @@ TINT = {"steel": (0.45, 0.47, 0.5), "aluminium": (0.7, 0.72, 0.75), "rubber": (0
         "track": (0.15, 0.15, 0.12), "cloth": (0.7, 0.2, 0.2)}
 PARTICLE_TINT = {"water": (0.35, 0.55, 0.85), "oil": (0.05, 0.04, 0.02), "honey": (0.8, 0.5, 0.1), "sand": (0.76, 0.66, 0.45),
                  "smoke": (0.4, 0.4, 0.42)}
+CLASSES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "physx", "spec", "classes.json")
+
+
+def srgb_to_linear(c):
+    return tuple(v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in c)
+
+
+def appearance_color(x, e):
+    """An entity's appearance colour as linear RGB (Blender's), or None: its own, or its host's for a mounted soft
+    body. Colour words map to the first prototype of their family in sim/physx/spec/classes.json."""
+    ap = e.get("appearance")
+    if not (ap and "color" in ap) and e.get("host"):
+        host = next((h for h in x.meta["entities"] if h["id"] == e["host"]), {})
+        ap = host.get("appearance")
+    if not ap or "color" not in ap:
+        return None
+    c = ap["color"]
+    if isinstance(c, str):
+        with open(CLASSES) as f:
+            colors = json.load(f)["colors"]
+        family = colors["aliases"].get(c.lower(), c.lower())
+        if family not in colors["families"]:
+            return None
+        c = colors["families"][family][0]
+    return srgb_to_linear(c)
 
 
 class X:
@@ -207,9 +233,13 @@ def build_parts(x, e, index):
         keyframe_poses(empty, poses)
         if visual_meshes(part, empty, e["id"], index):
             continue
+        paint = appearance_color(x, e)
         for k, s in enumerate(part["shapes"]):
             verts, faces = shape_geometry(s)
-            mat = material("p2s_" + s.get("material", "default"), TINT.get(s.get("material"), (0.7, 0.7, 0.7)))
+            if paint and part.get("kind") != "wheel" and s.get("material") not in ("tyre", "rubber", "track", "glass"):
+                mat = material("p2s_paint_%.3f_%.3f_%.3f" % paint, paint)
+            else:
+                mat = material("p2s_" + s.get("material", "default"), TINT.get(s.get("material"), (0.7, 0.7, 0.7)))
             ob = mesh_object(f"{e['id']}.{part['name']}.{k}", verts, faces, mat, e["id"], index)
             place(ob, s["pos"], s["quat_xyzw"])
             ob.parent = empty
@@ -219,7 +249,11 @@ def build_deformable(x, e, index, pc2_dir):
     st = e["streams"]
     verts = x.stream(st["verts"])  # [frames, n, 3]
     tris = x.stream(st["triangles"])
-    mat = material("p2s_" + e["kind"], TINT["cloth"] if e["kind"] == "cloth" else TINT["steel"])
+    paint = appearance_color(x, e)
+    if paint:
+        mat = material("p2s_paint_%.3f_%.3f_%.3f" % paint, paint)
+    else:
+        mat = material("p2s_" + e["kind"], TINT["cloth"] if e["kind"] == "cloth" else TINT["steel"])
     ob = cached_mesh(e["id"], verts[0], tris, verts, pc2_dir, mat, e["id"], index)
     if e["kind"] == "cloth":
         ob.modifiers.new("thickness", "SOLIDIFY").thickness = 0.004

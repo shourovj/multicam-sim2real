@@ -121,6 +121,7 @@ private:
     long steps_ = 0, fineSteps_ = 0;
     std::mt19937 rng_;
     Json sceneInfo_;
+    std::map<std::string, Json> appearance_;  // entity id -> its "appearance" (class, color, label), for the renderer
     std::vector<Json> energy_;
 };
 

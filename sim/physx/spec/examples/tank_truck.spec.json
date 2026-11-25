@@ -1,0 +1,41 @@
+{
+ "format": "p2s-spec",
+ "version": 1,
+ "writer": "hand-written reference (2026-11-25)",
+ "prompt": "A military truck crashes into an armoured tank; engine oil leaks and pools; a Texas flag flaps nearby. Views: static wide shot, satellite, phone, traffic-light camera, drone orbiting the intersection.",
+ "setting": {"place": "an intersection"},
+ "objects": [
+  {"name": "truck", "class": "truck", "color": "olive", "span": "A military truck"},
+  {"name": "tank", "class": "tank", "color": "olive", "span": "an armoured tank"},
+  {"name": "oil", "class": "oil", "span": "engine oil leaks and pools"},
+  {"name": "flag", "class": "flag", "span": "a Texas flag"},
+  {"name": "flagpole", "class": "pole", "span": "a Texas flag flaps nearby"},
+  {"name": "traffic_light", "class": "pole", "span": "traffic-light camera"}
+ ],
+ "parts": [
+  {"name": "truck.front", "of": "truck", "region": "front", "span": "the truck crashes into the tank; engine oil"}
+ ],
+ "cameras": [
+  {"name": "wide", "type": "fixed", "span": "static wide shot"},
+  {"name": "satellite", "type": "fixed", "min_height_m": 100, "span": "satellite"},
+  {"name": "phone", "type": "handheld", "span": "phone"},
+  {"name": "traffic_light_cam", "type": "fixed", "mounted_on": "traffic_light", "min_height_m": 3, "span": "traffic-light camera"},
+  {"name": "drone", "type": "orbit", "min_height_m": 5, "span": "drone orbiting the intersection"}
+ ],
+ "requirements": [
+  {"id": "crash", "mode": "action", "text": "the truck crashes into the tank", "formula": "F hits(truck, tank) & seq(moving(truck, 3), hits(truck, tank))"},
+  {"id": "truck_front_crushed", "mode": "action", "implied": true, "text": "a truck that crashes into a tank has its front crushed", "formula": "seq(hits(truck, tank), deformed(truck.front, 0.05))"},
+  {"id": "oil_from_engine", "mode": "action", "text": "engine oil leaks (from the truck's engine at its front)", "formula": "F leaks_from(oil, truck.front)"},
+  {"id": "oil_after_crash", "mode": "action", "text": "the oil leaks once the truck has crashed", "formula": "seq(hits(truck, tank), emitting(oil))"},
+  {"id": "oil_pools", "mode": "action", "text": "the oil pools on the ground", "formula": "F G on_ground(oil, 0.7)"},
+  {"id": "flag_nearby", "mode": "spatial", "text": "a flag flaps nearby", "formula": "G !touches(flag, truck) & G !touches(flag, tank)"},
+  {"id": "vehicles_stop", "mode": "consistency", "implied": true, "text": "after the crash the truck stops", "formula": "seq(hits(truck, tank), stationary(truck, 0.5))"},
+  {"id": "wide_sees_crash", "mode": "camera", "text": "the wide shot shows the crash", "formula": "F (hits(truck, tank) & visible(wide, truck) & visible(wide, tank))"},
+  {"id": "satellite_sees_crash", "mode": "camera", "text": "the satellite view shows the crash", "formula": "F (hits(truck, tank) & visible(satellite, truck, 12) & visible(satellite, tank, 12))"},
+  {"id": "phone_sees_crash", "mode": "camera", "text": "the phone films the crash", "formula": "F (hits(truck, tank) & visible(phone, truck))"},
+  {"id": "traffic_cam_sees_crash", "mode": "camera", "text": "the traffic-light camera films the crash", "formula": "F (hits(truck, tank) & visible(traffic_light_cam, truck))"},
+  {"id": "drone_sees_crash", "mode": "camera", "text": "the orbiting drone films the crash", "formula": "F (hits(truck, tank) & visible(drone, truck) & visible(drone, tank))"},
+  {"id": "flag_seen", "mode": "camera", "text": "the flag flapping nearby is seen in the wide shot", "formula": "F in_frame(wide, flag)"}
+ ],
+ "not_simulated": ["the Texas flag's design", "flapping fabric detail beyond the cloth simulation", "military markings"]
+}

@@ -1,5 +1,7 @@
 #include "check/Expectations.h"
 
+#include "check/Visibility.h"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -14,12 +16,6 @@ namespace {
 constexpr double kInf = std::numeric_limits<double>::infinity();
 constexpr size_t kMaxListedMoving = 40;  // coverage rows for moving entities that no expectation names
 
-struct View {
-    double inFrame = 0;  // fraction of the entity's sample points inside the image
-    double visible = 0;  // fraction inside the image and not hidden behind another body
-    double area = 0;     // screen-space bounding box of the visible points, as a fraction of the image
-};
-
 std::string percent(double fraction) { return fraction > 0 && fraction < 1e-4 ? "<0.01%" : fmt(100 * fraction) + "%"; }
 
 std::vector<std::string> split(const std::string& s, char sep) {
@@ -28,95 +24,6 @@ std::vector<std::string> split(const std::string& s, char sep) {
     for (std::string part; std::getline(ss, part, sep);) out.push_back(part);
     return out;
 }
-
-bool rayHitsBox(const Vec3& o, const Vec3& d, double maxT, const Aabb& b) {
-    double t0 = 0, t1 = maxT;
-    for (int a = 0; a < 3; ++a) {
-        const double inv = 1.0 / (std::fabs(d[a]) > 1e-12 ? d[a] : 1e-12);
-        double ta = (b.lo[a] - o[a]) * inv, tb = (b.hi[a] - o[a]) * inv;
-        if (ta > tb) std::swap(ta, tb);
-        t0 = std::max(t0, ta);
-        t1 = std::min(t1, tb);
-        if (t0 > t1) return false;
-    }
-    return true;
-}
-
-bool inClip(const Projection& pr, const Intrinsics& k) { return pr.inFrame(k) && pr.depth <= k.farM; }
-
-// Visibility of every entity from every camera, computed on demand and cached.
-class Visibility {
-public:
-    explicit Visibility(const RunData& run) : run_(run), bounds_(size_t(run.frames())) {}
-
-    const View& at(const CameraTrack& cam, const std::string& entity, int f) {
-        auto& track = cache_[{cam.id, entity}];
-        if (track.empty()) track.resize(size_t(run_.frames()));
-        auto& slot = track[size_t(f)];
-        if (!slot) slot = compute(cam, entity, f);
-        return *slot;
-    }
-
-private:
-    const std::vector<Aabb>& bounds(int f) {
-        auto& b = bounds_[size_t(f)];
-        if (b.empty())
-            for (const Part& p : run_.parts()) b.push_back(p.worldBounds(f));
-        return b;
-    }
-
-    View compute(const CameraTrack& cam, const std::string& entity, int f) {
-        View v;
-        const Pose& cp = cam.poses[size_t(f)];
-        const auto pts = run_.samples(entity, f, 160);
-        if (pts.empty()) return v;
-        std::vector<std::pair<Vec3, Projection>> framed;
-        Aabb reach;  // spans the camera and every framed point: only parts meeting it can occlude
-        reach.add(cp.p);
-        for (const Vec3& p : pts)
-            if (const Projection pr = project(cp, cam.k, p); inClip(pr, cam.k)) {
-                framed.push_back({p, pr});
-                reach.add(p);
-            }
-        const auto& parts = run_.parts();
-        const auto& wb = bounds(f);
-        std::vector<size_t> occluders;
-        for (size_t i = 0; i < parts.size(); ++i)
-            if (parts[i].entity != entity && parts[i].entity != cam.parent && !run_.exempt(parts[i].entity, entity) &&
-                overlaps(wb[i], reach))
-                occluders.push_back(i);
-        Aabb screen;
-        int vis = 0, facing = 0;
-        const auto own = run_.partsOf(entity);
-        for (const auto& [p, pr] : framed) {
-            const double dist = (p - cp.p).norm();
-            const Vec3 d = (p - cp.p) / dist;  // dist > near clip > 0
-            // Points on the far side of the entity itself (a plate's underside) are not counted either way.
-            const bool backside = std::any_of(own.begin(), own.end(), [&](const Part& o) {
-                const auto hit = PosedShapes{o.shapes, o.poses[size_t(f)]}.raycast(cp.p, d, dist);
-                return hit && *hit < dist - 0.05;
-            });
-            if (backside) continue;
-            ++facing;
-            const bool hidden = std::any_of(occluders.begin(), occluders.end(), [&](size_t i) {
-                if (!rayHitsBox(cp.p, d, dist, wb[i])) return false;
-                const auto hit = PosedShapes{parts[i].shapes, parts[i].poses[size_t(f)]}.raycast(cp.p, d, dist);
-                return hit && *hit < dist - 0.05;
-            });
-            if (hidden) continue;
-            ++vis;
-            screen.add({pr.u, pr.v, 0});
-        }
-        v.inFrame = double(framed.size()) / double(pts.size());
-        v.visible = facing > 0 ? v.inFrame * double(vis) / double(facing) : 0.0;  // share of what faces the camera
-        if (vis > 0) v.area = (screen.extent().x * screen.extent().y) / double(cam.k.width * cam.k.height);
-        return v;
-    }
-
-    const RunData& run_;
-    std::vector<std::vector<Aabb>> bounds_;  // per frame: every part's world bounds, filled on first use
-    std::map<std::pair<std::string, std::string>, std::vector<std::optional<View>>> cache_;
-};
 
 // "in 0.00-1.20 s, out 1.20-3.00 s": runs of frames where the predicate holds.
 std::string timeline(const RunData& run, const std::vector<bool>& on) {

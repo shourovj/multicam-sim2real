@@ -89,6 +89,8 @@ Driver::Driver(const Spec& s) {
     signalId_ = s.str("signal", "");
     if (s.has("stop_s")) stopS_ = s.num("stop_s");
     if (!signalId_.empty() && !stopS_) s.fail("a signal needs stop_s (arc length of the stop line)");
+    runsRed_ = s.flag("runs_red", false);
+    if (runsRed_ && signalId_.empty()) s["runs_red"].fail("runs_red needs the signal it runs (and its stop_s)");
     if (s.has("yield_to")) yieldIds_ = s.strings("yield_to");
     for (const Spec& c : s.items("crosswalks")) {
         if (!c.isArray() || c.size() != 2) c.fail("expected [s0, s1]");
@@ -115,7 +117,7 @@ double Driver::idmAccel(World& w, double front, double speed, const VehicleLimit
     const double v0 = std::max(limit_[size_t(std::clamp(int(s_), 0, int(limit_.size()) - 1))], 0.1);
     double acc = accelMax_ * (1 - std::pow(speed / v0, 4));
     std::vector<std::pair<double, double>> gaps;  // (gap to obstacle, obstacle speed)
-    if (signal_ && stopS_ && !passedStop_) {
+    if (signal_ && stopS_ && !passedStop_ && !runsRed_) {
         const std::string& light = signal_->get().state(w.time());
         if (light != "yellow") yellowGo_.reset();
         const double dist = *stopS_ - front;
@@ -188,6 +190,7 @@ Json Driver::toJson() const {
     path.push_back({path_.at(path_.length()).x, path_.at(path_.length()).y});
     Json j = {{"path", path}, {"cruise_mps", cruise_}, {"leader", leaderId_}, {"signal", signalId_}, {"yield_to", yieldIds_}};
     if (stopS_) j["stop_s"] = *stopS_;
+    if (runsRed_) j["runs_red"] = true;
     return j;
 }
 

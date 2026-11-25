@@ -86,6 +86,32 @@ const std::map<std::string, Advice>& advice() {
          {"The scene does not state enough expectations for the checker to confirm it matches the prompt.",
           "Add to expect: at least one in_view or enters_view per camera, and at least one physical outcome (event, "
           "reaches, at_rest, deformation, particles_in_region, ...) per thing the prompt says happens."}},
+        {"prompt_object",
+         {"An object of the prompt (from the prompt spec, written from the prompt alone) has no entity in the scene, "
+          "there are fewer than the prompt says, or the entity that stands for it is far from the size of its class.",
+          "Add the missing entity with an appearance naming its class, or size it like the real thing (the finding "
+          "gives the class's range). Entities are matched by kind, size, appearance.class and the words of their id."}},
+        {"prompt_appearance",
+         {"An entity that stands for a prompt object lacks the class or colour the prompt gives it, or has another one.",
+          "Set \"appearance\": {\"class\": ..., \"color\": ...} on that entity as the finding says. The renderer paints "
+          "the entity in that colour; the video model takes it from there."}},
+        {"prompt_camera",
+         {"A camera of the prompt is missing, or the camera that stands for it is of another type, rides another body, "
+          "is not on the body it should be mounted on, or is too low.",
+          "Change that camera: type (fixed, attached, handheld, orbit, follow), parent, or position (within 1.5 m of "
+          "the pole or wall it is mounted on)."}},
+        {"prompt_contact",
+         {"Two prompt objects touch although the prompt never says they do (a person struck).",
+          "Keep them apart: move the person, change the path or timing. For things other than people, acknowledge it "
+          "if the contact is incidental (a car brushing a kerb object)."}},
+        {"prompt",
+         {"A requirement of the prompt spec does not hold. Each is a temporal-logic formula over predicates measured "
+          "in X; the finding lists every predicate with when it held and what was measured (closest gap, peak "
+          "crush, emitter distance, ...).",
+          "Change the scene so the missing predicate holds, physically: e.g. deformed(sedan.front) needs a plastic "
+          "soft body mounted at the sedan's front; runs_red(sedan) needs the sedan's driver to have its signal, stop_s "
+          "and \"runs_red\": true; leaks_from(oil, sedan.front) needs the emitter's pos on the front's surface. Never "
+          "edit spec.json; if a requirement seems wrong for the prompt, say so in meta.notes and report it."}},
         {"expect_event",
          {"An expected event did not happen, or not within its time window.",
           "Check the event name in the events list of x.json (contact names sort ids: contact:a:b with a < b). Move "

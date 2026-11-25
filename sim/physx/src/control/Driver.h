@@ -77,6 +77,7 @@ private:
     std::optional<bool> yellowGo_;
     double s_ = 0, targetSpeed_ = 0;
     bool stopped_ = false, passedStop_ = false, initialised_ = false;
+    bool runsRed_ = false;  // watches its signal (events record the light) but does not stop for it
 };
 
 }  // namespace p2s

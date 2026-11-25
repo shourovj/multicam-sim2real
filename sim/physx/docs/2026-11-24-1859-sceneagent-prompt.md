@@ -26,6 +26,9 @@ $P/p2s_check $RUN/it1/scene.json $RUN/it1                                     # 
   `scene.vehicles[0].wheels.radius_m: must be > 0`), 3 on a solver failure.
 - `p2s_check` exits 0 **PASS**, 1 **FAIL** (iterate), 3 **STOP** (give up and report to a human), 2 bad input
   (then r.md says `STATUS: ERROR` with the JSON path of the problem, e.g. an expectation naming an unknown entity).
+- Before iteration 1, whoever runs the loop (not the SceneAgent) writes the prompt spec once:
+  `python3 sim/physx/spec/p2s_spec.py "<prompt>" $RUN/spec.json` (needs `sim/physx/spec/serve_llm.sh` running).
+  `p2s_check` picks it up from `$RUN/spec.json`.
 - Keep every iteration in its own folder (`it1`, `it2`, ...) with its own copy of S. All iterations of a scene
   share `$RUN/history.jsonl`, so each report shows how earlier iterations went.
 - Pick a free GPU with `nvidia-smi` (use one with < 1 GB used).
@@ -54,6 +57,12 @@ A warning that is right for this scene (a genuine 80 g crash deceleration) can b
 - `pos` is a position `[x, y, z]`; orientation is `yaw_deg` (about Z), `pitch_deg` (about Y), `roll_deg`
   (about X), applied yaw then pitch then roll; or `quat_xyzw`.
 - Every entity has a unique `id` (no `:`). The ground is the entity `ground`, top surface at z = 0 by default.
+- Every entity the prompt names gets an `appearance`: `{"class": "sedan", "color": "red", "label": "red sedan"}`.
+  - `class` is what it is, a class or name from `sim/physx/spec/classes.json`.
+  - `color` is a colour word from there, or `[r, g, b]` sRGB in 0..1.
+  - `label` is optional free text.
+  - Physics ignores it. The renderer paints the entity in that colour, and r checks class and colour against the prompt.
+  - Mounted soft bodies take their host's colour.
 - Unknown keys are errors (they are usually typos). Optional keys have the defaults shown.
 - Contact events are named `contact:<a>:<b>` with the two ids in alphabetical order.
 
@@ -209,9 +218,10 @@ All rigid-body keys (`shapes`, `pos`, `mass_kg`, `drag`) plus:
 - Verbs: `brake {level 0..1}` (the driver stamps on the brake: after a crash; the torque is level x
   `max_brake_torque_nm`, so lower the level if r says the braking g is too high), `release` (lets go of everything),
   `set_speed {mps}`.
-- A driver with a `signal` needs `stop_s` (where its stop line is along its path). A driver without `signal`
-  ignores the lights (it runs a red); one without `leader` ignores other vehicles and
-  drives into them: that is how a crash is staged.
+- A driver with a `signal` needs `stop_s` (where its stop line is along its path). A vehicle that runs a red light
+  keeps its `signal` and `stop_s` and adds `"runs_red": true`. It then drives through, and the event
+  `<id>:passes_stop_line` records the light's colour, which is how r confirms that it ran the red.
+- A driver without `leader` ignores other vehicles and drives into them: that is how a crash is staged.
 - A vehicle hit hard (over 4 g) lets go of the wheel and brakes fully (event `<id>:crashed`; a trigger's `brake`
   level wins), so it skids and turns as the crash sends it and stops within metres, even if a trigger released it
   earlier; `"after_crash": "continue"` keeps it driving. A crash turns a vehicle when it is
@@ -443,6 +453,20 @@ Give each expectation a unique `id`; findings are keyed `expect_<type>:<id>`.
 - **Cameras, from geometry alone:** where each image's corner rays meet the ground (what the camera covers), and
   for every moving entity and every entity an expectation names: the share of frames it is visible, how much of it
   is unoccluded, its screen size and an in/out timeline; static scenery gets one summary line per camera.
+- **The prompt spec** (`spec.json` in `$RUN`, beside the `itN` folders) is written from the prompt by another model
+  before iteration 1. It lists the prompt's objects, parts and cameras, and one temporal-logic requirement per thing
+  the prompt says happens. r binds each prompt object to one of your entities by kind, size, `appearance` and id.
+  Failure keys:
+  - `prompt_object`: an object is missing, too few, or the wrong size.
+  - `prompt_appearance`: a class or colour is missing or wrong.
+  - `prompt_camera`: a camera is the wrong type, rides the wrong body, or is not mounted where the prompt says.
+  - `prompt_contact`: a person is touched although the prompt does not say so.
+  - `prompt:<id>`: a requirement does not hold. The finding gives each measured predicate and when it held.
+  
+  An *implied* requirement (vehicles that crash come to rest) is a warning. Never edit `spec.json`. If r says
+  `PROMPT SPEC ERROR`, stop and report to a human. The predicates are listed in `sim/physx/spec/README.md`.
+  - `leaks_from` wants the emitter's nozzle on the host's surface, within 5 cm, at the named part.
+  - `deformed(<object>.<part>)` needs a soft body mounted in that region: the front is the +X third of the body.
 - Failures are listed in the order to fix them (simulation and overlap first, expectations last).
 - **Fact card:** measured events, start and end positions, peak speeds, contacts with peak forces, deformation.
   Use these numbers, not your intentions, when describing the scene later.

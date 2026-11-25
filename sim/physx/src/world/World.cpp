@@ -16,6 +16,29 @@ namespace {
 using Clk = std::chrono::steady_clock;
 double since(Clk::time_point a) { return std::chrono::duration<double>(Clk::now() - a).count(); }
 
+// "appearance": {"class": "sedan", "color": "red" or [r, g, b] (sRGB 0..1), "label": "red sedan"}: what the entity
+// is and looks like. Physics ignores it; the renderer tints the entity with the colour, and the prompt-spec checks
+// compare class and colour with the prompt (colour words are checked there, against spec/classes.json).
+Json readAppearance(const Spec& a) {
+    Json out = Json::object();
+    if (a.has("class")) out["class"] = a.str("class");
+    if (a.has("label")) out["label"] = a.str("label");
+    if (a.has("color")) {
+        const Spec c = a["color"];
+        if (c.isString()) {
+            out["color"] = c.asStr();
+        } else {
+            const Vec3 rgb = a.vec3("color");
+            for (int i = 0; i < 3; ++i)
+                if (rgb[i] < 0 || rgb[i] > 1) c.fail("expected a colour word or [r, g, b] with each in 0..1");
+            out["color"] = toJson(rgb);
+        }
+    }
+    if (out.empty()) a.fail("give at least one of class, color, label");
+    a.rejectUnknownKeys();
+    return out;
+}
+
 Aabb worldBounds(const Entity& e) { return boundsOf(e.shapes(), e.pose()); }
 
 double aabbGap(const Aabb& a, const Aabb& b) {
@@ -156,6 +179,7 @@ void World::build(const Spec& s) {
             if (index_.count(id)) e["id"].fail("duplicate entity id '" + id + "'");
             if (id.find_first_of(":./ ") != std::string::npos) e["id"].fail("ids may not contain ':', '.', '/' or spaces");
             index_[id] = entities_.size();
+            if (e.has("appearance")) appearance_[id] = readAppearance(e["appearance"]);
             entities_.push_back(factory(e, *this));
         }
     std::vector<Entity*> linkOrder;  // non-owning view of entities_
@@ -392,6 +416,7 @@ Json World::describe() const {
         Json d = e->describe();
         d["id"] = e->id();
         d["kind"] = e->kind();
+        if (const auto it = appearance_.find(e->id()); it != appearance_.end()) d["appearance"] = it->second;
         ents.push_back(d);
     }
     Json cams = Json::array();

@@ -1,0 +1,42 @@
+{
+ "format": "p2s-spec",
+ "version": 1,
+ "writer": "hand-written reference (2026-11-25)",
+ "prompt": "At a city intersection at dusk, a red sedan runs the red light at about 50 km/h and T-bones a white delivery van that is crossing on green. The van's side caves in, the van is shoved sideways and spins partly around, and the sedan's crumpled front leaks oil onto the road. A pedestrian waiting on the corner steps back in shock. Filmed by a CCTV camera on a pole overlooking the intersection and by the sedan's dashcam.",
+ "setting": {"place": "city intersection", "time_of_day": "dusk"},
+ "objects": [
+  {"name": "sedan", "class": "sedan", "color": "red", "span": "a red sedan"},
+  {"name": "van", "class": "van", "color": "white", "span": "a white delivery van"},
+  {"name": "light", "class": "traffic_light", "span": "the red light"},
+  {"name": "oil", "class": "oil", "span": "leaks oil onto the road"},
+  {"name": "pedestrian", "class": "person", "span": "A pedestrian waiting on the corner"},
+  {"name": "pole", "class": "pole", "span": "a CCTV camera on a pole"}
+ ],
+ "parts": [
+  {"name": "van.side", "of": "van", "region": "side", "span": "The van's side caves in"},
+  {"name": "sedan.front", "of": "sedan", "region": "front", "span": "the sedan's crumpled front"}
+ ],
+ "cameras": [
+  {"name": "cctv", "type": "fixed", "mounted_on": "pole", "min_height_m": 3, "span": "a CCTV camera on a pole overlooking the intersection"},
+  {"name": "dashcam", "type": "attached", "on": "sedan", "span": "the sedan's dashcam"}
+ ],
+ "requirements": [
+  {"id": "sedan_runs_red", "mode": "action", "text": "the sedan runs the red light", "formula": "F runs_red(sedan)"},
+  {"id": "sedan_speed", "mode": "action", "text": "at about 50 km/h", "formula": "speed(sedan, 11, 17) U hits(sedan, van)"},
+  {"id": "t_bone", "mode": "action", "text": "the sedan T-bones the van", "formula": "F (hits(sedan, van) & left_of(sedan, van) | hits(sedan, van) & right_of(sedan, van))"},
+  {"id": "van_on_green", "mode": "action", "text": "the van is crossing on green", "formula": "F crosses_on(van, green)"},
+  {"id": "van_side_caves", "mode": "action", "text": "the van's side caves in", "formula": "seq(hits(sedan, van), deformed(van.side, 0.05))"},
+  {"id": "van_shoved", "mode": "action", "text": "the van is shoved sideways", "formula": "F slid_sideways(van, 0.5, since=hits(sedan, van))"},
+  {"id": "van_spins", "mode": "action", "text": "the van spins partly around", "formula": "F turned(van, 30, since=hits(sedan, van)) & G !turned(van, 300, since=hits(sedan, van))"},
+  {"id": "vehicles_stop", "mode": "consistency", "implied": true, "text": "after the crash both vehicles come to rest (a crash ends their driving)", "formula": "F[0, 6] (hits(sedan, van) & F[0, 4] (stationary(sedan, 0.3) & stationary(van, 0.3)))"},
+  {"id": "sedan_front_crumples", "mode": "action", "text": "the sedan's front is crumpled", "formula": "seq(hits(sedan, van), deformed(sedan.front, 0.05))"},
+  {"id": "oil_leaks", "mode": "action", "text": "the crumpled front leaks oil onto the road", "formula": "F leaks_from(oil, sedan.front) & seq(hits(sedan, van), emitting(oil), on_ground(oil, 0.5))"},
+  {"id": "ped_waits", "mode": "action", "text": "a pedestrian waiting on the corner", "formula": "stationary(pedestrian) U hits(sedan, van)"},
+  {"id": "ped_steps_back", "mode": "action", "text": "the pedestrian steps back in shock", "formula": "seq(hits(sedan, van), moved(pedestrian, 0.3, since=hits(sedan, van)))"},
+  {"id": "ped_unharmed", "mode": "consistency", "text": "the pedestrian is not hit", "formula": "G !touches(pedestrian, sedan) & G !touches(pedestrian, van)"},
+  {"id": "cctv_sees_crash", "mode": "camera", "text": "the CCTV camera overlooks the crash", "formula": "F (hits(sedan, van) & visible(cctv, sedan) & visible(cctv, van))"},
+  {"id": "cctv_sees_pedestrian", "mode": "camera", "text": "the CCTV camera sees the pedestrian step back", "formula": "F (moved(pedestrian, 0.3, since=hits(sedan, van)) & visible(cctv, pedestrian))"},
+  {"id": "dashcam_sees_crash", "mode": "camera", "text": "the sedan's dashcam films the van as they collide", "formula": "F (hits(sedan, van) & visible(dashcam, van, 40))"}
+ ],
+ "not_simulated": ["dusk lighting", "city setting (buildings, road markings)", "the pedestrian's shocked expression"]
+}
