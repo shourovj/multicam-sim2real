@@ -60,7 +60,7 @@ private:
     MotionPeaks peaks_;
     std::string driveId_, brakesId_;  // actuator ids
     double manualBrake_ = -1;
-    bool released_ = false, crashRelease_ = true;
+    bool released_ = false, crashRelease_ = true, crashed_ = false;
     DriveCommand lastCmd_;
 };
 

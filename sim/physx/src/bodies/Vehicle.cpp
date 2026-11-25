@@ -241,11 +241,12 @@ void Vehicle::logActuators(World& w, double dt) {
 void Vehicle::afterStep(World& w, double dt) {
     const Vec3 before = peaks_.lastVel;
     peaks_.update(velocity(), dt, w.gravity());
-    // A driver hit hard lets go: the vehicle slides and spins as the crash sends it, instead of steering back
-    // into its lane. Bumps and hard braking stay well under 4 g.
+    // A driver hit hard lets go of the wheel and stamps on the brake: the vehicle skids and spins as the crash
+    // sends it, instead of steering back into its lane or coasting away. Bumps and hard braking stay under 4 g.
     const double accel = ((velocity() - before) / dt).norm();
-    if (driver_ && crashRelease_ && !released_ && accel > 4 * 9.81) {
-        released_ = true;
+    if (crashRelease_ && !crashed_ && accel > 4 * 9.81) {
+        crashed_ = released_ = true;
+        if (manualBrake_ < 0) manualBrake_ = 1;
         w.events().emit(id() + ":crashed", w.time());
     }
 }

@@ -209,10 +209,12 @@ All rigid-body keys (`shapes`, `pos`, `mass_kg`, `drag`) plus:
 - Verbs: `brake {level 0..1}` (the driver stamps on the brake: after a crash; the torque is level x
   `max_brake_torque_nm`, so lower the level if r says the braking g is too high), `release` (lets go of everything),
   `set_speed {mps}`.
-- A driver without `signal` ignores the lights (it runs a red); one without `leader` ignores other vehicles and
+- A driver with a `signal` needs `stop_s` (where its stop line is along its path). A driver without `signal`
+  ignores the lights (it runs a red); one without `leader` ignores other vehicles and
   drives into them: that is how a crash is staged.
-- A driver hit hard (over 4 g) lets go of the wheel and the pedals (event `<id>:crashed`), so the vehicle slides
-  and turns as the crash sends it; `"after_crash": "continue"` keeps it driving. A crash turns a vehicle when it is
+- A vehicle hit hard (over 4 g) lets go of the wheel and brakes fully (event `<id>:crashed`; a trigger's `brake`
+  level wins), so it skids and turns as the crash sends it and stops within metres, even if a trigger released it
+  earlier; `"after_crash": "continue"` keeps it driving. A crash turns a vehicle when it is
   hit near a corner, far from its centre of mass; a struck van typically turns 10-40 degrees.
 - `com` [x, y, z] (body frame) sets the centre of mass. A van or truck hit side-on rolls over unless it is low
   (about a third of the body's height); lower it if r shows wheels `below_ground` after a side impact.
@@ -284,6 +286,8 @@ human from their walk phase. A walker stands still at its path's start until `st
   crumple zone touches the tank's armour).
 - Mesh density: `max_edge_m` sets the collision mesh (what r counts in `fem_inverted` and draws); `resolution` sets
   the voxel grid the solver uses. Halving `max_edge_m` roughly quadruples the tetrahedra.
+- Two crumple zones on different vehicles crush each other (a car nose into a van's side panel) only where they
+  meet: give them overlapping heights, or the nose hits the rigid body under or over the panel.
 - Size a crumple zone to the impact patch: `deformation` is the 90th percentile over all its vertices, so a whole
   van side hit by a car nose reads as almost no deformation. Use a panel about as wide as what hits it.
 - Attach only the face that touches the host (a thin slab of the `attach` box); attaching most of the body makes it
@@ -323,7 +327,8 @@ The rectangle lies in its local x-y plane from (0, 0) to `size_m`; `pin` boxes a
 - Presets: `water oil honey` (kind fluid), `sand` (granular), `smoke`. Override `density viscosity cohesion
   adhesion surface_tension friction damping`; smoke also `buoyancy` (fraction of g, 0.12), `lifetime_s` (4),
   `drag` (1/s toward the wind, 1.0), `diffusion_mps` (random mixing that widens the plume, 0.4).
-- `blocks` fill boxes at t = 0; `emitters` (on a `host` or in the world) shoot disc layers along `direction`;
+- `blocks` fill boxes at t = 0; `emitters` (on a `host`, with `pos` and `direction` in the host's frame, or in the
+  world without one) shoot disc layers along `direction`;
   `phases` change the radius and speed over time after the emitter starts (a gush, then a trickle).
 - Emitters with `"active": false` wait for a trigger `start` (verbs `start`, `stop`).
 - Containers need walls at least two particle spacings thick (`container.wall` >= 0.025 for 1.2 cm particles).
@@ -407,7 +412,7 @@ fails with `expect_coverage` if a camera has none or there is no physical outcom
 | `leaves_view` | `camera`, `entity`, `inside_at_s`, `outside_by_s` | the reverse |
 | `event_in_view` | `camera`, `event` | where the event happens is inside the frame when it happens |
 | `reaches` | `entity`, `point`, `within_m`, `by_s` | it gets that close by then |
-| `speed` | `entity`, `during_s`, `min_mps`, `max_mps` | speed stays in range |
+| `speed` | `entity`, `during_s`, `min_mps`, `max_mps` | speed stays in range (bodies and vehicles; walkers follow their path: use `reaches`) |
 | `at_rest` | `entity`, `after_s`, `max_speed_mps` 0.05 | it has stopped |
 | `min_gap` | `a`, `b`, `metres` | they never come closer |
 | `upright` | `entity`, `max_tilt_deg` 30 | it never tips further |
