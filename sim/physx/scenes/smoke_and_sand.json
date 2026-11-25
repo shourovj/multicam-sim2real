@@ -1,0 +1,38 @@
+{
+ "p2s_version": 1,
+ "name": "smoke_and_sand",
+ "meta": {"iteration": 1, "max_iterations": 8,
+          "prompt": "Smoke rises from a burnt-out car wreck and drifts downwind; nearby a wooden crate falls off a ledge into a heap of sand, and a spinning top wobbles on the pavement. Views: a wide static shot and a low close-up of the sand."},
+ "clock": {"fps": 24, "duration_s": 5, "substeps": 20},
+ "world": {"ground": {"material": "concrete"}, "wind": {"velocity": [2.5, 0.5, 0], "gust": 0.3, "turbulence": 0.4, "turbulence_length_m": 2.0}},
+ "bodies": [
+  {"id": "wreck", "type": "static", "pos": [-4, 0, 0],
+   "shapes": [{"type": "box", "size": [4.2, 1.8, 0.8], "pos": [0, 0, 0.6], "material": "steel"},
+              {"type": "box", "size": [2.0, 1.6, 0.5], "pos": [-0.3, 0, 1.25], "material": "steel"}]},
+  {"id": "ledge", "type": "static", "pos": [3.2, 0, 0], "shapes": [{"type": "box", "size": [1.0, 1.2, 2.0], "pos": [0, 0, 1.0], "material": "concrete"}]},
+  {"id": "crate", "type": "dynamic", "pos": [2.55, 0, 2.3], "velocity": [-1.2, 0, 0], "density": 500,
+   "shapes": [{"type": "box", "size": [0.5, 0.5, 0.5], "material": "wood"}]},
+  {"id": "top", "type": "dynamic", "pos": [0.5, -2.0, 0.1], "angular_velocity": [0.3, 0, 60], "mass_kg": 0.3,
+   "shapes": [{"type": "cylinder", "radius": 0.08, "half_length": 0.015, "pos": [0, 0, 0.0], "material": "wood"},
+              {"type": "capsule", "radius": 0.012, "half_length": 0.05, "pos": [0, 0, -0.03], "material": "wood"}]}
+ ],
+ "particles": [
+  {"id": "smoke", "preset": "smoke", "max_particles": 20000, "lifetime_s": 4, "buoyancy": 0.15, "drag": 1.0,
+   "emitters": [{"pos": [-4.3, 0, 1.6], "direction": [0, 0, 1], "radius_m": 0.35, "speed_mps": 0.8}]},
+  {"id": "sand", "preset": "sand", "spacing_m": 0.02, "max_particles": 60000,
+   "blocks": [{"min": [1.0, -0.5, 0.01], "max": [2.0, 0.5, 0.35]}]}
+ ],
+ "cameras": [
+  {"id": "wide", "type": "fixed", "position": [0, -14, 4], "look_at": [-0.5, 0, 1.5], "fov_deg": 65},
+  {"id": "close", "type": "fixed", "position": [1.5, -3.5, 0.8], "look_at": [1.6, 0, 0.3], "fov_deg": 55}
+ ],
+ "expect": [
+  {"id": "crate_lands_in_sand", "type": "event", "event": "contact:crate:sand", "within_s": [0.2, 1.5]},
+  {"id": "crate_settles", "type": "at_rest", "entity": "crate", "after_s": 4.0, "max_speed_mps": 0.1},
+  {"id": "smoke_drifts_downwind", "type": "particles_in_region", "entity": "smoke", "min": [-4.5, -3, 2.5], "max": [8, 4, 12], "at_s": 5, "min_fraction": 0.3},
+  {"id": "top_keeps_spinning", "type": "upright", "entity": "top", "max_tilt_deg": 45},
+  {"id": "wide_sees_wreck", "type": "in_view", "camera": "wide", "entity": "wreck"},
+  {"id": "wide_sees_smoke", "type": "in_view", "camera": "wide", "entity": "smoke", "during_s": [1, 5]},
+  {"id": "close_sees_crate", "type": "in_view", "camera": "close", "entity": "crate", "during_s": [1, 5], "min_fraction": 0.8}
+ ]
+}

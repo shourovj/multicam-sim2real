@@ -51,6 +51,8 @@ Steps 1 and 5 are the LLM jobs. Everything else is deterministic code. Each step
 | [`configs/experiments/`](configs/experiments/) | One file per experiment: scenes, model and revision, sampler, conditions, seeds, GPU limits. [`cvp_v1/`](configs/experiments/cvp_v1/) holds the four-model benchmark, one file per model. |
 | [`sim/world/`](sim/world/) | The multi-camera simulator: spec loading, layouts, kinematics, cameras, checks, controls, and Blender mesh builders. Read [`sim/world/__init__.py`](sim/world/__init__.py) first. |
 | [`sim/physics/`](sim/physics/) | Motion models: quadrotor, ground and lane vehicles, pedestrian, robot arm, pour, rigid body. |
+| [`sim/physx/`](sim/physx/) | Prompt to sim (p2s): GPU physics on PhysX 5.9 from an LLM-written JSON scene, and the checker whose report drives the SceneAgent's loop. [`sim/physx/README.md`](sim/physx/README.md) has the build, the programs and the SceneAgent prompt. |
+| [`sim/blender/`](sim/blender/) | `import_x.py`: builds the Blender scene from p2s physics output, with no per-scene code. |
 | [`gen/`](gen/) | The GPU job runner and prompt composing at the top, shared code in `common/`, and one folder per model. [`gen/README.md`](gen/README.md) has the layout and how to add a model. |
 | [`eval/`](eval/) | Scoring against the simulator: five scene-independent scores (`run_eval.py`), the metric functions, and one folder per reader model. [`eval/README.md`](eval/README.md) has the definitions. |
 | [`setup/`](setup/) | Clone script for third-party code, env specs, asset fetcher, and the full setup guide. |

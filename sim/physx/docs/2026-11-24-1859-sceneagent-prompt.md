@@ -185,16 +185,38 @@ All rigid-body keys (`shapes`, `pos`, `mass_kg`, `drag`) plus:
   slows for bends, follows its `leader`, stops for red (and for yellow when it can stop at `brake_yellow`), and
   waits while a `yield_to` walker is on a crosswalk in its lane. Events: `<id>:stops`, `<id>:moves`,
   `<id>:passes_stop_line` (with the light's colour).
-- Typical numbers: car 1.2-2 t, 150-400 N m per driven wheel at the wheel... (r reports W/kg and g so you can
-  compare); truck 7-15 t; bus 12-18 t.
+- List axles front to back. Typical numbers: car 1.2-2 t with 800-1500 N m per driven wheel and 2500-3500 N m of
+  brake per wheel; truck 7-15 t with 3000 N m and 6000 N m; r reports the result in W/kg and g so you can compare.
 - Verbs: `brake {level 0..1}` (the driver stamps on the brake: after a crash), `release` (lets go of everything),
   `set_speed {mps}`.
 
 ### 6.5 `tracked_vehicles`: tanks, bulldozers
 
-All rigid-body keys plus `"traction": {"speed_mps": 5, "mu": 0.7, "track_half_length_m": 1.8, "response_s": 0.25}`.
-Use the `track` material on the track boxes (they slide; the traction controller supplies grip up to `mu * m * g`).
-Verbs: rigid-body verbs plus `brake` and `set_speed {mps}`.
+All rigid-body keys plus `"traction": {"speed_mps": 5, "mu": 0.7, "track_half_length_m": 1.8, "response_s": 0.25,
+"path": [[x, y], ...], "lat_accel_max": 2.0}`. Use the `track` material on the track boxes (they slide; the traction
+controller supplies grip up to `mu * m * g`). Without `path` it holds its heading; with one it skid-steers along it
+and slows for bends. Verbs: rigid-body verbs plus `brake` and `set_speed {mps}`.
+
+### 6.5b `robot_arms`: robot arms that carry things
+
+```json
+{"id": "robot", "robot": "franka_panda", "base": {"pos": [-0.1, 0, 0.75], "yaw_deg": 0},
+ "hold": {"object": "pitcher", "offset": {"pos": [0.13, 0, 0], "pitch_deg": -90}, "gripper_m": 0.035},
+ "point_local": [0.05, 0, 0.16],
+ "keys": [{"t": 0, "point": [0.42, 0.143, 1.06], "yaw_deg": -90, "tilt_deg": 0},
+          {"t": 2.3, "point": [0.5, -0.03, 0.94], "yaw_deg": -90, "tilt_deg": 45}],
+ "drive": {"stiffness": 2000, "damping": 200, "max_torque_nm": 87}}
+```
+
+- Robots: `franka_panda` (made from MuJoCo Menagerie by `sim/physx/tools/mjcf_to_robot.py`; others can be added the
+  same way). The arm is a jointed physical body: its joints are driven to an inverse-kinematics solution of the
+  keys, so it moves, carries and pushes like a real arm.
+- `keys` say where a point of the held object (`point_local`, in the object's frame) should be, which way the object
+  faces (`yaw_deg`) and how far it is tilted about its own Y axis (`tilt_deg`; for a pitcher with its spout on +X,
+  positive tilts the spout down). Without `hold`, the keys move the tool centre point.
+- The held object is a dynamic body (a `container` pitcher, a box); the arm places it in the gripper at t = 0.
+  Put things the arm stands on (the table) in the arm's assembly: `"assembly": "<arm id>"`.
+- A camera can ride a link: `{"type": "attached", "parent": "robot", "part": "hand", ...}`.
 
 ### 6.6 `walkers`: people
 
@@ -224,7 +246,9 @@ human from their walk phase.
 ```
 
 - With a `host`, the shape and the `attach` boxes are in the host's frame and the attached vertices are bolted to
-  it; without a host, `pos` places it in the world and `attach` boxes pin vertices to the world.
+  it; without a host, `pos` places it in the world and `attach` boxes pin vertices to the world. A mounted soft body
+  never collides with its host.
+- Soft-body prisms may be concave (an L-shaped bumper over a wheel well); rigid prisms must be convex.
 - Elastic: rubber balls, jelly, cushions, a car tyre. Plastic (`plastic`): crumple zones, dented panels, bent
   metal, dough. Stiffness guide: rubber 1e6-1e7, crumple zone 2e7 (crushes ~0.3 m at 16 m/s), armour 5e8.
 - A soft body reports contacts like a rigid one and also as its host (`contact:tank:truck` fires when the truck's
@@ -287,8 +311,12 @@ Each trigger fires once. `do` must be a verb of the target's kind:
 {"id": "satellite", "type": "fixed", "position": [0, 0, 400], "look_at": [0, 0.01, 0], "fov_deg": 8}
 ```
 
-Attached cameras look along their parent's +X; `offset` turns them. Handheld cameras may ride a walker with
-`parent` + `offset.pos`.
+- Attached cameras look along their parent's +X with its +Z up; `offset` moves and turns them in the parent's frame:
+  `yaw_deg` > 0 turns left, **`pitch_deg` > 0 tilts the view down** (so a dashcam looking slightly up has
+  `pitch_deg: -4`), `roll_deg` rolls. `part` picks a part of the parent (a robot link: `"part": "hand"`).
+- Handheld cameras may ride a walker (`parent`, `offset.pos`) and still aim at `look_at` or `look_at_entity`.
+- A camera's own parent never blocks its view in the checker (a dashcam sees out of its car).
+- `satellite`-style views: a high fixed camera with a narrow `fov_deg` and `clip_m` that reaches the ground.
 
 ## 7. `expect`: what the prompt asks for
 
@@ -320,8 +348,8 @@ Give each expectation an `id`; findings are keyed `expect_<type>:<id>`.
 - **Hard checks:** finite state, no PhysX errors, no interpenetration beyond about 3 cm (bodies, deformables,
   particles; overlap at t = 0 is reported separately), nothing below the ground or flung away, no energy gained
   beyond what actuators delivered, no inverted FEM elements.
-- **Plausibility tables for you to judge:** per body, peak speed and peak acceleration in g and whether a contact
-  explains it; per actuator, thrust-to-weight, W/kg and braking g against the usual ranges. Out-of-range values are
+- **Plausibility tables for you to judge:** per body, peak speed and peak acceleration |dv/dt| in g (0 at rest,
+  1 g in free fall) and whether a contact explains it; per actuator, thrust-to-weight, W/kg and braking g against the usual ranges. Out-of-range values are
   warnings: fix them, or acknowledge them when the prompt really asks for it.
 - **Cameras, from geometry alone:** where each image's corner rays meet the ground (what the camera covers), and
   per entity the share of frames it is visible, how much of it is unoccluded, its screen size and an in/out
@@ -345,6 +373,13 @@ Give each expectation an `id`; findings are keyed `expect_<type>:<id>`.
 
 ## 10. Example
 
-`sim/physx/scenes/` holds working scenes: `tank_truck.json` (vehicle with plastic crumple zone, tracked tank with
-plastic armour, oil emitter, flag in wind, five cameras), `intersection.json` (cars, signals, pedestrians),
-`drone_delivery.json`, `robot_pour.json`, `smoke_and_sand.json`. Start from the closest one.
+`sim/physx/scenes/` holds working scenes that pass the checker. Start from the closest one:
+
+| scene | shows |
+|---|---|
+| `tank_truck.json` | wheeled truck with a plastic crumple zone, tracked tank with plastic armour, crash refine window, oil emitter started by the impact, flag in gusty wind, five cameras incl. satellite, phone and orbiting drone |
+| `intersection.json` | four cars with drivers, two signals, pedestrians on crosswalks, buildings; CCTV, dashcam, phone |
+| `robot_pour.json` | robot arm pouring water from a pitcher into a glass; wrist camera on the hand link |
+| `drone_takeoff.json`, `drones_air.json` | drones lifting off, crossing, hovering in gusts |
+| `convoy_overhead.json` | tracked tank and two trucks following a road under a bridge and a tree canopy; overhead view |
+| `smoke_and_sand.json` | smoke drifting downwind, a crate falling into sand, a spinning top |
