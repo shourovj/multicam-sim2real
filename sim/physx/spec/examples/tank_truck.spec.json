@@ -9,8 +9,7 @@
   {"name": "tank", "class": "tank", "color": "olive", "span": "an armoured tank"},
   {"name": "oil", "class": "oil", "span": "engine oil leaks and pools"},
   {"name": "flag", "class": "flag", "span": "a Texas flag"},
-  {"name": "flagpole", "class": "pole", "span": "a Texas flag flaps nearby"},
-  {"name": "traffic_light", "class": "pole", "span": "traffic-light camera"}
+  {"name": "flagpole", "class": "pole", "span": "a Texas flag flaps nearby"}
  ],
  "parts": [
   {"name": "truck.front", "of": "truck", "region": "front", "span": "the truck crashes into the tank; engine oil"}
@@ -19,7 +18,7 @@
   {"name": "wide", "type": "fixed", "span": "static wide shot"},
   {"name": "satellite", "type": "fixed", "min_height_m": 100, "span": "satellite"},
   {"name": "phone", "type": "handheld", "span": "phone"},
-  {"name": "traffic_light_cam", "type": "fixed", "mounted_on": "traffic_light", "min_height_m": 3, "span": "traffic-light camera"},
+  {"name": "traffic_light_cam", "type": "fixed", "min_height_m": 3, "span": "traffic-light camera"},
   {"name": "drone", "type": "orbit", "min_height_m": 5, "span": "drone orbiting the intersection"}
  ],
  "requirements": [

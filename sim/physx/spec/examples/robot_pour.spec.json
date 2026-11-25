@@ -20,13 +20,13 @@
  "requirements": [
   {"id": "arm_on_table", "mode": "spatial", "text": "the arm stands on the table", "formula": "G near(arm, table, 0.05)"},
   {"id": "glass_on_table", "mode": "spatial", "text": "the glass stands on the table", "formula": "G on(glass, table)"},
-  {"id": "pitcher_tilts", "mode": "action", "text": "the arm tilts the pitcher to pour", "formula": "F turned(pitcher, 20)"},
+  {"id": "pitcher_tilts", "mode": "action", "text": "the arm tilts the pitcher to pour", "formula": "F tipped(pitcher, 30)"},
   {"id": "water_from_pitcher", "mode": "action", "text": "the water starts in the pitcher", "formula": "fills(pitcher, water, 0.8)"},
-  {"id": "water_into_glass", "mode": "action", "text": "the water pours from the pitcher into the glass", "formula": "seq(fills(pitcher, water, 0.8), fills(glass, water, 0.5))"},
+  {"id": "water_into_glass", "mode": "action", "text": "the water pours from the pitcher into the glass", "formula": "seq(fills(pitcher, water, 0.8), tipped(pitcher, 30), fills(glass, water, 0.3))"},
   {"id": "glass_stays", "mode": "consistency", "implied": true, "text": "the glass is not knocked over", "formula": "G upright(glass, 20)"},
-  {"id": "wrist_sees_glass", "mode": "camera", "text": "the wrist camera sees the glass during the pour", "formula": "F (turned(pitcher, 20) & visible(wrist, glass))"},
-  {"id": "tripod_sees_pour", "mode": "camera", "text": "the side tripod shows the pour", "formula": "F (turned(pitcher, 20) & visible(tripod, pitcher) & visible(tripod, glass))"},
-  {"id": "cctv_sees_pour", "mode": "camera", "text": "the CCTV camera shows the arm pouring", "formula": "F (turned(pitcher, 20) & visible(cctv, arm) & visible(cctv, glass))"}
+  {"id": "wrist_sees_glass", "mode": "camera", "text": "the wrist camera sees the glass during the pour", "formula": "F (tipped(pitcher, 30) & visible(wrist, glass))"},
+  {"id": "tripod_sees_pour", "mode": "camera", "text": "the side tripod shows the pour", "formula": "F (tipped(pitcher, 30) & visible(tripod, pitcher) & visible(tripod, glass))"},
+  {"id": "cctv_sees_pour", "mode": "camera", "text": "the CCTV camera shows the arm pouring", "formula": "F (tipped(pitcher, 30) & visible(cctv, arm) & visible(cctv, glass))"}
  ],
  "not_simulated": ["the room's walls and furnishing"]
 }

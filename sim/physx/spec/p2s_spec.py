@@ -57,7 +57,7 @@ Answer with the spec as one JSON object and nothing else. Copy the prompt verbat
 
 def chat(url, model, messages, temperature, max_tokens):
     body = json.dumps({"model": model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens,
-                       "seed": 0}).encode()
+                       "seed": 0, "thinking_token_budget": max_tokens // 2, "response_format": {"type": "json_object"}}).encode()
     req = urllib.request.Request(url.rstrip("/") + "/chat/completions", body, {"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=1800) as r:
         out = json.load(r)

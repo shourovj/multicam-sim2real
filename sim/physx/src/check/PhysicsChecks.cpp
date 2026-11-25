@@ -288,6 +288,11 @@ void checkMotion(const RunData& run, Report& r) {
                           contact ? "yes" : kicked ? "no (kicked)" : "no"});
         if (vmax > 3000) {
             r.add({"speed", Severity::Fail, id, id + " reached " + fmt(vmax) + " m/s, faster than any gun or rocket", ""});
+        } else if (vmax > 150 && typicalSpeed.count(e.kind) && vmax > 2 * typicalSpeed.at(e.kind)) {
+            // A car at 400 m/s is not a fast projectile that needs ccd (vehicles have none): something pumped energy in.
+            r.add({"speed", Severity::Fail, id, id + " (" + e.kind + ") reached " + fmt(vmax) + " m/s, over twice the usual " +
+                   fmt(typicalSpeed.at(e.kind)) + " m/s: energy was injected (see the energy finding: an overlap, a "
+                   "crumple zone pushed inside a body, or a huge force)", ""});
         } else if (vmax > 150 && !e.desc.value("ccd", false)) {
             r.add({"speed", Severity::Warn, id, id + " reached " + fmt(vmax) + " m/s without ccd: it can pass through thin "
                    "walls between steps; set \"ccd\": true", ""});

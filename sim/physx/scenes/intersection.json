@@ -7,12 +7,12 @@
  "clock": {"fps": 16, "duration_s": 7.0, "substeps": 30},
  "world": {"ground": {"material": "asphalt"}},
  "bodies": [
-  {"id": "bldg_ne", "type": "static", "pos": [20.5, 20.5, 0], "shapes": [{"type": "box", "size": [20, 20, 18], "pos": [0, 0, 9], "material": "concrete"}]},
-  {"id": "bldg_nw", "type": "static", "pos": [-20.5, 20.5, 0], "shapes": [{"type": "box", "size": [20, 20, 24], "pos": [0, 0, 12], "material": "concrete"}]},
-  {"id": "bldg_sw", "type": "static", "pos": [-20.5, -20.5, 0], "shapes": [{"type": "box", "size": [20, 20, 28], "pos": [0, 0, 14], "material": "concrete"}]},
-  {"id": "bldg_se", "type": "static", "pos": [20.5, -20.5, 0], "shapes": [{"type": "box", "size": [20, 20, 17], "pos": [0, 0, 8.5], "material": "concrete"}]},
-  {"id": "lamp_nw", "type": "static", "pos": [-5.2, 5.2, 0], "shapes": [{"type": "cylinder", "radius": 0.08, "half_length": 3.5, "pos": [0, 0, 3.5], "material": "steel"}]},
-  {"id": "lamp_se", "type": "static", "pos": [5.2, -5.2, 0], "shapes": [{"type": "cylinder", "radius": 0.08, "half_length": 3.5, "pos": [0, 0, 3.5], "material": "steel"}]}
+  {"id": "bldg_ne", "appearance": {"class": "building", "color": "beige"}, "type": "static", "pos": [20.5, 20.5, 0], "shapes": [{"type": "box", "size": [20, 20, 18], "pos": [0, 0, 9], "material": "concrete"}]},
+  {"id": "bldg_nw", "appearance": {"class": "building", "color": "grey"}, "type": "static", "pos": [-20.5, 20.5, 0], "shapes": [{"type": "box", "size": [20, 20, 24], "pos": [0, 0, 12], "material": "concrete"}]},
+  {"id": "bldg_sw", "appearance": {"class": "building", "color": "beige"}, "type": "static", "pos": [-20.5, -20.5, 0], "shapes": [{"type": "box", "size": [20, 20, 28], "pos": [0, 0, 14], "material": "concrete"}]},
+  {"id": "bldg_se", "appearance": {"class": "building", "color": "grey"}, "type": "static", "pos": [20.5, -20.5, 0], "shapes": [{"type": "box", "size": [20, 20, 17], "pos": [0, 0, 8.5], "material": "concrete"}]},
+  {"id": "lamp_nw", "appearance": {"class": "lamp post", "color": "grey"}, "type": "static", "pos": [-5.2, 5.2, 0], "shapes": [{"type": "cylinder", "radius": 0.08, "half_length": 3.5, "pos": [0, 0, 3.5], "material": "steel"}]},
+  {"id": "lamp_se", "appearance": {"class": "lamp post", "color": "grey"}, "type": "static", "pos": [5.2, -5.2, 0], "shapes": [{"type": "cylinder", "radius": 0.08, "half_length": 3.5, "pos": [0, 0, 3.5], "material": "steel"}]}
  ],
  "signals": [
   {"id": "tl_NS", "plan": [{"state": "green", "until_s": 3.0}, {"state": "yellow", "until_s": 4.0}, {"state": "red", "until_s": 7.2}],
@@ -21,31 +21,31 @@
    "heads": [{"pos": [-8.5, 1.75, 5.4], "yaw_deg": 0}, {"pos": [8.5, -1.75, 5.4], "yaw_deg": 180}]}
  ],
  "walkers": [
-  {"id": "ped_red", "path": [[4.6, 5.0], [4.6, -5.0]], "speed_mps": 1.4, "start_offset_m": 1.35, "height_m": 1.72},
-  {"id": "ped_white", "path": [[6.4, -5.0], [6.4, 5.0]], "speed_mps": 1.5, "start_offset_m": 1.95, "height_m": 1.8},
-  {"id": "ped_phone", "idle_at": [9.5, -8.0], "facing_deg": 111.4, "pose": "phone", "height_m": 1.7}
+  {"id": "ped_red", "appearance": {"class": "pedestrian", "label": "pedestrian in a red jacket"}, "path": [[4.6, 5.0], [4.6, -5.0]], "speed_mps": 1.4, "start_offset_m": 1.35, "height_m": 1.72},
+  {"id": "ped_white", "appearance": {"class": "pedestrian", "label": "pedestrian in a white shirt"}, "path": [[6.4, -5.0], [6.4, 5.0]], "speed_mps": 1.5, "start_offset_m": 1.95, "height_m": 1.8},
+  {"id": "ped_phone", "appearance": {"class": "bystander", "label": "bystander filming on a phone"}, "idle_at": [9.5, -8.0], "facing_deg": 111.4, "pose": "phone", "height_m": 1.7}
  ],
  "vehicles": [
-  {"id": "car_red", "pos": [-1.75, 26, 0], "yaw_deg": -90, "speed_mps": 10, "mass_kg": 1500,
+  {"id": "car_red", "appearance": {"class": "sedan", "color": "red"}, "pos": [-1.75, 26, 0], "yaw_deg": -90, "speed_mps": 10, "mass_kg": 1500,
    "shapes": [{"type": "box", "size": [4.6, 1.8, 0.7], "pos": [0, 0, 0.7]}, {"type": "box", "size": [2.4, 1.7, 0.55], "pos": [-0.2, 0, 1.32]}],
    "wheels": {"radius_m": 0.33, "half_width_m": 0.11, "mass_kg": 20,
               "axles": [{"x": 1.4, "track_m": 1.55, "steer": true, "drive": true}, {"x": -1.4, "track_m": 1.55, "drive": false}]},
    "limits": {"max_wheel_torque_nm": 1200, "max_brake_torque_nm": 3000, "max_steer_deg": 32},
    "driver": {"path": [[-1.75, 60], [-1.75, -60]], "cruise_mps": 10, "signal": "tl_NS", "stop_s": 52}},
-  {"id": "car_white", "pos": [1.75, -20, 0], "yaw_deg": 90, "speed_mps": 9, "mass_kg": 2000,
+  {"id": "car_white", "appearance": {"class": "sedan", "color": "white"}, "pos": [1.75, -20, 0], "yaw_deg": 90, "speed_mps": 9, "mass_kg": 2000,
    "shapes": [{"type": "box", "size": [4.8, 1.9, 0.85], "pos": [0, 0, 0.78]}, {"type": "box", "size": [2.8, 1.8, 0.6], "pos": [-0.3, 0, 1.5]}],
    "wheels": {"radius_m": 0.36, "half_width_m": 0.12, "mass_kg": 25,
               "axles": [{"x": 1.45, "track_m": 1.6, "steer": true, "drive": true}, {"x": -1.45, "track_m": 1.6, "drive": true}]},
    "limits": {"max_wheel_torque_nm": 1300, "max_brake_torque_nm": 3500, "max_steer_deg": 32},
    "driver": {"path": [[1.75, -60], [1.75, 60]], "cruise_mps": 9, "signal": "tl_NS", "stop_s": 52}},
-  {"id": "car_ego", "pos": [12.1, 1.75, 0], "yaw_deg": 180, "speed_mps": 0, "mass_kg": 1200,
+  {"id": "car_ego", "appearance": {"class": "car", "color": "silver"}, "pos": [12.1, 1.75, 0], "yaw_deg": 180, "speed_mps": 0, "mass_kg": 1200,
    "shapes": [{"type": "box", "size": [4.1, 1.75, 0.7], "pos": [0, 0, 0.68]}, {"type": "box", "size": [2.2, 1.65, 0.55], "pos": [-0.3, 0, 1.3]}],
    "wheels": {"radius_m": 0.31, "half_width_m": 0.1, "mass_kg": 18,
               "axles": [{"x": 1.25, "track_m": 1.5, "steer": true, "drive": true}, {"x": -1.25, "track_m": 1.5, "drive": false}]},
    "limits": {"max_wheel_torque_nm": 1000, "max_brake_torque_nm": 2500, "max_steer_deg": 32},
    "driver": {"path": [[60, 1.75], [-60, 1.75]], "cruise_mps": 9, "accel_max": 2.5, "signal": "tl_EW", "stop_s": 52,
               "yield_to": ["ped_red", "ped_white"], "crosswalks": [[53, 56], [64, 67]]}},
-  {"id": "car_blue", "pos": [-12.35, -1.75, 0], "yaw_deg": 0, "speed_mps": 0, "mass_kg": 1500,
+  {"id": "car_blue", "appearance": {"class": "car", "color": "blue"}, "pos": [-12.35, -1.75, 0], "yaw_deg": 0, "speed_mps": 0, "mass_kg": 1500,
    "shapes": [{"type": "box", "size": [4.6, 1.8, 0.7], "pos": [0, 0, 0.7]}, {"type": "box", "size": [2.4, 1.7, 0.55], "pos": [-0.2, 0, 1.32]}],
    "wheels": {"radius_m": 0.33, "half_width_m": 0.11, "mass_kg": 20,
               "axles": [{"x": 1.4, "track_m": 1.55, "steer": true, "drive": true}, {"x": -1.4, "track_m": 1.55, "drive": false}]},

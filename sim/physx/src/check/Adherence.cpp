@@ -431,7 +431,14 @@ private:
             const double h = info.desc.value("height_m", 1.75);
             return {0.5, 0.5, h};
         }
-        const auto pts = run_.samples(id, 0, 3000);
+        // Its rigid parts and the soft bodies mounted on it (a crumple zone is part of a car's length); not a flag on
+        // a pole or a liquid in a glass.
+        std::vector<Vec3> pts;
+        for (const Part& p : run_.partsOf(id))
+            for (const Vec3& s : p.samples) pts.push_back(p.poses[0].transform(s));
+        for (const PointSet& ps : run_.pointSets())
+            if ((ps.entity == id || (ps.host == id && ps.kind == "soft_body")) && !ps.frames.empty())
+                pts.insert(pts.end(), ps.frames[0].begin(), ps.frames[0].end());
         if (pts.empty()) return {};
         const auto fr = frameOf(id, 0);
         Aabb box;
@@ -1354,6 +1361,9 @@ void runAdherence(const RunData& run, const Spec& sceneSpec, const Json& specJso
             std::string x = c.value("a", ""), y = c.value("b", "");
             for (std::string* s : {&x, &y}) if (run.hasEntity(*s)) { const std::string h = run.entity(*s).desc.value("host", ""); if (!h.empty()) *s = h; }
             if (!objectOf.count(x) || !objectOf.count(y) || x == y) continue;
+            // Matter that flows (liquids, sand, smoke) and cloth touch whatever holds or carries them.
+            const auto flows = [&](const std::string& id) { const std::string k = scene.facts().at(id).kind; return k == "particles" || k == "cloth"; };
+            if (flows(x) || flows(y)) continue;
             const std::string ox = objectOf[x], oy = objectOf[y];
             if (mentioned.count(ox + "|" + oy)) continue;
             const bool person = scene.facts().at(x).kind == "walker" || scene.facts().at(y).kind == "walker";

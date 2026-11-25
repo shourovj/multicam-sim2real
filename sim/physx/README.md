@@ -8,7 +8,13 @@ builds the Blender scene from X.
 
 ```
 prompt ─> SceneAgent ─> S ─> p2s_sim ─> X ─> p2s_check ─> r (PASS: render; FAIL: fix S; STOP: ask a human)
+   └─> p2s_spec ─> spec.json (once per prompt) ──────────────┘ prompt adherence, checked in X (Eval1)
 ```
+
+Eval1 has two halves, both in r. The physics checks ask whether X is physically possible. The prompt spec
+([spec/README.md](spec/README.md)) asks whether X is the scene the prompt describes. The spec is written from the
+prompt alone and its temporal-logic requirements are measured exactly in X. [agent/](agent/README.md) runs the whole
+loop with an open model served by vLLM, on a 15-minute budget, and scores the result (eval1, physics).
 
 ## Documents
 
@@ -24,7 +30,7 @@ prompt ─> SceneAgent ─> S ─> p2s_sim ─> X ─> p2s_check ─> r (PASS: r
 source sim/physx/env.sh
 sim/physx/setup_physx.sh                 # once: PhysX 5.9.1 + plasticity patch, CUDA 13 toolkit (into .deps/)
 cmake -S sim/physx -B sim/physx/build && cmake --build sim/physx/build -j
-CUDA_VISIBLE_DEVICES=<gpu> sim/physx/build/p2s_tests      # 20 tests against analytic physics, ~2 min
+CUDA_VISIBLE_DEVICES=<gpu> sim/physx/build/p2s_tests      # 31 tests: analytic physics, geometry, the spec formulas; ~2 min
 ```
 
 `.deps/` (gitignored) holds the PhysX source and build, the CUDA 13 runtime, the Python env and the MuJoCo Menagerie
@@ -48,12 +54,14 @@ sim/blender/.deps/blender-4.2.1-linux-x64/blender -b --python sim/blender/import
 | `src/world/` | the World (scene, clock, triggers, contact events, refinement windows, recording X) and the Entity base class |
 | `src/bodies/` | one class per kind: RigidBody (with Propulsion: buoyancy, thrusters), Joint, Multirotor, Vehicle, TrackedVehicle, RobotArm, Walker, TrafficSignal, SoftBody, Cloth, ParticleSystem, Magnet, Explosion; `Registry.cpp` maps scene keys to them |
 | `src/control/` | controllers: Driver (lane path, IDM, signals, crosswalks), GoalPath (quintic), Kinematics (robot FK/IK), Linear |
-| `src/check/` | the checker: RunData (reads X), PhysicsChecks, Expectations and camera coverage, Report, Guide |
+| `src/check/` | the checker: RunData (reads X), PhysicsChecks, Expectations and camera coverage (Visibility), the prompt spec (Formula, Adherence), Report, Guide |
+| `spec/` | prompt specs: format and predicates (README), object classes and colours, the spec writer `p2s_spec.py`, `serve_llm.sh` (vLLM), examples |
+| `agent/` | the SceneAgent loop on a time budget (`p2s_agent.py`), scores, the render audit, lessons carried between runs |
 | `app/` | `sim_main.cpp` (p2s_sim), `check_main.cpp` (p2s_check) |
 | `tests/` | doctest unit tests: geometry and spec (no GPU), physics against analytic results (GPU) |
 | `scenes/` | example scenes that pass the checker, ported from the earlier pipelines |
 | `robots/` | robot descriptions made from MJCF by `tools/mjcf_to_robot.py` |
-| `tools/` | `mjcf_to_robot.py`, `make_round1_scenes.py` |
+| `tools/` | `mjcf_to_robot.py`, `make_round1_scenes.py`, `run_scenes.sh` (simulate and check every example scene) |
 
 ## What it simulates
 

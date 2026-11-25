@@ -31,7 +31,7 @@
  "bodies": [
   {
    "id": "pole",
-   "type": "static",
+   "appearance": {"class": "flagpole", "color": "grey"}, "type": "static",
    "pos": [
     -12,
     7,
@@ -55,7 +55,7 @@
  "tracked_vehicles": [
   {
    "id": "tank",
-   "pos": [
+   "appearance": {"class": "tank", "color": "olive"}, "pos": [
     -17.5,
     0,
     0
@@ -162,7 +162,7 @@
  "vehicles": [
   {
    "id": "truck",
-   "pos": [
+   "appearance": {"class": "military truck", "color": "olive"}, "pos": [
     0.6,
     -61.63,
     0
@@ -424,7 +424,7 @@
  "cloths": [
   {
    "id": "flag",
-   "host": "pole",
+   "appearance": {"class": "flag", "label": "Texas flag"}, "host": "pole",
    "size_m": [
     2.4,
     1.6
@@ -476,11 +476,7 @@
    "emitters": [
     {
      "host": "truck",
-     "pos": [
-      3.1,
-      -1.38,
-      0.85
-     ],
+     "pos": [3.25, -0.7, 1.24],
      "direction": [
       0,
       0,

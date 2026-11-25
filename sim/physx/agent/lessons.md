@@ -1,0 +1,25 @@
+- Resolve scene validity first: fix attach-box errors and unknown/unused keys before tuning dynamics or prompt checks.
+- Define deformable-part attach boxes in the host's local frame and ensure each box contains at least one host vertex.
+- Do not add unsupported keys such as per-vehicle ccd; if tunneling occurs, use thicker collision shapes or a smaller timestep.
+- Start all bodies separated and with non-overlapping collision shapes; check t=0 penetration before tuning dynamics.
+- If mechanical energy spikes, inspect the body gaining energy and its contacts at the peak; remove unintended contacts, reduce restitution, add damping, and cap actuator forces.
+- Keep actuator work within the energy budget; if energy rise exceeds the allowed amount, reduce forces, remove hidden contacts, or increase dissipation.
+- Keep brake decelerations at or below about 1.2 g by lowering brake force or lengthening the braking interval.
+- If a vehicle becomes unrealistically fast, suspect energy injection or missing collision; constrain speed, increase friction/damping, and avoid thin collision walls.
+- Prevent FEM inversion by reducing impact energy, increasing stiffness, and avoiding compression beyond the expected permanent deformation.
+- Calibrate permanent deformation to the expected range: too little means the part is not deformable, not hit, or too stiff; too much means impact energy is too high or material is too soft.
+- For side-impact caving, make the impacted side a deformable part with enough mass and stiffness to cave but not shatter.
+- Ensure the primary collision actually deforms the intended part: the hit part must be deformable, correctly attached, and in the impact path.
+- Place cameras outside all solids and with clear line of sight; verify target screen size and occlusion during the event window.
+- Check camera placement at t=0 and during motion; a camera inside a building or prop blocks its own view.
+- Assign appearance.class to every prompt-visible object, including people and support props.
+- For leak particles, attach the emitter to the leaking surface in the host frame, close enough to satisfy the leak relation, and orient it outward.
+- Make leak particles land in the intended region by giving them ground collision, appropriate gravity/lifetime, and a region that matches the ground surface.
+- Ensure particle region tests use a region large enough and at the correct height above the ground.
+- Ensure final rest by applying brakes/friction after impact and checking speed in the rest window.
+- Use rest constraints or brakes to hold vehicles at rest after the event, not just low speed.
+- Avoid high-speed impacts that exceed expected deformation; scale initial speed to produce the desired crush and stop.
+- If a checker says a relation is false because a subcondition never holds, fix the subcondition directly (deformation, visibility, leak source) rather than only the contact.
+- Order fixes: scene validity, t=0 placement/camera, energy/speed/brakes, deformation, particles, then prompt-level relations.
+- For vehicles, model collision shapes robustly: avoid thin walls that can be tunneled, and ensure front/side collision geometry matches the visible body.
+- Keep the scene minimal: remove unused keys and objects that cause checker failures.

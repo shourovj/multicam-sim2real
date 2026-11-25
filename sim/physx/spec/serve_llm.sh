@@ -10,6 +10,8 @@ model=${P2S_LLM_MODEL:-Qwen/Qwen3.8-27B}
 port=${P2S_LLM_PORT:-8016}
 source "$deps/envs/vlm/.venv/bin/activate"
 export HF_HUB_CACHE=$deps/hf HF_HUB_OFFLINE=1
+# MTP: the model's own multi-token-prediction head drafts tokens that the full model verifies (same output, faster).
 exec vllm serve "$model" --port "$port" --served-model-name p2s-llm \
-  --max-model-len 32768 --max-num-seqs 16 --gpu-memory-utilization 0.92 --limit-mm-per-prompt '{"image": 4}' \
+  --max-model-len 65536 --max-num-seqs 8 --gpu-memory-utilization 0.92 --limit-mm-per-prompt '{"image": 4}' \
+  --speculative-config '{"method": "mtp", "num_speculative_tokens": 3}' \
   --reasoning-parser qwen3 "$@"

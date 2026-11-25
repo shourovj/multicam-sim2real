@@ -20,7 +20,7 @@
  "bodies": [
   {
    "id": "table",
-   "type": "static",
+   "appearance": {"class": "table", "color": "brown"}, "type": "static",
    "assembly": "robot",
    "pos": [
     0.35,
@@ -102,7 +102,7 @@
   },
   {
    "id": "wall_n",
-   "type": "static",
+   "appearance": {"class": "wall", "color": "beige"}, "type": "static",
    "pos": [
     0,
     2.5,
@@ -122,7 +122,7 @@
   },
   {
    "id": "wall_w",
-   "type": "static",
+   "appearance": {"class": "wall", "color": "beige"}, "type": "static",
    "pos": [
     -2.5,
     -0.05,
@@ -142,7 +142,7 @@
   },
   {
    "id": "glass",
-   "type": "static",
+   "appearance": {"class": "glass", "label": "clear drinking glass"}, "type": "static",
    "pos": [
     0.5,
     -0.1,
@@ -161,7 +161,7 @@
   },
   {
    "id": "pitcher",
-   "type": "dynamic",
+   "appearance": {"class": "pitcher", "color": "white"}, "type": "dynamic",
    "pos": [
     0.42,
     0.193,
@@ -183,7 +183,7 @@
  "robot_arms": [
   {
    "id": "robot",
-   "robot": "franka_panda",
+   "appearance": {"class": "robot arm", "color": "white", "label": "Franka Panda"}, "robot": "franka_panda",
    "base": {
     "pos": [
      -0.1,

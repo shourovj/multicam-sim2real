@@ -166,6 +166,8 @@ Arguments: `o` an object (or a part, where allowed), `c` a camera, `n` a number,
   - "steps back" becomes `moved(..., 0.3, since=...)`.
 - **Anchor outcomes to their cause.** Write `seq(hits(a, b), deformed(b.side, 0.05))` or
   `turned(van, 30, since=hits(sedan, van))`. A turn measured from t = 0 also counts the driving.
+- **Turning or tilting.** `turned` is a heading change about the vertical: a car spinning, a door swinging. For
+  something that tilts or topples (a pitcher pouring, a crate tipping over), use `tipped`.
 - **Order.** Use `seq` for "then". Use `U` only for "until" or "while ... before ...", e.g. "waiting on the corner"
   until the crash.
 - **Cameras.** Every camera gets at least one `visible` requirement on the main event, e.g.

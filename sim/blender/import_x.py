@@ -2,6 +2,7 @@
 
   sim/blender/.deps/blender-4.2.1-linux-x64/blender -b --python sim/blender/import_x.py -- <x_dir> <out.blend> \
       [--preview <camera_id,...> <frame,...> <out_prefix>]     (renders <out_prefix>_<camera>_<frame>.png)
+      [--preview-width <px>]                                    (preview width; default half the camera's)
 
 What it builds (all in X's world frame, Z up, metres; one Blender frame per X frame):
   - every rigid part (bodies, vehicle chassis and wheels, robot links, walkers) as an empty keyframed from its pose
@@ -340,6 +341,7 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:]
     x_dir, out_blend = argv[0], argv[1]
     preview = argv[argv.index("--preview") + 1:argv.index("--preview") + 4] if "--preview" in argv else None
+    width = int(argv[argv.index("--preview-width") + 1]) if "--preview-width" in argv else 0
     x = X(x_dir)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
@@ -371,14 +373,17 @@ def main():
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(out_blend))
     print(f"[import_x] {len(x.meta['entities'])} entities, {len(x.meta['cameras'])} cameras -> {out_blend}")
 
-    if preview:  # for developers checking a result by eye; the SceneAgent never sees images
+    if preview:  # for developers, and the render audit's judge; the SceneAgent never sees images
         cam_ids, frames, prefix = preview[0].split(","), [int(f) for f in preview[1].split(",")], preview[2]
         scene.render.engine = "BLENDER_EEVEE_NEXT"
         for cam_id in cam_ids:
             cam = bpy.data.objects[cam_id]
             scene.camera = cam
-            scene.render.resolution_x, scene.render.resolution_y = cam["p2s_resolution"]
-            scene.render.resolution_percentage = 50
+            w, h = cam["p2s_resolution"]
+            if width:  # small renders for the render audit: few pixels, few image tokens
+                w, h = width, max(2, int(round(h * width / w / 2)) * 2)
+            scene.render.resolution_x, scene.render.resolution_y = w, h
+            scene.render.resolution_percentage = 100 if width else 50
             for frame in frames:
                 scene.frame_set(frame + 1)
                 scene.render.filepath = os.path.abspath(f"{prefix}_{cam_id}_{frame:04d}.png")
