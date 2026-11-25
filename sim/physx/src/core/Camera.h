@@ -37,6 +37,8 @@ public:
     const std::string& id() const { return id_; }
     const Intrinsics& intrinsics() const { return intr_; }
     std::vector<std::string> referencedEntities() const;
+    // What the camera rides on: "<entity>" or "<entity>.<part>" (a robot link, "robot.hand"); empty if fixed.
+    std::string parentKey() const { return part_.empty() ? parent_ : parent_ + "." + part_; }
 
     // Advances to time t (call once per frame, in order) and returns the camera pose.
     Pose update(double t, const PoseOf& poseOf);
@@ -49,7 +51,7 @@ private:
     Pose shake(double t) const;
 
     Type type_ = Type::Fixed;
-    std::string id_, typeName_, parent_, lookEntity_, centerEntity_;
+    std::string id_, typeName_, parent_, part_, lookEntity_, centerEntity_;
     Json spec_;
     Intrinsics intr_;
     Vec3 position_, lookAt_, center_, offsetPos_;

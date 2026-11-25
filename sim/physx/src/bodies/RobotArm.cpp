@@ -57,6 +57,13 @@ RobotArm::~RobotArm() {
 
 PxRigidActor& RobotArm::actor() { return links_[size_t(chain_.tcpLink())].get(); }
 
+std::optional<Pose> RobotArm::partPose(const std::string& link) const {
+    const auto& models = chain_.links();
+    for (size_t i = 0; i < models.size(); ++i)
+        if (models[i].name == link) return fromPx(links_[i].get().getGlobalPose());
+    return std::nullopt;
+}
+
 Pose RobotArm::targetTcp(double t) const {
     size_t i = 0;
     while (i + 2 < keys_.size() && keys_[i + 1].t < t) ++i;

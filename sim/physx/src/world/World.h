@@ -5,6 +5,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <random>
 #include <string>
 #include <vector>
@@ -29,10 +30,13 @@ struct Clock {
 };
 
 // Smaller steps while two bodies are about to hit or are in contact (the tank-truck "crash window").
+// Active from when the two first come within within_m until hold_s after they first touch (or after they first
+// came close, if they never touch): the approach and the impact, not the long contact afterwards.
 struct Refinement {
     std::string a, b;
     double withinM = 1.0, holdS = 0.4;
     int factor = 8;
+    std::optional<double> closeAt;
 };
 
 class World {
@@ -106,7 +110,6 @@ private:
     std::vector<std::unique_ptr<Camera>> cameras_;
     std::vector<Trigger> triggers_;
     std::vector<Refinement> refinements_;
-    double refineUntil_ = -1e9;
     ActuatorLog actuators_;
     WindField wind_;
     Clock clock_;

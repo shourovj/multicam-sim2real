@@ -22,7 +22,8 @@ PairStats& ContactReporter::pair(const std::string& a, const std::string& b) {
 void ContactReporter::touch(const std::string& a, const std::string& b, double t, double impulse) {
     if (a == b) return;
     PairStats& p = pair(a, b);
-    if (p.firstT < 0) {
+    if (!p.touched) {
+        p.touched = true;
         p.firstT = t;
         const auto& [x, y] = a < b ? std::make_pair(a, b) : std::make_pair(b, a);
         events_.emit("contact:" + x + ":" + y, t);

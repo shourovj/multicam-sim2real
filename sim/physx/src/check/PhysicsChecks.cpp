@@ -215,7 +215,7 @@ void checkEnergy(const RunData& run, Report& r) {
 }
 
 void checkMotion(const RunData& run, Report& r) {
-    Table t{"Motion (judge against the prompt and the real world)", "peak acceleration excludes gravity; g = 9.81 m/s^2",
+    Table t{"Motion (judge against the prompt and the real world)", "peak acceleration is |dv/dt| (0 at rest, 1 g in free fall); g = 9.81 m/s^2",
             {"entity", "kind", "mass kg", "peak speed m/s", "peak accel g", "at t s", "in a contact then"}, {}};
     const std::map<std::string, double> typicalSpeed = {{"walker", 3}, {"vehicle", 70}, {"multirotor", 40}, {"tracked_vehicle", 25}};
     for (const auto& [id, e] : run.entities()) {
@@ -225,8 +225,8 @@ void checkMotion(const RunData& run, Report& r) {
         for (int f = 0; f < run.frames(); ++f) {
             vmax = std::max(vmax, e.velocity[size_t(f)].norm());
             if (f > 0) {
-                const double a = ((e.velocity[size_t(f)] - e.velocity[size_t(f - 1)]) * run.fps() - Vec3{0, 0, -kG}).norm();
-                if (a > amax && !(e.velocity[size_t(f)].norm() < 1e-3 && e.velocity[size_t(f - 1)].norm() < 1e-3)) amax = a, at = f;
+                const double a = ((e.velocity[size_t(f)] - e.velocity[size_t(f - 1)]) * run.fps()).norm();
+                if (a > amax) amax = a, at = f;
             }
         }
         amax = std::max(amax, e.desc.value("peak_accel_mps2", 0.0));
@@ -272,8 +272,8 @@ void checkActuators(const RunData& run, Report& r) {
         std::string per = "-", typical = "-", v = "-";
         if (kind == "wheel_drive" && m > 0) {
             per = fmt(power / m) + " W/kg";
-            typical = "15-250 W/kg";
-            v = verdict(power / m, 5, 250);
+            typical = "<= 250 W/kg";
+            v = verdict(power / m, 0, 250);  // a gently driven vehicle uses little power: only too much is suspicious
             if (r0 > 0) per += ", " + fmt(peak / r0 / m / kG) + " g";
         } else if (kind == "brake" && m > 0 && r0 > 0) {
             per = fmt(peak / r0 / m / kG) + " g";
@@ -326,9 +326,13 @@ void checkSoftBodies(const RunData& run, Report& r) {
         for (int f = 0; f < run.frames(); f += std::max(1, run.frames() / 48)) {
             size_t flipped = 0;
             for (size_t i = 0; i < ps.tets.size(); ++i) flipped += tetVolume(ps.frames[size_t(f)], ps.tets[i]) * restSign[i] < 0;
-            if (flipped > ps.tets.size() / 200) {
-                r.add({"fem_inverted", Severity::Fail, ps.entity, std::to_string(flipped) + " of " + std::to_string(ps.tets.size()) +
-                       " tetrahedra of " + ps.entity + " are inverted at t=" + fmt(run.time(f)) + " s", ""});
+            // A few slivers at a contact patch are a local solver error; widespread inversion is a failed solve.
+            const double frac = double(flipped) / double(ps.tets.size());
+            if (frac > 0.002) {
+                r.add({"fem_inverted", frac > 0.02 ? Severity::Fail : Severity::Warn, ps.entity,
+                       std::to_string(flipped) + " of " + std::to_string(ps.tets.size()) + " tetrahedra of " + ps.entity +
+                           " (" + fmt(100 * frac, 2) + "%) are inverted at t=" + fmt(run.time(f)) + " s",
+                       frac > 0.02 ? "" : "local: acknowledge if the deformation numbers look right, else raise resolution"});
                 break;
             }
         }

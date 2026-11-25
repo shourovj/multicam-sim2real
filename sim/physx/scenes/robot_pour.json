@@ -1,0 +1,433 @@
+{
+ "p2s_version": 1,
+ "name": "robot_pour",
+ "meta": {
+  "iteration": 3,
+  "max_iterations": 8,
+  "prompt": "A Franka Panda arm on a table pours water from a pitcher into a glass. Views: a wrist camera, a side tripod and a CCTV camera in the corner of the room.",
+  "source": "port of configs/scenes/robot_pour.yaml; the water is a particle fluid instead of the analytic weir model"
+ },
+ "clock": {
+  "fps": 16,
+  "duration_s": 7.0,
+  "substeps": 40
+ },
+ "world": {
+  "ground": {
+   "material": "ceramic"
+  }
+ },
+ "bodies": [
+  {
+   "id": "table",
+   "type": "static",
+   "assembly": "robot",
+   "pos": [
+    0.35,
+    0,
+    0
+   ],
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      1.2,
+      0.8,
+      0.04
+     ],
+     "pos": [
+      0,
+      0,
+      0.73
+     ],
+     "material": "wood"
+    },
+    {
+     "type": "box",
+     "size": [
+      0.05,
+      0.05,
+      0.71
+     ],
+     "pos": [
+      0.55,
+      0.35,
+      0.355
+     ],
+     "material": "wood"
+    },
+    {
+     "type": "box",
+     "size": [
+      0.05,
+      0.05,
+      0.71
+     ],
+     "pos": [
+      -0.55,
+      0.35,
+      0.355
+     ],
+     "material": "wood"
+    },
+    {
+     "type": "box",
+     "size": [
+      0.05,
+      0.05,
+      0.71
+     ],
+     "pos": [
+      0.55,
+      -0.35,
+      0.355
+     ],
+     "material": "wood"
+    },
+    {
+     "type": "box",
+     "size": [
+      0.05,
+      0.05,
+      0.71
+     ],
+     "pos": [
+      -0.55,
+      -0.35,
+      0.355
+     ],
+     "material": "wood"
+    }
+   ]
+  },
+  {
+   "id": "wall_n",
+   "type": "static",
+   "pos": [
+    0,
+    2.5,
+    1.4
+   ],
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      5,
+      0.1,
+      2.8
+     ],
+     "material": "concrete"
+    }
+   ]
+  },
+  {
+   "id": "wall_w",
+   "type": "static",
+   "pos": [
+    -2.5,
+    -0.05,
+    1.4
+   ],
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      0.1,
+      4.9,
+      2.8
+     ],
+     "material": "concrete"
+    }
+   ]
+  },
+  {
+   "id": "glass",
+   "type": "static",
+   "pos": [
+    0.5,
+    -0.1,
+    0.75
+   ],
+   "shapes": [
+    {
+     "type": "container",
+     "radius": 0.045,
+     "height": 0.11,
+     "wall": 0.012,
+     "base": 0.01,
+     "material": "glass"
+    }
+   ]
+  },
+  {
+   "id": "pitcher",
+   "type": "dynamic",
+   "pos": [
+    0.42,
+    0.193,
+    0.9
+   ],
+   "mass_kg": 0.35,
+   "shapes": [
+    {
+     "type": "container",
+     "radius": 0.05,
+     "height": 0.16,
+     "wall": 0.01,
+     "base": 0.01,
+     "material": "ceramic"
+    }
+   ]
+  }
+ ],
+ "robot_arms": [
+  {
+   "id": "robot",
+   "robot": "franka_panda",
+   "base": {
+    "pos": [
+     -0.1,
+     0,
+     0.75
+    ],
+    "yaw_deg": 0
+   },
+   "hold": {
+    "object": "pitcher",
+    "offset": {
+     "pos": [
+      0.13,
+      0,
+      0
+     ],
+     "pitch_deg": -90
+    },
+    "gripper_m": 0.035
+   },
+   "point_local": [
+    0.05,
+    0,
+    0.16
+   ],
+   "keys": [
+    {
+     "t": 0.0,
+     "point": [
+      0.42,
+      0.143,
+      1.06
+     ],
+     "yaw_deg": -90,
+     "tilt_deg": 0
+    },
+    {
+     "t": 1.4,
+     "point": [
+      0.5,
+      -0.03,
+      0.96
+     ],
+     "yaw_deg": -90,
+     "tilt_deg": 0
+    },
+    {
+     "t": 2.3,
+     "point": [
+      0.5,
+      -0.03,
+      0.94
+     ],
+     "yaw_deg": -90,
+     "tilt_deg": 45
+    },
+    {
+     "t": 4.7,
+     "point": [
+      0.5,
+      -0.03,
+      0.93
+     ],
+     "yaw_deg": -90,
+     "tilt_deg": 95
+    },
+    {
+     "t": 5.6,
+     "point": [
+      0.5,
+      -0.03,
+      0.96
+     ],
+     "yaw_deg": -90,
+     "tilt_deg": 0
+    },
+    {
+     "t": 7.0,
+     "point": [
+      0.43,
+      0.12,
+      1.05
+     ],
+     "yaw_deg": -90,
+     "tilt_deg": 0
+    }
+   ]
+  }
+ ],
+ "particles": [
+  {
+   "id": "water",
+   "preset": "water",
+   "spacing_m": 0.006,
+   "max_particles": 6000,
+   "blocks": [
+    {
+     "min": [
+      0.392,
+      0.165,
+      0.912
+     ],
+     "max": [
+      0.448,
+      0.221,
+      1.04
+     ]
+    }
+   ]
+  }
+ ],
+ "cameras": [
+  {
+   "id": "wrist",
+   "type": "attached",
+   "parent": "robot",
+   "part": "hand",
+   "offset": {
+    "pos": [
+     -0.09,
+     0,
+     0.06
+    ],
+    "pitch_deg": -62
+   },
+   "fov_deg": 87,
+   "resolution": [
+    832,
+    480
+   ],
+   "clip_m": [
+    0.02,
+    50
+   ]
+  },
+  {
+   "id": "side",
+   "type": "fixed",
+   "position": [
+    0.5,
+    -1.45,
+    1.15
+   ],
+   "look_at": [
+    0.4,
+    -0.05,
+    0.95
+   ],
+   "fov_deg": 60,
+   "resolution": [
+    832,
+    480
+   ]
+  },
+  {
+   "id": "cctv",
+   "type": "fixed",
+   "position": [
+    -2.2,
+    2.2,
+    2.6
+   ],
+   "look_at": [
+    0.35,
+    -0.1,
+    0.85
+   ],
+   "fov_deg": 65,
+   "resolution": [
+    832,
+    480
+   ]
+  }
+ ],
+ "expect": [
+  {
+   "id": "water_reaches_glass",
+   "type": "event",
+   "event": "contact:glass:water",
+   "within_s": [
+    1.5,
+    5.0
+   ]
+  },
+  {
+   "id": "glass_fills",
+   "type": "particles_in_region",
+   "entity": "water",
+   "min": [
+    0.46,
+    -0.14,
+    0.76
+   ],
+   "max": [
+    0.54,
+    -0.06,
+    0.86
+   ],
+   "at_s": 7.0,
+   "min_fraction": 0.35
+  },
+  {
+   "id": "pitcher_carried",
+   "type": "reaches",
+   "entity": "pitcher",
+   "point": [
+    0.5,
+    0.02,
+    0.8
+   ],
+   "within_m": 0.08,
+   "by_s": 4.7
+  },
+  {
+   "id": "wrist_sees_glass",
+   "type": "in_view",
+   "camera": "wrist",
+   "entity": "glass",
+   "during_s": [
+    1.4,
+    4.7
+   ],
+   "min_fraction": 0.7
+  },
+  {
+   "id": "side_sees_pour",
+   "type": "in_view",
+   "camera": "side",
+   "entity": "pitcher",
+   "min_fraction": 0.8
+  },
+  {
+   "id": "side_sees_glass",
+   "type": "in_view",
+   "camera": "side",
+   "entity": "glass",
+   "min_fraction": 0.9
+  },
+  {
+   "id": "cctv_sees_robot",
+   "type": "in_view",
+   "camera": "cctv",
+   "entity": "robot",
+   "min_fraction": 0.9
+  }
+ ]
+}

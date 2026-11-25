@@ -41,6 +41,7 @@ Camera::Camera(const Spec& s) : spec_(s.raw()) {
             // A handheld camera's offset is a position only: its view direction comes from the look-at target.
             if (type_ == Type::Handheld && s.has("parent")) {
                 parent_ = s.str("parent");
+                part_ = s.str("part", "");
                 if (s.has("offset")) offsetPos_ = s["offset"].vec3("pos", {0, 0, 0});
             } else {
                 position_ = s.vec3("position");
@@ -60,6 +61,7 @@ Camera::Camera(const Spec& s) : spec_(s.raw()) {
             break;
         case Type::Attached:
             parent_ = s.str("parent");
+            part_ = s.str("part", "");
             if (s.has("offset")) {
                 const Spec o = s["offset"];
                 offsetPos_ = o.vec3("pos", {0, 0, 0});
@@ -115,12 +117,12 @@ Pose Camera::update(double t, const PoseOf& poseOf) {
         case Type::Attached: {
             // Parent +X is forward and +Z up; the camera's -Z must point along parent +X.
             const Quat base = Quat::fromAxes({0, -1, 0}, {0, 0, 1}, {-1, 0, 0});
-            const Pose par = poseOf(parent_);
+            const Pose par = poseOf(parentKey());
             out = {par.transform(offsetPos_), par.q * offsetRot_ * base};
             break;
         }
         case Type::Handheld: {
-            const Vec3 eye = parent_.empty() ? position_ : poseOf(parent_).transform(offsetPos_);
+            const Vec3 eye = parent_.empty() ? position_ : poseOf(parentKey()).transform(offsetPos_);
             out = Pose{eye, lookRotation(eye, target(poseOf))} * shake(t);
             break;
         }

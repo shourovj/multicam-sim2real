@@ -319,8 +319,10 @@ void runExpectations(const RunData& run, const Spec& scene, Report& r) {
             const double maxTilt = s.num("max_tilt_deg", 30);
             double worst = 0;
             for (const Part& p : run.parts())
-                if (p.entity == ent)
+                if (p.entity == ent) {  // the main part (body, chassis, base link): wheels roll, they do not tip
                     for (const Pose& q : p.poses) worst = std::max(worst, rad2deg(std::acos(std::clamp(q.q.axisZ().z, -1.0, 1.0))));
+                    break;
+                }
             ok = worst <= maxTilt;
             msg = ent + " tilted up to " + fmt(worst) + " deg (allowed " + fmt(maxTilt) + ")";
         } else if (type == "deformation") {

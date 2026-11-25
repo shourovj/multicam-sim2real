@@ -14,7 +14,8 @@
 namespace p2s {
 
 struct PairStats {
-    double firstT = -1, lastT = -1;
+    bool touched = false;  // times may be negative during the preroll, so no time doubles as "never"
+    double firstT = 0, lastT = 0;
     double totalImpulse = 0;    // N s
     double peakForce = 0;       // N, impulse of one step divided by the step
     int touches = 0;

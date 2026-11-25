@@ -1,6 +1,7 @@
 // Base class of everything in a scene: bodies, vehicles, deformables, particle systems, signals.
 #pragma once
 
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -53,6 +54,8 @@ public:
     virtual const std::vector<Shape>& shapes() const { static const std::vector<Shape> none; return none; }
     virtual Pose pose() const { return {}; }
     virtual Vec3 velocity() const { return {}; }
+    // Pose of a named part (a robot link, a wheel), for cameras that ride on it; nullopt if there is no such part.
+    virtual std::optional<Pose> partPose(const std::string& /*part*/) const { return std::nullopt; }
 
     // Deformables and particles: their current surface points in world space, for contact detection that
     // PhysX's rigid contact reports do not cover. A deformable mounted on a host also reports as the host.

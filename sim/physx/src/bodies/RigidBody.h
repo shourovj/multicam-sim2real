@@ -27,12 +27,12 @@ std::vector<PoseKey> parseKeys(const Spec& s, const std::string& key = "keys");
 // Kinetic (translation + rotation about the centre of mass) and gravitational energy of a PhysX body.
 Energy rigidEnergy(const physx::PxRigidDynamic& d, const Vec3& gravity);
 
-// Peak speed and peak acceleration beyond free fall (what the body's contents feel), updated after each step.
+// Peak speed and peak acceleration |dv/dt| (0 at rest, 1 g in free fall, the deceleration in a crash), per step.
 struct MotionPeaks {
     Vec3 lastVel;
     double accel = 0, speed = 0;
-    void update(const Vec3& v, double dt, const Vec3& gravity) {
-        accel = std::max(accel, ((v - lastVel) / dt - gravity).norm());
+    void update(const Vec3& v, double dt, const Vec3& /*gravity*/) {
+        accel = std::max(accel, ((v - lastVel) / dt).norm());
         speed = std::max(speed, v.norm());
         lastVel = v;
     }

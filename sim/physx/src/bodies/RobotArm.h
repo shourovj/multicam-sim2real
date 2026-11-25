@@ -30,6 +30,7 @@ public:
     bool isRigid() const override { return true; }
     physx::PxRigidActor& actor() override;  // the hand link
     Pose pose() const override { return base_; }
+    std::optional<Pose> partPose(const std::string& link) const override;
 
 private:
     struct Key {

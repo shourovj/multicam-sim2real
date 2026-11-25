@@ -153,7 +153,7 @@ void World::build(const Spec& s) {
         for (const Spec& e : s.items(key)) {
             const std::string id = e.str("id");
             if (index_.count(id)) e["id"].fail("duplicate entity id '" + id + "'");
-            if (id.find(':') != std::string::npos) e["id"].fail("ids may not contain ':'");
+            if (id.find_first_of(":./ ") != std::string::npos) e["id"].fail("ids may not contain ':', '.', '/' or spaces");
             index_[id] = entities_.size();
             entities_.push_back(factory(e, *this));
         }
@@ -173,6 +173,11 @@ void World::build(const Spec& s) {
     for (const Spec& cs : s.items("cameras")) {
         auto cam = std::make_unique<Camera>(cs);
         for (const auto& ref : cam->referencedEntities()) entity(ref, cs.path());
+        if (const std::string key = cam->parentKey(); key.find('.') != std::string::npos) {
+            const std::string part = key.substr(key.find('.') + 1);
+            if (!entity(key.substr(0, key.find('.')), cs.path()).partPose(part))
+                cs["part"].fail("'" + key.substr(0, key.find('.')) + "' has no part '" + part + "'");
+        }
         cameras_.push_back(std::move(cam));
     }
     for (const Spec& r : s.items("refine")) {
@@ -197,11 +202,15 @@ void World::build(const Spec& s) {
 }
 
 bool World::refining() {
-    for (const Refinement& r : refinements_) {
-        if (aabbGap(worldBounds(entity(r.a, "refine")), worldBounds(entity(r.b, "refine"))) < r.withinM)
-            refineUntil_ = std::max(refineUntil_, t_ + r.holdS);
+    bool active = false;
+    for (Refinement& r : refinements_) {
+        if (!r.closeAt && aabbGap(worldBounds(entity(r.a, "refine")), worldBounds(entity(r.b, "refine"))) < r.withinM)
+            r.closeAt = t_;
+        if (!r.closeAt) continue;
+        const auto contact = events_.first("contact:" + std::min(r.a, r.b) + ":" + std::max(r.a, r.b));
+        active |= t_ < (contact ? *contact : *r.closeAt) + r.holdS;
     }
-    return t_ < refineUntil_;
+    return active;
 }
 
 void World::step(double h) {
@@ -321,7 +330,11 @@ void World::recordFrame(int frame, Recorder& rec) {
         total.kinetic += en.kinetic;
         total.potential += en.potential;
     }
-    const auto poseOf = [this](const std::string& id) { return entity(id, "camera").pose(); };
+    const auto poseOf = [this](const std::string& key) {
+        const size_t dot = key.find('.');
+        if (dot == std::string::npos) return entity(key, "camera").pose();
+        return *entity(key.substr(0, dot), "camera").partPose(key.substr(dot + 1));  // validated in build()
+    };
     for (auto& cam : cameras_) {
         const Pose p = cam->update(t_, poseOf);
         rec.put("camera/" + cam->id(), {float(p.p.x), float(p.p.y), float(p.p.z), float(p.q.x), float(p.q.y),
