@@ -106,6 +106,7 @@ struct Aabb {
     }
     Vec3 center() const { return (lo + hi) * 0.5; }
     Vec3 extent() const { return hi - lo; }
+    Vec3 clamp(const Vec3& v) const { return v.cwiseMax(lo).cwiseMin(hi); }  // nearest point of the box
     // Bounds of this box's eight corners after `pose`.
     Aabb transformed(const Pose& pose) const {
         Aabb out;

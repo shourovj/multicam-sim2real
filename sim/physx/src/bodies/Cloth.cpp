@@ -226,4 +226,11 @@ Json Cloth::describe() const {
 
 Energy Cloth::energy(const World&) const { return {kinetic_, potential_}; }
 
+void Cloth::act(World& w, const Action& a) {
+    Spec::fromJson(a.params, id() + "." + a.verb).rejectUnknownKeys();
+    attachment_.reset();
+    nPinned_ = 0;
+    w.events().emit(id() + ":released", w.time());
+}
+
 }  // namespace p2s

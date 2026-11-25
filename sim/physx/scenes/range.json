@@ -1,0 +1,309 @@
+{
+ "p2s_version": 1,
+ "name": "range",
+ "meta": {
+  "iteration": 1,
+  "max_iterations": 8,
+  "prompt": "At a test range a small rocket lifts off its launch rail and climbs away to the right, while in the foreground a rifle bullet punches into a stack of three tin cans on a crate and knocks the top can off. Static side view."
+ },
+ "clock": {
+  "fps": 24,
+  "duration_s": 4,
+  "substeps": 20
+ },
+ "world": {
+  "ground": {
+   "material": "concrete"
+  }
+ },
+ "bodies": [
+  {
+   "id": "rail",
+   "type": "static",
+   "pos": [
+    10,
+    20,
+    0
+   ],
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      0.1,
+      0.1,
+      2.0
+     ],
+     "pos": [
+      -0.3,
+      0,
+      1.0
+     ],
+     "material": "steel"
+    },
+    {
+     "type": "box",
+     "size": [
+      1.0,
+      1.0,
+      0.1
+     ],
+     "pos": [
+      0,
+      0,
+      0.05
+     ],
+     "material": "steel"
+    }
+   ]
+  },
+  {
+   "id": "crate",
+   "type": "static",
+   "pos": [
+    3,
+    0,
+    0.3
+   ],
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      0.6,
+      0.6,
+      0.6
+     ],
+     "material": "wood"
+    }
+   ]
+  },
+  {
+   "id": "rocket",
+   "pos": [
+    10,
+    20,
+    0.85
+   ],
+   "pitch_deg": 15,
+   "mass_kg": 12,
+   "ccd": true,
+   "drag": {
+    "cd": 0.4,
+    "area_m2": 0.008
+   },
+   "shapes": [
+    {
+     "type": "cylinder",
+     "radius": 0.05,
+     "half_length": 0.6,
+     "material": "aluminium"
+    },
+    {
+     "type": "sphere",
+     "radius": 0.05,
+     "pos": [
+      0,
+      0,
+      0.62
+     ],
+     "material": "aluminium"
+    }
+   ],
+   "thrusters": [
+    {
+     "id": "motor",
+     "pos": [
+      0,
+      0,
+      -0.6
+     ],
+     "direction": [
+      0,
+      0,
+      1
+     ],
+     "force_n": 600,
+     "burn_s": [
+      0.5,
+      2.5
+     ]
+    }
+   ],
+   "type": "kinematic"
+  },
+  {
+   "id": "bullet",
+   "type": "kinematic",
+   "pos": [
+    -2,
+    0,
+    0.9039999999999999
+   ],
+   "mass_kg": 0.01,
+   "ccd": true,
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.004,
+     "half_length": 0.008,
+     "pitch_deg": 90,
+     "material": "steel"
+    }
+   ]
+  },
+  {
+   "id": "can_bottom",
+   "pos": [
+    3,
+    0,
+    0.6599999999999999
+   ],
+   "mass_kg": 0.06,
+   "shapes": [
+    {
+     "type": "cylinder",
+     "radius": 0.033,
+     "half_length": 0.06,
+     "material": "aluminium"
+    }
+   ]
+  },
+  {
+   "id": "can_middle",
+   "pos": [
+    3,
+    0,
+    0.7819999999999999
+   ],
+   "mass_kg": 0.06,
+   "shapes": [
+    {
+     "type": "cylinder",
+     "radius": 0.033,
+     "half_length": 0.06,
+     "material": "aluminium"
+    }
+   ]
+  },
+  {
+   "id": "can_top",
+   "pos": [
+    3,
+    0,
+    0.9039999999999999
+   ],
+   "mass_kg": 0.06,
+   "shapes": [
+    {
+     "type": "cylinder",
+     "radius": 0.033,
+     "half_length": 0.06,
+     "material": "aluminium"
+    }
+   ]
+  }
+ ],
+ "triggers": [
+  {
+   "at_s": 1.0,
+   "target": "bullet",
+   "do": "release"
+  },
+  {
+   "at_s": 1.0,
+   "target": "bullet",
+   "do": "set_velocity",
+   "params": {
+    "velocity": [
+     850,
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "at_s": 0.5,
+   "target": "rocket",
+   "do": "release"
+  }
+ ],
+ "cameras": [
+  {
+   "id": "side",
+   "type": "fixed",
+   "position": [
+    4,
+    -9,
+    1.5
+   ],
+   "look_at": [
+    5,
+    6,
+    3
+   ],
+   "fov_deg": 80
+  }
+ ],
+ "expect": [
+  {
+   "id": "bullet_hits",
+   "type": "event",
+   "event": "contact:bullet:can_top",
+   "within_s": [
+    1.0,
+    1.05
+   ]
+  },
+  {
+   "id": "top_can_flies_off",
+   "type": "reaches",
+   "entity": "can_top",
+   "point": [
+    6,
+    0,
+    0.05
+   ],
+   "within_m": 2.5,
+   "by_s": 4
+  },
+  {
+   "id": "bottom_can_stays",
+   "type": "at_rest",
+   "entity": "can_bottom",
+   "after_s": 2.0,
+   "max_speed_mps": 0.2
+  },
+  {
+   "id": "rocket_climbs",
+   "type": "reaches",
+   "entity": "rocket",
+   "point": [
+    25,
+    20,
+    35
+   ],
+   "within_m": 20,
+   "by_s": 4
+  },
+  {
+   "id": "side_sees_cans",
+   "type": "in_view",
+   "camera": "side",
+   "entity": "can_top",
+   "during_s": [
+    0,
+    1.1
+   ]
+  },
+  {
+   "id": "side_sees_launch",
+   "type": "in_view",
+   "camera": "side",
+   "entity": "rocket",
+   "during_s": [
+    0,
+    1.8
+   ],
+   "min_fraction": 0.75
+  }
+ ]
+}

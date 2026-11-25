@@ -270,6 +270,23 @@ Json ParticleSystem::describe() const {
             {"streams", {{"pos", "particles/" + id() + "/pos"}}}};
 }
 
+double ParticleSystem::kick(World& w, const Vec3& centre, double radius, double speed) {
+    double added = 0;
+    const double m = 1.0 / invMass_;
+    for (int i = 0; i < highWater_; ++i) {
+        if (born_[size_t(i)] <= kFree) continue;
+        const Vec3 d = fromPx(pos_[size_t(i)].getXYZ()) - centre;
+        const double r = d.norm();
+        if (r >= radius || r < 1e-9) continue;
+        const Vec3 before = fromPx(vel_[size_t(i)].getXYZ());
+        const Vec3 after = before + d / r * (speed * (1 - r / radius));
+        vel_[size_t(i)] = PxVec4(px(after), 0);
+        if (kind_ != Kind::Smoke) added += 0.5 * m * (after.norm2() - before.norm2());
+    }
+    upload(w);  // this step's upload has already happened
+    return added;
+}
+
 void ParticleSystem::act(World& w, const Action& a) {
     Spec::fromJson(a.params, id() + "." + a.verb).rejectUnknownKeys();
     for (Emitter& e : emitters_) {

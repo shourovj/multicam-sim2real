@@ -124,6 +124,7 @@ void World::build(const Spec& s) {
     gravity_ = w.vec3("gravity", {0, 0, -9.81});
     rng_.seed(unsigned(w.integer("seed", 0)));
     if (w.has("wind")) wind_ = WindField(w["wind"], unsigned(w.integer("seed", 0)) + 101);
+    if (w.has("water")) water_ = Water::parse(w["water"]);
 
     for (const Spec& m : s.items("materials")) materials_.add(m);
 
@@ -403,6 +404,7 @@ Json World::describe() const {
               {"preroll_s", clock_.prerollS}}},
             {"gravity", toJson(gravity_)},
             {"wind", wind_.toJson()},
+            {"water", water_ ? water_->toJson() : Json(nullptr)},
             {"materials", materials_.toJson()},
             {"entities", ents},
             {"cameras", cams},

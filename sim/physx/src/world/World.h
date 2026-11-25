@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "core/Actuators.h"
+#include "core/Water.h"
 #include "core/Wind.h"
 #include "physx/Materials.h"
 #include "physx/ShapeFactory.h"
@@ -63,6 +64,7 @@ public:
     EventLog& events() { return events_; }
     ActuatorLog& actuators() { return actuators_; }
     const WindField& wind() const { return wind_; }
+    const std::optional<Water>& water() const { return water_; }
     std::mt19937& rng() { return rng_; }
 
     Entity& entity(const std::string& id, const std::string& usedBy);
@@ -112,6 +114,7 @@ private:
     std::vector<Refinement> refinements_;
     ActuatorLog actuators_;
     WindField wind_;
+    std::optional<Water> water_;
     Clock clock_;
     Vec3 gravity_{0, 0, -9.81};
     double t_ = 0;

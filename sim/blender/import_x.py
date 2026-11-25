@@ -284,6 +284,24 @@ def build_cameras(x):
         keyframe_poses(ob, x.stream("camera/" + c["id"])[:, 0, :])
 
 
+def build_water(x):
+    """A flat, semi-transparent blue sheet at the water level (bounded by its extent, else 2 km across)."""
+    w = x.meta.get("water")
+    if not w:
+        return
+    lo, hi = w.get("min", [-1000, -1000]), w.get("max", [1000, 1000])
+    z = w["level"]
+    verts = [(lo[0], lo[1], z), (hi[0], lo[1], z), (hi[0], hi[1], z), (lo[0], hi[1], z)]
+    m = bpy.data.materials.new("water")
+    m.use_nodes = True
+    bsdf = m.node_tree.nodes["Principled BSDF"]
+    bsdf.inputs["Base Color"].default_value = (0.1, 0.3, 0.45, 1.0)
+    bsdf.inputs["Roughness"].default_value = 0.1
+    bsdf.inputs["Alpha"].default_value = 0.55
+    m.blend_method = "BLEND"
+    mesh_object("water", verts, [(0, 1, 2, 3)], m, "water", 0)
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:]
     x_dir, out_blend = argv[0], argv[1]
@@ -314,6 +332,7 @@ def main():
             build_signal(x, e, index)
         elif "parts" in e:
             build_parts(x, e, index)
+    build_water(x)
     build_cameras(x)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(out_blend))
     print(f"[import_x] {len(x.meta['entities'])} entities, {len(x.meta['cameras'])} cameras -> {out_blend}")

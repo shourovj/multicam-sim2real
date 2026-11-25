@@ -206,3 +206,63 @@ TEST_CASE("the checker reports bodies that start overlapping") {
     CHECK_THROWS_WITH_AS(expect({{"type", "in_view"}, {"camera", "x"}, {"entity", "a"}}), doctest::Contains("scene.expect[0].camera"),
                          SpecError);
 }
+
+TEST_CASE("a floating box sinks to the draft where buoyancy carries its weight") {
+    // 1 m cube of 400 kg in fresh water: draft 0.4 m, so its centre rests 0.1 m above the surface.
+    Json box = {{"id", "raft"}, {"pos", {0, 0, 0.5}}, {"mass_kg", 400}, {"hull_cd", 2.0},
+                {"shapes", {{{"type", "box"}, {"size", {1, 1, 1}}}}}};
+    const auto r = simulate("float", {{"clock", {{"fps", 24}, {"duration_s", 8}, {"substeps", 10}}},
+                                      {"world", {{"ground", {{"height", -5}}}, {"water", {{"level", 0}, {"density", 1000}}}}},
+                                      {"bodies", {box}}});
+    CHECK(std::fabs(at(r, "raft", 8.0).z - 0.1) < 0.1);  // the waterline is resolved to a sixth of the box
+}
+
+TEST_CASE("a constant thruster accelerates a free body at F / m") {
+    Json pod = {{"id", "pod"}, {"pos", {0, 0, 0}}, {"mass_kg", 10},
+                {"shapes", {{{"type", "sphere"}, {"radius", 0.2}}}},
+                {"thrusters", {{{"id", "jet"}, {"direction", {1, 0, 0}}, {"force_n", 20}}}}};
+    const auto r = simulate("thrust", {{"world", {{"ground", false}, {"gravity", {0, 0, 0}}}}, {"bodies", {pod}}});
+    CHECK(at(r, "pod", 2.0).x == doctest::Approx(0.5 * 2.0 * 4.0).epsilon(0.02));
+}
+
+TEST_CASE("a wind rotor runs between its design speed and its runaway speed") {
+    Json hub = {{"id", "hub"}, {"type", "static"}, {"pos", {0, 0, 10}}, {"shapes", {{{"type", "sphere"}, {"radius", 0.2}}}}};
+    Json rotor = {{"id", "rotor"}, {"pos", {-0.5, 0, 10}}, {"mass_kg", 20},
+                  {"shapes", {{{"type", "box"}, {"size", {0.05, 0.2, 4.0}}}}}};
+    Json joint = {{"id", "shaft"}, {"type", "revolute"}, {"a", "hub"}, {"b", "rotor"}, {"anchor", {-0.5, 0, 10}},
+                  {"axis", {1, 0, 0}}, {"wind_rotor", {{"radius_m", 2.0}, {"cp", 0.4}, {"tip_speed_ratio", 5}}}};
+    const auto r = simulate("wind_rotor", {{"clock", {{"fps", 24}, {"duration_s", 20}, {"substeps", 10}}},
+                                           {"world", {{"ground", false}, {"wind", {{"velocity", {6, 0, 0}}}}}},
+                                           {"bodies", {hub, rotor}}, {"joints", {joint}}});
+    // Unloaded, it spins past the design speed 5 * 6 / 2 = 15 rad/s toward runaway at twice that, never beyond.
+    const auto& poses = r.partsOf("rotor").front().get().poses;
+    const int f = r.frameAt(19.0);
+    const Quat d = (poses[size_t(f)].q.conj() * poses[size_t(f + 1)].q).normalized();
+    const double omega = 2 * std::acos(std::clamp(std::fabs(d.w), 0.0, 1.0)) * 24;
+    CHECK(omega > 15.0);
+    CHECK(omega < 30.0 * 1.02);
+}
+
+TEST_CASE("a magnet pulls a steel block and its host feels the reaction") {
+    const auto block = [](const std::string& id, double x) {
+        return Json{{"id", id}, {"pos", {x, 0, 0}}, {"mass_kg", 5}, {"shapes", {{{"type", "box"}, {"size", {0.2, 0.2, 0.2}}}}}};
+    };
+    Json m = {{"id", "mag"}, {"host", "magnet_block"}, {"pos", {0, 0, 0}}, {"targets", {"steel"}}, {"force_n_at_1m", 5}};
+    const auto r = simulate("magnet", {{"clock", {{"fps", 24}, {"duration_s", 1}, {"substeps", 10}}},
+                                       {"world", {{"ground", false}, {"gravity", {0, 0, 0}}}},
+                                       {"bodies", {block("magnet_block", -1), block("steel", 1)}}, {"magnets", {m}}});
+    const double movedA = at(r, "magnet_block", 1.0).x + 1, movedB = 1 - at(r, "steel", 1.0).x;
+    CHECK(movedB > 0.05);
+    CHECK(movedA == doctest::Approx(movedB).epsilon(0.02));  // equal masses, equal and opposite forces
+}
+
+TEST_CASE("an explosion throws a nearby box away from it") {
+    Json box = {{"id", "crate"}, {"pos", {2, 0, 0}}, {"mass_kg", 10}, {"shapes", {{{"type", "box"}, {"size", {0.5, 0.5, 0.5}}}}}};
+    Json blast = {{"id", "bomb"}, {"pos", {0, 0, 0}}, {"at_s", 0.5}, {"radius_m", 5}, {"impulse_ns", 100}};
+    const auto r = simulate("explosion", {{"world", {{"ground", false}, {"gravity", {0, 0, 0}}}},
+                                          {"bodies", {box}}, {"explosions", {blast}}});
+    // J = 100 N s * 0.25 m^2 / 1.75^2 along +x on 10 kg.
+    const double v = 100 * 0.25 / (1.75 * 1.75) / 10;
+    CHECK(at(r, "crate", 1.5).x - at(r, "crate", 1.0).x == doctest::Approx(v * 0.5).epsilon(0.03));
+    CHECK(r.eventTime("bomb:detonated").has_value());
+}

@@ -1,0 +1,290 @@
+{
+ "p2s_version": 1,
+ "name": "harbour",
+ "meta": {
+  "iteration": 1,
+  "max_iterations": 8,
+  "prompt": "A motor boat pushed by its spinning propeller crosses a calm harbour from left to right, rocking gently; a submarine glides underwater below it and a striped buoy bobs nearby. Wide shot from the quay."
+ },
+ "clock": {
+  "fps": 24,
+  "duration_s": 8,
+  "substeps": 20,
+  "preroll_s": 1.0
+ },
+ "world": {
+  "ground": {
+   "material": "concrete",
+   "height": -12
+  },
+  "water": {
+   "level": 0,
+   "density": 1025,
+   "current": [
+    0,
+    0.2,
+    0
+   ]
+  }
+ },
+ "bodies": [
+  {
+   "id": "boat",
+   "pos": [
+    -12,
+    0,
+    0.3
+   ],
+   "mass_kg": 2500,
+   "hull_cd": 0.6,
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      6.0,
+      2.4,
+      1.0
+     ],
+     "pos": [
+      0,
+      0,
+      0
+     ],
+     "material": "wood"
+    },
+    {
+     "type": "box",
+     "size": [
+      1.8,
+      1.6,
+      1.2
+     ],
+     "pos": [
+      -0.6,
+      0,
+      1.0
+     ],
+     "material": "wood"
+    }
+   ],
+   "thrusters": [
+    {
+     "id": "screw",
+     "pos": [
+      -3.3,
+      0,
+      -0.65
+     ],
+     "direction": [
+      1,
+      0,
+      0
+     ],
+     "joint": "prop_shaft",
+     "k": 2.5,
+     "medium": "water"
+    }
+   ]
+  },
+  {
+   "id": "propeller",
+   "pos": [
+    -15.3,
+    0,
+    -0.35
+   ],
+   "mass_kg": 20,
+   "assembly": "boat_prop",
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      0.08,
+      0.9,
+      0.18
+     ],
+     "material": "steel"
+    },
+    {
+     "type": "box",
+     "size": [
+      0.08,
+      0.18,
+      0.9
+     ],
+     "material": "steel"
+    }
+   ]
+  },
+  {
+   "id": "submarine",
+   "pos": [
+    -6,
+    -3,
+    -6
+   ],
+   "mass_kg": 21900,
+   "hull_cd": 0.15,
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.9,
+     "material": "steel",
+     "half_length": 3.5,
+     "pitch_deg": 90
+    },
+    {
+     "type": "box",
+     "size": [
+      1.4,
+      0.4,
+      1.0
+     ],
+     "pos": [
+      0.8,
+      0,
+      1.2
+     ],
+     "material": "steel"
+    }
+   ],
+   "thrusters": [
+    {
+     "id": "screw",
+     "pos": [
+      -4.4,
+      0,
+      0
+     ],
+     "direction": [
+      1,
+      0,
+      0
+     ],
+     "force_n": 4000,
+     "medium": "water"
+    }
+   ]
+  },
+  {
+   "id": "buoy",
+   "pos": [
+    2,
+    4,
+    0
+   ],
+   "shapes": [
+    {
+     "type": "cylinder",
+     "radius": 0.35,
+     "half_length": 0.7,
+     "material": "wood"
+    },
+    {
+     "type": "sphere",
+     "radius": 0.15,
+     "pos": [
+      0,
+      0,
+      -0.75
+     ],
+     "material": "steel"
+    }
+   ]
+  }
+ ],
+ "joints": [
+  {
+   "id": "prop_shaft",
+   "type": "revolute",
+   "a": "boat",
+   "b": "propeller",
+   "anchor": [
+    -15.3,
+    0,
+    -0.35
+   ],
+   "axis": [
+    1,
+    0,
+    0
+   ],
+   "motor": {
+    "velocity": 40,
+    "max_force": 400
+   }
+  }
+ ],
+ "cameras": [
+  {
+   "id": "quay",
+   "type": "fixed",
+   "position": [
+    0,
+    -22,
+    5
+   ],
+   "look_at": [
+    0,
+    0,
+    -1
+   ],
+   "fov_deg": 70
+  }
+ ],
+ "expect": [
+  {
+   "id": "boat_crosses",
+   "type": "reaches",
+   "entity": "boat",
+   "point": [
+    6,
+    0,
+    0
+   ],
+   "within_m": 4,
+   "by_s": 8
+  },
+  {
+   "id": "boat_stays_upright",
+   "type": "upright",
+   "entity": "boat",
+   "max_tilt_deg": 15
+  },
+  {
+   "id": "sub_moves",
+   "type": "speed",
+   "entity": "submarine",
+   "during_s": [
+    3,
+    8
+   ],
+   "min_mps": 0.5,
+   "max_mps": 6
+  },
+  {
+   "id": "sub_clears_boat",
+   "type": "min_gap",
+   "a": "boat",
+   "b": "submarine",
+   "metres": 2
+  },
+  {
+   "id": "buoy_floats",
+   "type": "upright",
+   "entity": "buoy",
+   "max_tilt_deg": 40
+  },
+  {
+   "id": "quay_sees_boat",
+   "type": "in_view",
+   "camera": "quay",
+   "entity": "boat",
+   "during_s": [
+    0,
+    8
+   ],
+   "min_fraction": 0.9
+  }
+ ]
+}

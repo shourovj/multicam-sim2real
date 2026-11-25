@@ -35,6 +35,10 @@ public:
     std::span<const Vec3> contactPoints() const override { return alivePoints_; }
     double contactRadius() const override { return restOffset_; }
 
+    // A blast wave: particles within `radius` gain `speed` away from `centre`, fading linearly to the edge.
+    // Returns the kinetic energy added (0 for smoke, whose energy is the air's).
+    double kick(World& w, const Vec3& centre, double radius, double speed);
+
 private:
     enum class Kind { Fluid, Granular, Smoke };
     struct Phase {

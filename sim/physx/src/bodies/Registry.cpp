@@ -1,7 +1,9 @@
 // Every scene list key and the entity class that builds its entries, in build order: things that others
 // refer to (bodies) come before things that refer to them (joints, attachments, controllers).
 #include "bodies/Cloth.h"
+#include "bodies/Explosion.h"
 #include "bodies/Joint.h"
+#include "bodies/Magnet.h"
 #include "bodies/Multirotor.h"
 #include "bodies/Particles.h"
 #include "bodies/RigidBody.h"
@@ -36,6 +38,8 @@ World::FactoryList builtinEntities() {
         {"soft_bodies", make<SoftBody>()},
         {"cloths", make<Cloth>()},
         {"particles", make<ParticleSystem>()},
+        {"magnets", make<Magnet>()},
+        {"explosions", make<Explosion>()},
     };
 }
 

@@ -11,7 +11,7 @@ PxFilterFlags filterShader(PxFilterObjectAttributes, PxFilterData d0, PxFilterOb
     if (d0.word3 != 0 && d0.word3 == d1.word3) return PxFilterFlag::eKILL;  // same assembly
     if ((d0.word0 & d1.word1) || (d1.word0 & d0.word1)) return PxFilterFlag::eKILL;
     flags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_PERSISTS |
-            PxPairFlag::eNOTIFY_CONTACT_POINTS;
+            PxPairFlag::eNOTIFY_CONTACT_POINTS | PxPairFlag::eDETECT_CCD_CONTACT;  // CCD acts only on bodies that ask
     return PxFilterFlag::eDEFAULT;
 }
 

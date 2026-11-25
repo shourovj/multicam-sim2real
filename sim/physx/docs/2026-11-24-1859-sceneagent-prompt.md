@@ -66,10 +66,11 @@ A warning that is right for this scene (a genuine 80 g crash deceleration) can b
   "meta": {"iteration": 1, "max_iterations": 8, "prompt": "A military truck crashes into ..."},
   "clock": {"fps": 24, "duration_s": 6, "substeps": 20, "preroll_s": 0},
   "world": {"gravity": [0, 0, -9.81], "ground": {"material": "asphalt"}, "seed": 0,
-            "wind": {"velocity": [7, 0, 0], "gust": 0.2, "turbulence": 0.3, "turbulence_length_m": 1.0}},
+            "wind": {"velocity": [7, 0, 0], "gust": 0.2, "turbulence": 0.3, "turbulence_length_m": 1.0},
+            "water": {"level": 0, "density": 1025, "current": [0, 0.2, 0], "min": [x, y], "max": [x, y]}},
   "materials": [...], "bodies": [...], "multirotors": [...], "walkers": [...], "signals": [...],
   "vehicles": [...], "tracked_vehicles": [...], "joints": [...], "soft_bodies": [...], "cloths": [...],
-  "particles": [...], "triggers": [...], "refine": [...], "cameras": [...], "expect": [...], "acknowledge": []
+  "particles": [...], "magnets": [...], "explosions": [...], "triggers": [...], "refine": [...], "cameras": [...], "expect": [...], "acknowledge": []
 }
 ```
 
@@ -78,6 +79,10 @@ A warning that is right for this scene (a genuine 80 g crash deceleration) can b
 - `clock.preroll_s` simulates before t = 0 without recording (a flag settling in the wind).
 - `world.ground`: `true` (default), `false` (no ground: space, or a scene with its own floor), or
   `{"material", "height"}`.
+- `world.water`: a flat water surface at `level` (optional horizontal `min`/`max`; unbounded without). Every
+  dynamic body then floats or sinks by its real density: buoyancy acts on the submerged part of each shape, so
+  a hull rights itself, and water drag (`hull_cd` on the body, 0.8) slows it. Put `ground.height` below it as the
+  sea bed. Water here is a field, not particles: use `particles` for water that pours or splashes.
 - `refine`: smaller steps while two rigid bodies are close: `{"between": ["truck", "tank"], "within_m": 1.0,
   "hold_s": 0.4, "factor": 8}`. Use it for every fast collision (it is what made the tank-truck crash converge).
 
@@ -122,10 +127,18 @@ cloth`, or define your own: `{"id": "mud", "preset": "concrete", "static_frictio
   collide or are pushed must be dynamic: **do not keyframe outcomes**.
 - `drag`: `linear_per_s` (simple damping, e.g. 0.3 for a parcel under a drone) or `cd` + `area_m2` (quadratic,
   uses the wind). Spinning bodies keep gyroscopic effects (tops, thrown wrenches, tumbling debris).
-- `ccd`: continuous collision for small fast bodies (bullets, balls); `assembly`: bodies with the same assembly
-  never collide with each other.
-- Verbs (section 6.13): `impulse {vector, point?}` (N s), `push {force, duration_s}` (N), `set_velocity
-  {velocity}`, `release` (kinematic becomes dynamic: drop it), `freeze`.
+- `ccd`: continuous collision for small fast bodies (bullets, balls, rockets); r warns about anything over
+  150 m/s without it. `assembly`: bodies with the same assembly never collide with each other.
+- `thrusters`: forces fixed to the body: rocket motors, jets, ship propellers, bow thrusters.
+  `{"id": "motor", "pos": [0, 0, -0.6], "direction": [0, 0, 1], "force_n": 600, "burn_s": [0.5, 2.5]}`, in the
+  body frame; or a propeller driven by a spinning revolute joint: `"joint": "prop_shaft", "k": 2.5` gives thrust
+  k w|w|. `"medium": "water"` makes it push only while under water (a ship's screw), `"air"` only above it;
+  `"active": false` waits for the verb `ignite`.
+- Verbs (section 6.11): `impulse {vector, point?}` (N s), `push {force, duration_s}` (N), `set_velocity
+  {velocity}`, `release` (kinematic becomes dynamic: drop it, fire it), `freeze`, `ignite`/`cutoff {thruster}`.
+- A bullet or rocket that starts from rest in a launcher: make it `kinematic`, then at the firing time trigger
+  `release` and (bullet) `set_velocity`. A light projectile can only move what its momentum allows: a 10 g
+  bullet at 850 m/s barely nudges a 16 kg block but knocks a 60 g tin can away.
 
 ### 6.2 `joints`
 
@@ -141,6 +154,11 @@ cloth`, or define your own: `{"id": "mud", "preset": "concrete", "static_frictio
 - `a` may be `"world"`. `anchor` and `axis` are world coordinates at t = 0.
 - `break_force` / `break_torque`: the joint snaps beyond these (event `<id>:broken`): collapsing structures,
   towing ropes that snap.
+- `wind_rotor` (revolute): `{"radius_m": 17, "cp": 0.45, "tip_speed_ratio": 7}` lets the wind turn `b` about the
+  axis (wind turbines, windmills, pinwheels): rated power cp rho/2 pi R^2 v^3 at the design tip speed ratio, a
+  slow spin-up for big rotors. Point `axis` into the wind.
+- Rotors of every kind are revolute joints: a ceiling fan or ship propeller is a `motor` (rad/s, N m), a wind
+  turbine a `wind_rotor`; drones are `multirotors` (6.3). Check the rate with a `spin` expectation.
 - Verbs: `release` (detach now: a drone drops its parcel), `motor {velocity, max_force}`.
 
 ### 6.3 `multirotors`: drones flown by their rotors
@@ -283,6 +301,30 @@ The rectangle lies in its local x-y plane from (0, 0) to `size_m`; `pin` boxes a
   `phases` change the radius and speed over time after the emitter starts (a gush, then a trickle).
 - Emitters with `"active": false` wait for a trigger `start` (verbs `start`, `stop`).
 - Containers need walls at least two particle spacings thick (`container.wall` >= 0.025 for 1.2 cm particles).
+- There is no fire: smoke from a burning thing is a `smoke` emitter; the video model draws the flames.
+
+### 6.10b `magnets`
+
+```json
+{"id": "crane_magnet", "host": "crane_head", "pos": [0, 0, -0.2], "targets": ["plate"],
+ "force_n_at_1m": 2500, "max_force_n": 6000, "falloff": 2, "active": false}
+```
+
+Pulls (or with `"repel": true` pushes) each target body: force_n_at_1m / d^falloff from the magnet point to the
+target's nearest point, capped at `max_force_n`; the host (or the world) feels the opposite force. Only list iron
+and steel targets. Verbs: `on`, `off`, `repel`, `attract`.
+
+### 6.10c `explosions`
+
+```json
+{"id": "blast", "pos": [0, 0, 0.1], "at_s": 1.0, "radius_m": 8, "impulse_ns": 700, "particle_speed_mps": 6}
+```
+
+Only the effect on the surroundings is simulated: at `at_s` (or on the verb `detonate`) every dynamic body within
+`radius_m` gets an impulse away from the centre, `impulse_ns` x its facing area / max(d, 1 m)^2, at its nearest
+point (so it tumbles); particles (sand, water, smoke) are thrown at up to `particle_speed_mps`. Event
+`<id>:detonated`. No fireball or flash: add a smoke emitter started by the event, the video model does the rest.
+Scale: a few hundred N s for a gas cylinder flinging crates metres, thousands for a car bomb.
 
 ### 6.11 `triggers`: things that happen on cue
 
@@ -296,10 +338,13 @@ Each trigger fires once. `do` must be a verb of the target's kind:
 
 | kind | verbs |
 |---|---|
-| rigid body, multirotor, tracked vehicle | `impulse`, `push`, `set_velocity`, `release`, `freeze` (+ multirotor `kill`, `goto`; tracked `brake`, `set_speed`) |
+| rigid body, multirotor, tracked vehicle | `impulse`, `push`, `set_velocity`, `release`, `freeze`, `ignite`, `cutoff` (+ multirotor `kill`, `goto`; tracked `brake`, `set_speed`) |
 | vehicle | `brake`, `release`, `set_speed` |
 | joint | `release`, `motor` |
 | particles | `start`, `stop` |
+| cloth | `release` (unpin: a flag tears off) |
+| magnet | `on`, `off`, `repel`, `attract` |
+| explosion | `detonate` |
 
 ### 6.12 `cameras`
 
@@ -338,6 +383,7 @@ fails with `expect_coverage` if a camera has none or there is no physical outcom
 | `at_rest` | `entity`, `after_s`, `max_speed_mps` 0.05 | it has stopped |
 | `min_gap` | `a`, `b`, `metres` | they never come closer |
 | `upright` | `entity`, `max_tilt_deg` 30 | it never tips further |
+| `spin` | `entity`, `during_s`, `min_rpm`, `max_rpm` | its rotation rate stays in range (rotors, wheels, tops) |
 | `deformation` | `entity`, `min_m`, `max_m` | a soft body's permanent crush (90th percentile) is in range |
 | `particles_in_region` | `entity`, `min`, `max`, `at_s`, `min_fraction` 0.8 | that share of particles is in the box |
 | `obeys_signals` | | no vehicle crosses its stop line on red |
@@ -349,6 +395,8 @@ Give each expectation a unique `id`; findings are keyed `expect_<type>:<id>`.
 - `min_gap` measures surface to surface (a body includes the soft bodies mounted on it) and counts a contact as 0.
 - Ids that name no entity or camera, and contact events with ids out of alphabetical order, are errors.
 - In camera checks only rigid bodies block the view; cloth, soft bodies, smoke and liquids never hide anything.
+  Visibility counts only the side of an entity facing the camera.
+- `spin` above half a turn per frame (360 rpm at 24 fps) cannot show in video; r says so.
 
 ## 8. What r checks besides your expectations
 
@@ -376,6 +424,11 @@ Give each expectation a unique `id`; findings are keyed `expect_<type>:<id>`.
 - Pouring: a `container` held in a gripper or kinematic `keys`, liquid as `particles` in it, a receiving
   `container` below; expect `particles_in_region`.
 - Wind effects: `world.wind` plus `cloths` (flags), `particles` smoke, and `drag` with `cd` on light bodies.
+- Boats: a hull box (or prism) with the real mass, a propeller body on a motored revolute joint, and a
+  `thrusters` entry linked to that joint with `"medium": "water"`. Submarines: mass = displaced volume x 1025 (neutral),
+  a water thruster. Rockets: `thrusters` with `burn_s`, `ccd`, held `kinematic` on the pad until `release`.
+- Not simulated (leave to the video model): flames and fireballs, thin stiff sheets that bend and spring back
+  (playing cards, sheet metal flexing), cutting and fracture, liquid-surface waves and wakes.
 - Many similar bodies (traffic, debris, crates): fine, up to thousands; keep ids short and systematic (`car_01`).
 - Cameras: point each one at where the action is when it happens; the coverage tables in r tell you if you missed.
 
@@ -391,3 +444,7 @@ Give each expectation a unique `id`; findings are keyed `expect_<type>:<id>`.
 | `drone_takeoff.json`, `drones_air.json` | drones lifting off, crossing, hovering in gusts |
 | `convoy_overhead.json` | tracked tank and two trucks following a road under a bridge and a tree canopy; overhead view |
 | `smoke_and_sand.json` | smoke drifting downwind, a crate falling into sand, a spinning top |
+| `harbour.json` | motor boat driven by a propeller joint, submarine with a water thruster, ballasted buoy; `world.water` |
+| `blast_yard.json` | explosion throwing crates and a drum, smoke started by the blast, crane electromagnet lifting a plate |
+| `range.json` | rocket held on a rail, released at ignition; bullet (`ccd`) knocking a can off a stack |
+| `rotors.json` | wind turbine turned by the wind (`wind_rotor`), motored ceiling fan; `spin` expectations |

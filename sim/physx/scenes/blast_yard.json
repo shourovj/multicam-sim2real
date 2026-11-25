@@ -1,0 +1,305 @@
+{
+ "p2s_version": 1,
+ "name": "blast_yard",
+ "meta": {
+  "iteration": 1,
+  "max_iterations": 8,
+  "prompt": "In a scrapyard a gas cylinder explodes, flinging two wooden crates and an oil drum away and leaving a column of black smoke; on the right a crane electromagnet switches on and snaps a steel plate up off the ground. Wide static shot."
+ },
+ "clock": {
+  "fps": 24,
+  "duration_s": 5,
+  "substeps": 20
+ },
+ "world": {
+  "ground": {
+   "material": "concrete"
+  },
+  "wind": {
+   "velocity": [
+    1.0,
+    0,
+    0
+   ]
+  }
+ },
+ "bodies": [
+  {
+   "id": "crate_a",
+   "pos": [
+    -2.0,
+    0.4,
+    0.4
+   ],
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      0.8,
+      0.8,
+      0.8
+     ],
+     "material": "wood"
+    }
+   ],
+   "mass_kg": 35
+  },
+  {
+   "id": "crate_b",
+   "pos": [
+    -1.2,
+    1.4,
+    0.3
+   ],
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      0.6,
+      0.6,
+      0.6
+     ],
+     "material": "wood"
+    }
+   ],
+   "mass_kg": 20
+  },
+  {
+   "id": "drum",
+   "pos": [
+    0.3,
+    1.8,
+    0.45
+   ],
+   "mass_kg": 40,
+   "shapes": [
+    {
+     "type": "cylinder",
+     "radius": 0.3,
+     "half_length": 0.45,
+     "material": "steel"
+    }
+   ]
+  },
+  {
+   "id": "crane_head",
+   "type": "static",
+   "pos": [
+    7,
+    0,
+    1.6
+   ],
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      1.2,
+      1.2,
+      0.4
+     ],
+     "material": "steel"
+    },
+    {
+     "type": "box",
+     "size": [
+      0.3,
+      0.3,
+      3.0
+     ],
+     "pos": [
+      0,
+      0,
+      1.7
+     ],
+     "material": "steel"
+    }
+   ]
+  },
+  {
+   "id": "plate",
+   "pos": [
+    7,
+    0,
+    0.03
+   ],
+   "mass_kg": 60,
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      1.0,
+      0.8,
+      0.05
+     ],
+     "material": "steel"
+    }
+   ]
+  }
+ ],
+ "particles": [
+  {
+   "id": "soot",
+   "preset": "smoke",
+   "spacing_m": 0.1,
+   "max_particles": 40000,
+   "emitters": [
+    {
+     "pos": [
+      0,
+      0,
+      0.3
+     ],
+     "direction": [
+      0,
+      0,
+      1
+     ],
+     "radius_m": 0.5,
+     "speed_mps": 1.5,
+     "active": false
+    }
+   ]
+  }
+ ],
+ "explosions": [
+  {
+   "id": "blast",
+   "pos": [
+    0,
+    0,
+    0.1
+   ],
+   "at_s": 1.0,
+   "radius_m": 8,
+   "impulse_ns": 700,
+   "particle_speed_mps": 6
+  }
+ ],
+ "magnets": [
+  {
+   "id": "electromagnet",
+   "host": "crane_head",
+   "pos": [
+    0,
+    0,
+    -0.2
+   ],
+   "targets": [
+    "plate"
+   ],
+   "force_n_at_1m": 2500,
+   "max_force_n": 6000,
+   "falloff": 2,
+   "active": false
+  }
+ ],
+ "triggers": [
+  {
+   "on_event": "blast:detonated",
+   "target": "soot",
+   "do": "start"
+  },
+  {
+   "at_s": 2.5,
+   "target": "electromagnet",
+   "do": "on"
+  },
+  {
+   "at_s": 3.3,
+   "target": "soot",
+   "do": "stop"
+  }
+ ],
+ "cameras": [
+  {
+   "id": "wide",
+   "type": "fixed",
+   "position": [
+    3,
+    -13,
+    2.2
+   ],
+   "look_at": [
+    3,
+    0,
+    1.0
+   ],
+   "fov_deg": 65
+  }
+ ],
+ "expect": [
+  {
+   "id": "blast_happens",
+   "type": "event",
+   "event": "blast:detonated",
+   "within_s": [
+    0.9,
+    1.1
+   ]
+  },
+  {
+   "id": "crate_a_thrown",
+   "type": "speed",
+   "entity": "crate_a",
+   "during_s": [
+    1.05,
+    1.2
+   ],
+   "min_mps": 1.5,
+   "max_mps": 30
+  },
+  {
+   "id": "drum_thrown",
+   "type": "speed",
+   "entity": "drum",
+   "during_s": [
+    1.05,
+    1.2
+   ],
+   "min_mps": 1,
+   "max_mps": 30
+  },
+  {
+   "id": "plate_lifted",
+   "type": "event",
+   "event": "contact:crane_head:plate",
+   "within_s": [
+    2.5,
+    3.5
+   ]
+  },
+  {
+   "id": "smoke_rises",
+   "type": "particles_in_region",
+   "entity": "soot",
+   "min": [
+    -6,
+    -6,
+    2
+   ],
+   "max": [
+    12,
+    6,
+    20
+   ],
+   "at_s": 5,
+   "min_fraction": 0.4
+  },
+  {
+   "id": "wide_sees_plate",
+   "type": "in_view",
+   "camera": "wide",
+   "entity": "plate",
+   "during_s": [
+    0,
+    5
+   ]
+  },
+  {
+   "id": "wide_sees_blast",
+   "type": "event_in_view",
+   "camera": "wide",
+   "event": "blast:detonated"
+  }
+ ]
+}

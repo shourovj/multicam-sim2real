@@ -86,10 +86,18 @@ private:
                 overlaps(wb[i], reach))
                 occluders.push_back(i);
         Aabb screen;
-        int vis = 0;
+        int vis = 0, facing = 0;
+        const auto own = run_.partsOf(entity);
         for (const auto& [p, pr] : framed) {
             const double dist = (p - cp.p).norm();
             const Vec3 d = (p - cp.p) / dist;  // dist > near clip > 0
+            // Points on the far side of the entity itself (a plate's underside) are not counted either way.
+            const bool backside = std::any_of(own.begin(), own.end(), [&](const Part& o) {
+                const auto hit = PosedShapes{o.shapes, o.poses[size_t(f)]}.raycast(cp.p, d, dist);
+                return hit && *hit < dist - 0.05;
+            });
+            if (backside) continue;
+            ++facing;
             const bool hidden = std::any_of(occluders.begin(), occluders.end(), [&](size_t i) {
                 if (!rayHitsBox(cp.p, d, dist, wb[i])) return false;
                 const auto hit = PosedShapes{parts[i].shapes, parts[i].poses[size_t(f)]}.raycast(cp.p, d, dist);
@@ -100,7 +108,7 @@ private:
             screen.add({pr.u, pr.v, 0});
         }
         v.inFrame = double(framed.size()) / double(pts.size());
-        v.visible = double(vis) / double(pts.size());
+        v.visible = facing > 0 ? v.inFrame * double(vis) / double(facing) : 0.0;  // share of what faces the camera
         if (vis > 0) v.area = (screen.extent().x * screen.extent().y) / double(cam.k.width * cam.k.height);
         return v;
     }
@@ -249,6 +257,7 @@ public:
         if (type == "speed" || type == "at_rest") return speed(s, type == "at_rest");
         if (type == "min_gap") return minGap(s);
         if (type == "upright") return upright(s);
+        if (type == "spin") return spin(s);
         if (type == "deformation") return deformation(s);
         if (type == "particles_in_region") return particlesInRegion(s);
         return obeysSignals();
@@ -287,9 +296,9 @@ private:
     Outcome event(const Spec& s) {
         const std::string ev = eventName(run_, s);
         const auto t = run_.eventTime(ev);
+        const auto w = s.has("within_s") ? s.numbers("within_s") : std::vector<double>{};
         if (!t) return {false, ev + " never happened"};
-        if (!s.has("within_s")) return {true, ev + " at t=" + fmt(*t) + " s"};
-        const auto w = s.numbers("within_s");
+        if (w.empty()) return {true, ev + " at t=" + fmt(*t) + " s"};
         if (w.size() != 2 || w[1] < w[0]) s["within_s"].fail("expected [start_s, end_s]");
         return {*t >= w[0] && *t <= w[1], ev + " at t=" + fmt(*t) + " s (wanted " + fmt(w[0]) + "-" + fmt(w[1]) + " s)"};
     }
@@ -410,6 +419,31 @@ private:
             best = 0, when = run_.frameAt(*t);
         return {best >= metres, a + " and " + b + " came within " + fmt(best) + " m at t=" + fmt(run_.time(when)) +
                                     " s (wanted >= " + fmt(metres) + " m)"};
+    }
+
+    // Rotation rate of the main part from frame to frame (rpm); above half a turn per frame it aliases.
+    Outcome spin(const Spec& s) {
+        const std::string ent = entityId(run_, s, "entity");
+        const auto parts = run_.partsOf(ent);
+        if (parts.empty()) s["entity"].fail(ent + " has no rigid body to measure spin on");
+        const auto [f0, f1] = window(run_, s, "during_s");
+        const double lo = s.num("min_rpm", 0), hi = s.num("max_rpm", 1e9);
+        const auto& poses = parts.front().get().poses;
+        if (f1 < std::max(f0, 1) || run_.frames() < 2) s["during_s"].fail("needs at least two frames");
+        const double toRpm = 60.0 / (2 * kPi) / (run_.time(1) - run_.time(0));
+        double rmin = kInf, rmax = 0;
+        for (int f = std::max(f0, 1); f <= f1; ++f) {
+            const Quat d = (poses[size_t(f - 1)].q.conj() * poses[size_t(f)].q).normalized();
+            const double rpm = 2 * std::acos(std::clamp(std::fabs(d.w), 0.0, 1.0)) * toRpm;
+            rmin = std::min(rmin, rpm);
+            rmax = std::max(rmax, rpm);
+        }
+        const double aliasRpm = kPi * toRpm;  // half a turn per frame
+        std::string msg = ent + " spins at " + fmt(rmin) + "-" + fmt(rmax) + " rpm between " + fmt(run_.time(std::max(f0, 1))) +
+                          " and " + fmt(run_.time(f1)) + " s (wanted " + fmt(lo) + "-" + fmt(hi) + " rpm)";
+        if (rmax > 0.8 * aliasRpm)
+            msg += "; near or above " + fmt(aliasRpm) + " rpm (half a turn per frame) the video cannot show the rotation";
+        return {rmin >= lo && rmax <= hi, msg};
     }
 
     Outcome upright(const Spec& s) {
@@ -559,7 +593,7 @@ void runExpectations(const RunData& run, const Spec& scene, Report& r) {
         ++index;
         const std::string type = s.oneOf("type", {"event", "no_event", "event_order", "in_view", "enters_view", "leaves_view",
                                                   "event_in_view", "reaches", "speed", "at_rest", "min_gap", "upright",
-                                                  "deformation", "particles_in_region", "obeys_signals"});
+                                                  "spin", "deformation", "particles_in_region", "obeys_signals"});
         const std::string id = s.str("id", type + std::to_string(index));
         if (!ids.insert(id).second) s["id"].fail("duplicate expectation id '" + id + "'");
         if (s.has("camera")) camerasCovered.insert(s.str("camera"));

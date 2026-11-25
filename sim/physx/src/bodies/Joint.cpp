@@ -30,6 +30,12 @@ Joint::Joint(const Spec& s, World&) : Entity(s.str("id"), "joint") {
     }
     breakForce_ = s.positive("break_force", PX_MAX_F32);
     breakTorque_ = s.positive("break_torque", PX_MAX_F32);
+    if (s.has("wind_rotor")) {
+        if (type_ != "revolute") s["wind_rotor"].fail("only revolute joints can be wind rotors");
+        const Spec r = s["wind_rotor"];
+        windRotor_ = WindRotor{r.positive("radius_m"), r.positive("cp", 0.45), r.positive("tip_speed_ratio", 7)};
+        if (windRotor_->cp > 0.593) r["cp"].fail("cannot exceed the Betz limit 0.593");
+    }
 }
 
 PxRigidActor* Joint::actorOf(World& w, const std::string& id) {
@@ -84,6 +90,38 @@ void Joint::link(World& w) {
     joint_->setBreakForce(float(breakForce_), float(breakTorque_));
     joint_->setConstraintFlag(PxConstraintFlag::eCOLLISION_ENABLED, false);
     if (motor_) startMotor(w, *motor_);
+    if (windRotor_) {
+        const auto* bd = b->is<PxRigidDynamic>();
+        if (!bd) throw SpecError(id() + ".wind_rotor: b must be a dynamic body");
+        windId_ = id() + "/wind";
+        w.actuators().declare(windId_, "wind_rotor", bd->getMass(), true);
+    }
+}
+
+double Joint::speed() const {
+    if (broken_ || type_ != "revolute") return 0.0;
+    return static_cast<const PxRevoluteJoint&>(*joint_).getVelocity();
+}
+
+void Joint::beforeStep(World& w, double dt) {
+    if (!windRotor_ || broken_) return;
+    // Linear torque curve Q = Q0 (1 - w / w_free) whose power peaks at the design tip speed ratio with cp.
+    PxRigidActor *a, *b;
+    joint_->getActors(a, b);
+    const Vec3 axis = fromPx((b->getGlobalPose() * joint_->getLocalPose(PxJointActorIndex::eACTOR1)).q.getBasisVector0());
+    const Vec3 hub = fromPx(b->getGlobalPose().p);
+    const double v = std::fabs(w.wind().at(w.time(), hub).dot(axis));
+    const WindRotor& r = *windRotor_;
+    const double omega = speed();
+    double tau = 0;
+    if (v > 0.1) {
+        const double power = r.cp * 0.5 * w.wind().airDensity() * kPi * r.radius * r.radius * v * v * v;
+        const double optimum = r.tsr * v / r.radius;  // rad/s at the design tip speed ratio
+        tau = std::max(0.0, 2 * power / optimum * (1 - omega / (2 * optimum)));
+    }
+    if (auto* bd = b->is<PxRigidDynamic>()) bd->addTorque(px(axis * tau));
+    if (auto* ad = a ? a->is<PxRigidDynamic>() : nullptr) ad->addTorque(px(axis * -tau));
+    w.actuators().step(windId_, tau, tau * omega, dt);
 }
 
 void Joint::startMotor(World& w, const Motor& m) {

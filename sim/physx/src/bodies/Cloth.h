@@ -8,6 +8,8 @@
 //    "areal_density": 0.25 (kg/m^2), "thickness_m": 0.002, "youngs_pa": 5e6, "poisson": 0.3,
 //    "bending": 2e-6, "friction": 0.5, "damping": 0.02, "drag": {"normal": 1.2, "tangent": 0.15},
 //    "solver_iterations": 30}
+// Verbs: release (the pins let go: a flag tears off its pole, a sheet drops).
+// Stiff thin sheets (a playing card, a sheet of card, a plastic panel) are cloths with a high "bending".
 // Streams: cloth/<id>/verts (world, every frame); static: triangles, uv.
 #pragma once
 
@@ -26,6 +28,8 @@ public:
     void record(World& w, Recorder& rec) override;
     Json describe() const override;
     Energy energy(const World& w) const override;
+    std::vector<std::string> verbs() const override { return {"release"}; }
+    void act(World& w, const Action& a) override;
     std::span<const Vec3> contactPoints() const override { return current_; }
     double contactRadius() const override { return thickness_; }
     const std::string& contactAlias() const override { return hostId_; }

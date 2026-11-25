@@ -241,6 +241,9 @@ void checkMotion(const RunData& run, Report& r) {
     Table t{"Motion (judge against the prompt and the real world)", "peak acceleration is |dv/dt| (0 at rest, 1 g in free fall); g = 9.81 m/s^2",
             {"entity", "kind", "mass kg", "peak speed m/s", "peak accel g", "at t s", "in a contact then"}, {}};
     const std::map<std::string, double> typicalSpeed = {{"walker", 3}, {"vehicle", 70}, {"multirotor", 40}, {"tracked_vehicle", 25}};
+    std::vector<std::string> blasts;
+    for (const auto& [other, o] : run.entities())
+        if (o.kind == "explosion") blasts.push_back(other + ":detonated");
     for (const auto& [id, e] : run.entities()) {
         if (e.velocity.empty()) continue;
         double vmax = 0, amax = 0;
@@ -260,16 +263,26 @@ void checkMotion(const RunData& run, Report& r) {
                 c.at("last_t").get<double>() >= run.time(at) - 0.2)
                 contact = true;
         }
-        t.rows.push_back({id, e.kind, fmt(e.mass), fmt(vmax), fmt(amax / kG), fmt(run.time(at)), contact ? "yes" : "no"});
-        if (vmax > 343) {
-            r.add({"speed", Severity::Fail, id, id + " exceeded the speed of sound (" + fmt(vmax) + " m/s)", ""});
+        // Set off on purpose at that moment: an impulse, a velocity set by a trigger, or a blast.
+        bool kicked = false;
+        std::vector<std::string> kicks = blasts;
+        kicks.insert(kicks.end(), {id + ":impulse", id + ":set_velocity"});
+        for (const std::string& k : kicks)
+            if (const auto tk = run.eventTime(k); tk && std::fabs(*tk - run.time(at)) <= 2.0 / run.fps()) kicked = true;
+        t.rows.push_back({id, e.kind, fmt(e.mass), fmt(vmax), fmt(amax / kG), fmt(run.time(at)),
+                          contact ? "yes" : kicked ? "no (kicked)" : "no"});
+        if (vmax > 3000) {
+            r.add({"speed", Severity::Fail, id, id + " reached " + fmt(vmax) + " m/s, faster than any gun or rocket", ""});
+        } else if (vmax > 150 && !e.desc.value("ccd", false)) {
+            r.add({"speed", Severity::Warn, id, id + " reached " + fmt(vmax) + " m/s without ccd: it can pass through thin "
+                   "walls between steps; set \"ccd\": true", ""});
         } else if (typicalSpeed.count(e.kind) && vmax > typicalSpeed.at(e.kind)) {
             r.add({"speed", Severity::Warn, id, id + " (" + e.kind + ") reached " + fmt(vmax) + " m/s, above the usual " +
                    fmt(typicalSpeed.at(e.kind)) + " m/s", ""});
         }
-        if (amax > 2000 * kG) {
+        if (amax > 2000 * kG && !contact && !kicked) {
             r.add({"acceleration", Severity::Fail, id, id + " peak acceleration " + fmt(amax / kG) + " g: the solver is unstable", ""});
-        } else if (amax > 50 * kG && !contact) {
+        } else if (amax > 50 * kG && !contact && !kicked) {
             r.add({"acceleration", Severity::Warn, id, id + " peak acceleration " + fmt(amax / kG) + " g at t=" + fmt(run.time(at)) +
                    " s with no collision then", "", {{"g", amax / kG}}});
         }
@@ -285,6 +298,7 @@ void checkActuators(const RunData& run, Report& r) {
     for (const auto& [id, a] : run.x().at("actuators").items()) {
         const std::string kind = a.at("kind"), owner = id.substr(0, id.find('/'));
         const double peak = a.at("peak_force"), power = a.at("peak_power_w"), m = a.at("carried_mass_kg");
+        if (kind == "water" || kind == "wind_rotor" || kind == "explosion" || kind == "scripted") continue;  // the environment's work, not a machine's
         if (kind == "rotor") {
             rotorThrust[owner].first += peak;
             rotorThrust[owner].second += m;
@@ -390,7 +404,7 @@ void facts(const RunData& run, Report& r) {
     Json bodies = Json::object(), still = Json::array();
     for (const auto& [id, e] : run.entities()) {
         const auto p0 = run.position(id, 0), p1 = run.position(id, run.frames() - 1);
-        if (!p0 || id == "ground") continue;
+        if (!p0 || id == "ground" || run.partsOf(id).empty()) continue;  // only things with a body
         if (!e.moving) {
             still.push_back(id);
             continue;

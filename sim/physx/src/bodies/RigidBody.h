@@ -6,11 +6,15 @@
 //    "drag": {"linear_per_s": 0.3} | {"cd": 1.05, "area_m2": 1.0},  (quadratic drag uses the wind field)
 //    "damping": {"linear": 0, "angular": 0.05}, "ccd": false, "assembly": "truck",
 //    "keys": [{"t": 0, "pos": [...], "yaw_deg": 0}, ...]           (kinematic: smooth path through keys)
+//    "thrusters": [...], "hull_cd": 0.8                              (bodies/Propulsion.h)
 //   }
+// Verbs: impulse, push, set_velocity, release, freeze, ignite/cutoff {thruster}.
 #pragma once
 
 #include <optional>
+#include <set>
 
+#include "bodies/Propulsion.h"
 #include "world/World.h"
 
 namespace p2s {
@@ -26,6 +30,8 @@ std::vector<PoseKey> parseKeys(const Spec& s, const std::string& key = "keys");
 
 // Kinetic (translation + rotation about the centre of mass) and gravitational energy of a PhysX body.
 Energy rigidEnergy(const physx::PxRigidDynamic& d, const Vec3& gravity);
+// Kinetic energy an impulse J at world point p adds to a rigid body (translation and rotation).
+double impulseWork(const physx::PxRigidDynamic& d, const Vec3& J, const Vec3& p);
 
 // Peak speed and peak acceleration |dv/dt| (0 at rest, 1 g in free fall, the deceleration in a crash), per step.
 struct MotionPeaks {
@@ -44,6 +50,7 @@ public:
     // Static, from code (the ground). `category` is the collision category bit (2 = ground).
     RigidBody(std::string id, std::vector<Shape> shapes, const Pose& pose, World& w, uint32_t category = 1);
 
+    void link(World& w) override;
     void beforeStep(World& w, double dt) override;
     void afterStep(World& w, double dt) override;
     void record(World& w, Recorder& rec) override;
@@ -63,6 +70,7 @@ public:
 
 private:
     void applyDrag(World& w);
+    void scriptedWork(World& w, double joules);
 
     std::string type_;
     std::vector<Shape> shapes_;
@@ -75,6 +83,10 @@ private:
         double until;
     };
     std::optional<Push> push_;
+    std::vector<Thruster> thrusters_;
+    std::optional<Buoyancy> buoyancy_;  // only when the world has water
+    double submerged_ = 0;  // fraction under water, last step
+    bool ccd_ = false;  // PhysX allows CCD on dynamic bodies only: applied on release
 };
 
 // The ground plane (z = height), created from world.ground.

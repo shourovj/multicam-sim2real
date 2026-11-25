@@ -64,7 +64,8 @@ RigidBody::RigidBody(const Spec& s, World& w, std::string kind) : Entity(s.str("
         }
         if (type_ == "kinematic") d->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
         d->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_GYROSCOPIC_FORCES, true);
-        d->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, s.flag("ccd", false));
+        ccd_ = s.flag("ccd", false);
+        d->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, ccd_ && type_ == "dynamic");
         if (type_ == "dynamic") {
             d->setLinearVelocity(px(s.vec3("velocity", {0, 0, 0})));
             d->setAngularVelocity(px(s.vec3("angular_velocity", {0, 0, 0})));
@@ -90,7 +91,22 @@ RigidBody::RigidBody(const Spec& s, World& w, std::string kind) : Entity(s.str("
             area_ = dr.positive("area_m2", std::max({e.x * e.y, e.y * e.z, e.x * e.z}));
         }
     }
+    std::set<std::string> thrusterIds;
+    for (const Spec& t : s.items("thrusters")) {
+        if (type_ == "static") t.fail("a static body cannot carry thrusters");
+        thrusters_.emplace_back(t);
+        if (!thrusterIds.insert(thrusters_.back().id()).second) t["id"].fail("duplicate thruster id");
+    }
+    const double hullCd = s.positive("hull_cd", 0.8);
+    if (type_ != "static" && w.water()) buoyancy_.emplace(shapes_, hullCd);
     w.scene().addActor(*actor_);
+}
+
+void RigidBody::link(World& w) {
+    // Work done by scripted verbs (impulse, push, set_velocity), so the energy check can account for it.
+    if (type_ != "static") w.actuators().declare(id() + "/scripted", "scripted", mass());
+    if (buoyancy_) w.actuators().declare(id() + "/water", "water", mass());
+    for (Thruster& t : thrusters_) t.link(w, id(), mass());
 }
 
 RigidBody::RigidBody(std::string id, std::vector<Shape> shapes, const Pose& pose, World& w, uint32_t category)
@@ -122,7 +138,7 @@ void RigidBody::applyDrag(World& w) {
     Vec3 f = v * (-linearDrag_ * d.getMass());
     if (cd_ > 0) {
         const Vec3 rel = w.wind().at(w.time(), pose().p) - v;
-        f += rel * (0.5 * w.wind().airDensity() * cd_ * area_ * rel.norm());
+        f += rel * (0.5 * w.wind().airDensity() * cd_ * area_ * rel.norm() * (1 - submerged_));
     }
     d.addForce(px(f));
 }
@@ -134,8 +150,17 @@ void RigidBody::beforeStep(World& w, double dt) {
         if (!keys_.empty()) d.setKinematicTarget(px(interpolateKeys(keys_, w.time() + dt)));
         return;
     }
-    if (linearDrag_ > 0 || cd_ > 0) applyDrag(w);
-    if (push_ && w.time() < push_->until) d.addForce(px(push_->force));
+    if (push_ && w.time() < push_->until) {
+        d.addForce(px(push_->force));
+        w.actuators().step(id() + "/scripted", push_->force.norm(), push_->force.dot(velocity()), dt);
+    }
+    if (buoyancy_) {
+        const Buoyancy::Result r = buoyancy_->apply(d, *w.water(), w.gravity());
+        submerged_ = r.submerged;
+        w.actuators().step(id() + "/water", 0, r.power, dt);
+    }
+    if (linearDrag_ > 0 || cd_ > 0) applyDrag(w);  // after buoyancy: only the part above water feels the air
+    for (Thruster& t : thrusters_) t.apply(d, w, dt);
 }
 
 void RigidBody::afterStep(World& w, double dt) {
@@ -163,43 +188,80 @@ Json RigidBody::describe() const {
         j["streams"]["vel"] = "body/" + id() + "/vel";
         j["peak_accel_mps2"] = peaks_.accel;
         j["peak_speed_mps"] = peaks_.speed;
+        j["ccd"] = ccd_;
     }
+    if (!thrusters_.empty()) {
+        j["thrusters"] = Json::array();
+        for (const Thruster& t : thrusters_) j["thrusters"].push_back(t.toJson());
+    }
+    if (buoyancy_) j["floats"] = true;
     return j;
 }
 
 std::vector<std::string> RigidBody::verbs() const {
     if (type_ == "static") return {};
-    return {"impulse", "push", "set_velocity", "release", "freeze"};
+    return {"impulse", "push", "set_velocity", "release", "freeze", "ignite", "cutoff"};
 }
 
 void RigidBody::act(World& w, const Action& a) {
     PxRigidDynamic& d = dynamic();
     const Spec p = Spec::fromJson(a.params, id() + "." + a.verb);
+    if (a.verb == "ignite" || a.verb == "cutoff") {
+        const std::string which = p.str("thruster");
+        p.rejectUnknownKeys();
+        auto it = std::find_if(thrusters_.begin(), thrusters_.end(),
+                               [&](const Thruster& t) { return t.id() == which; });
+        if (it == thrusters_.end()) p["thruster"].fail("no thruster '" + which + "' on " + id());
+        it->setActive(a.verb == "ignite");
+        w.events().emit(id() + "/" + which + ":" + (a.verb == "ignite" ? "ignited" : "cut_off"), w.time());
+        return;
+    }
     const bool forceVerb = a.verb == "impulse" || a.verb == "push" || a.verb == "set_velocity";
     if (forceVerb && type_ != "dynamic")
         throw SpecError(id() + ": '" + a.verb + "' at t=" + std::to_string(w.time()) +
                         " needs a dynamic body; it is kinematic (trigger 'release' first)");
     if (a.verb == "impulse") {  // N s, at the centre of mass or at a world point
         const Vec3 j = p.vec3("vector");
-        if (p.has("point"))
-            PxRigidBodyExt::addForceAtPos(d, px(j), px(p.vec3("point")), PxForceMode::eIMPULSE);
-        else
-            d.addForce(px(j), PxForceMode::eIMPULSE);
+        const Vec3 at = p.has("point") ? p.vec3("point") : fromPx((d.getGlobalPose() * d.getCMassLocalPose()).p);
+        scriptedWork(w, impulseWork(d, j, at));
+        PxRigidBodyExt::addForceAtPos(d, px(j), px(at), PxForceMode::eIMPULSE);
     } else if (a.verb == "push") {  // constant force for a while
         push_ = Push{p.vec3("force"), w.time() + p.positive("duration_s")};
     } else if (a.verb == "set_velocity") {
-        d.setLinearVelocity(px(p.vec3("velocity")));
+        const Vec3 v = p.vec3("velocity");
+        scriptedWork(w, 0.5 * d.getMass() * (v.norm2() - velocity().norm2()));
+        d.setLinearVelocity(px(v));
     } else if (a.verb == "release") {  // kinematic -> dynamic: falls, gets knocked about
         d.setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, false);
+        d.setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, ccd_);
         type_ = "dynamic";
         peaks_.lastVel = velocity();
     } else if (a.verb == "freeze") {
+        d.setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, false);
         d.setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
         type_ = "kinematic";
         keys_.clear();
     }
     p.rejectUnknownKeys();
     w.events().emit(id() + ":" + a.verb, w.time());
+}
+
+void RigidBody::scriptedWork(World& w, double joules) {
+    // Logged as one step's power: the actuator log integrates power x dt.
+    const double dt = w.clock().dt();
+    w.actuators().step(id() + "/scripted", 0, joules / dt, dt);
+}
+
+double impulseWork(const PxRigidDynamic& d, const Vec3& J, const Vec3& p) {
+    const PxTransform com = d.getGlobalPose() * d.getCMassLocalPose();
+    const double m = d.getMass();
+    const Vec3 v = fromPx(d.getLinearVelocity());
+    const Vec3 L = fromPx(com.q.rotateInv(px((p - fromPx(com.p)).cross(J))));  // angular impulse, mass frame
+    const Vec3 I = fromPx(d.getMassSpaceInertiaTensor());
+    const Vec3 om = fromPx(com.q.rotateInv(d.getAngularVelocity()));
+    const Vec3 dom{I.x > 0 ? L.x / I.x : 0, I.y > 0 ? L.y / I.y : 0, I.z > 0 ? L.z / I.z : 0};
+    const auto rot = [&](const Vec3& w) { return 0.5 * (I.x * w.x * w.x + I.y * w.y * w.y + I.z * w.z * w.z); };
+    return 0.5 * m * ((v + J / m).norm2() - v.norm2()) + rot(om + dom) - rot(om);
 }
 
 Energy rigidEnergy(const PxRigidDynamic& d, const Vec3& gravity) {

@@ -209,6 +209,10 @@ std::optional<Vec3> RunData::position(const std::string& id, int frame) const {
             for (const Vec3& v : p.frames[size_t(frame)]) c += v;
             return c / double(p.frames[size_t(frame)].size());
         }
+    if (hasEntity(id) && entity(id).desc.contains("pos")) {  // fixed places without geometry (explosions)
+        const Json& p = entity(id).desc.at("pos");
+        return Vec3{p[0], p[1], p[2]};
+    }
     return std::nullopt;
 }
 

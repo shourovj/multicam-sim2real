@@ -46,7 +46,7 @@ sim/blender/.deps/blender-4.2.1-linux-x64/blender -b --python sim/blender/import
 | `src/core/` | no PhysX: math, the JSON reader (rejects unknown keys, errors name the JSON path), shapes with exact signed distances and ray casts (the one 3D model the simulator collides, the checker measures and Blender draws), cameras, streams, wind |
 | `src/physx/` | PhysX glue: owning handles, runtime, materials, shapes |
 | `src/world/` | the World (scene, clock, triggers, contact events, refinement windows, recording X) and the Entity base class |
-| `src/bodies/` | one class per kind: RigidBody, Joint, Multirotor, Vehicle, TrackedVehicle, RobotArm, Walker, TrafficSignal, SoftBody, Cloth, ParticleSystem; `Registry.cpp` maps scene keys to them |
+| `src/bodies/` | one class per kind: RigidBody (with Propulsion: buoyancy, thrusters), Joint, Multirotor, Vehicle, TrackedVehicle, RobotArm, Walker, TrafficSignal, SoftBody, Cloth, ParticleSystem, Magnet, Explosion; `Registry.cpp` maps scene keys to them |
 | `src/control/` | controllers: Driver (lane path, IDM, signals, crosswalks), GoalPath (quintic), Kinematics (robot FK/IK), Linear |
 | `src/check/` | the checker: RunData (reads X), PhysicsChecks, Expectations and camera coverage, Report, Guide |
 | `app/` | `sim_main.cpp` (p2s_sim), `check_main.cpp` (p2s_check) |
@@ -74,3 +74,12 @@ sim/blender/.deps/blender-4.2.1-linux-x64/blender -b --python sim/blender/import
 | triggers on time or events | `triggers` | tank-truck driver reactions |
 | crash refinement windows | `refine` | tank-truck crash window |
 | cameras: fixed, attached (to parts), handheld, orbit, follow | `cameras` | cameras.py, tank-truck cameras |
+| water: buoyancy, hull drag, currents (boats, submarines, buoys) | `world.water`, `hull_cd` | new |
+| thrusters: rockets, jets, propellers driven by a joint's spin | `thrusters` on bodies | new |
+| wind rotors (turbines, windmills) | `joints[].wind_rotor` | new |
+| magnets (attract, repel, on/off) | `magnets` | new |
+| explosions: impulse on bodies, kick on particles (no fireball) | `explosions` | new |
+
+Not simulated, left to the video model: flames and fireballs, thin stiff sheets that bend and spring back
+(playing cards; PhysX's GPU cloth and FEM fold at the table edge whatever the stiffness), cutting and fracture,
+waves and wakes on the water surface. A bullet bounces off what it hits rather than piercing it.

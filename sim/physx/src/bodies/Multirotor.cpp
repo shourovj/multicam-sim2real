@@ -61,6 +61,7 @@ Multirotor::Multirotor(const Spec& s, World& w) : RigidBody(s, w, "multirotor") 
 }
 
 void Multirotor::link(World& w) {
+    RigidBody::link(w);
     PxRigidDynamic& d = dynamic();
     const double m = d.getMass(), g = w.gravity().norm();
     const double n = double(rotors_.size());
