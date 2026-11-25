@@ -41,7 +41,8 @@ RigidBody::RigidBody(const Spec& s, World& w, std::string kind) : Entity(s.str("
     keys_ = parseKeys(s);
     if (!keys_.empty() && type_ != "kinematic") s["keys"].fail("keys need type kinematic");
     const Pose start = keys_.empty() ? s.pose() : keys_.front().pose;
-    const CollisionFilter filter = w.filterFor(id(), s.str("assembly", ""));
+    // Static bodies share the ground's category: vehicle wheels meet them only through the suspension's road query.
+    const CollisionFilter filter = w.filterFor(id(), s.str("assembly", ""), type_ == "static" ? 2u : 1u);
 
     if (type_ == "static") {
         actor_.reset(w.physics().createRigidStatic(px(start)));
@@ -69,28 +70,23 @@ RigidBody::RigidBody(const Spec& s, World& w, std::string kind) : Entity(s.str("
             d->setAngularVelocity(px(s.vec3("angular_velocity", {0, 0, 0})));
         }
         d->setMaxAngularVelocity(1000.0f);
-        if (s.has("damping")) {
-            d->setLinearDamping(float(s["damping"].num("linear", 0)));
-            d->setAngularDamping(float(s["damping"].num("angular", 0.05)));
-        }
+        // No damping unless asked: PhysX's default angular damping would bleed a spinning body's energy.
+        const Spec damping = s.has("damping") ? s["damping"] : Spec::fromJson(Json::object(), "damping");
+        d->setLinearDamping(float(damping.num("linear", 0)));
+        d->setAngularDamping(float(damping.num("angular", 0)));
         d->setMaxDepenetrationVelocity(float(s.positive("max_depenetration_mps", 2.0)));
         const int posIters = s.integer("solver_iterations", 8);
-        d->setSolverIterationCounts(PxU32(std::clamp(posIters, 1, 255)), 2);
+        if (posIters < 1 || posIters > 255) s["solver_iterations"].fail("must be in 1..255");
+        d->setSolverIterationCounts(PxU32(posIters), 2);
         d->setSleepThreshold(0.0f);
-        lastVel_ = velocity();
+        peaks_.lastVel = velocity();
     }
     if (s.has("drag")) {
         const Spec dr = s["drag"];
         linearDrag_ = dr.num("linear_per_s", 0);
         cd_ = dr.num("cd", 0);
         if (cd_ > 0) {
-            Aabb b;
-            for (const Shape& sh : shapes_) {
-                const Aabb sb = sh.bounds().transformed(sh.local);
-                b.add(sb.lo);
-                b.add(sb.hi);
-            }
-            const Vec3 e = b.extent();  // default frontal area: the largest face of the bounding box
+            const Vec3 e = boundsOf(shapes_).extent();  // default frontal area: the largest face of the bounding box
             area_ = dr.positive("area_m2", std::max({e.x * e.y, e.y * e.z, e.x * e.z}));
         }
     }
@@ -144,18 +140,11 @@ void RigidBody::beforeStep(World& w, double dt) {
 
 void RigidBody::afterStep(World& w, double dt) {
     if (type_ != "dynamic") return;
-    const Vec3 v = velocity();
-    // Acceleration beyond free fall: what the body's contents would feel.
-    const double a = ((v - lastVel_) / dt - w.gravity()).norm();
-    peakAccel_ = std::max(peakAccel_, a);
-    peakSpeed_ = std::max(peakSpeed_, v.norm());
-    lastVel_ = v;
+    peaks_.update(velocity(), dt, w.gravity());
 }
 
 void RigidBody::record(World&, Recorder& rec) {
-    const Pose p = pose();
-    rec.put("body/" + id() + "/pose",
-            {float(p.p.x), float(p.p.y), float(p.p.z), float(p.q.x), float(p.q.y), float(p.q.z), float(p.q.w)});
+    putPose(rec, "body/" + id() + "/pose", pose());
     if (type_ != "static") {
         const auto& d = *actor_->is<PxRigidDynamic>();
         const PxVec3 v = d.getLinearVelocity(), om = d.getAngularVelocity();
@@ -172,8 +161,8 @@ Json RigidBody::describe() const {
     if (type_ != "static") {
         j["mass_kg"] = mass();
         j["streams"]["vel"] = "body/" + id() + "/vel";
-        j["peak_accel_mps2"] = peakAccel_;
-        j["peak_speed_mps"] = peakSpeed_;
+        j["peak_accel_mps2"] = peaks_.accel;
+        j["peak_speed_mps"] = peaks_.speed;
     }
     return j;
 }
@@ -203,7 +192,7 @@ void RigidBody::act(World& w, const Action& a) {
     } else if (a.verb == "release") {  // kinematic -> dynamic: falls, gets knocked about
         d.setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, false);
         type_ = "dynamic";
-        lastVel_ = velocity();
+        peaks_.lastVel = velocity();
     } else if (a.verb == "freeze") {
         d.setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
         type_ = "kinematic";
@@ -213,15 +202,19 @@ void RigidBody::act(World& w, const Action& a) {
     w.events().emit(id() + ":" + a.verb, w.time());
 }
 
+Energy rigidEnergy(const PxRigidDynamic& d, const Vec3& gravity) {
+    const double m = d.getMass();
+    const PxTransform com = d.getGlobalPose() * d.getCMassLocalPose();
+    const PxVec3 om = com.q.rotateInv(d.getAngularVelocity());
+    const PxVec3 I = d.getMassSpaceInertiaTensor();
+    const double rot = 0.5 * (I.x * om.x * om.x + I.y * om.y * om.y + I.z * om.z * om.z);
+    return {0.5 * m * fromPx(d.getLinearVelocity()).norm2() + rot, -m * gravity.dot(fromPx(com.p))};
+}
+
 Energy RigidBody::energy(const World& w) const {
     const auto* d = actor_->is<PxRigidDynamic>();
     if (!d || type_ != "dynamic") return {};
-    const double m = d->getMass();
-    const PxTransform com = d->getGlobalPose() * d->getCMassLocalPose();
-    const PxVec3 om = com.q.rotateInv(d->getAngularVelocity());
-    const PxVec3 I = d->getMassSpaceInertiaTensor();
-    const double rot = 0.5 * (I.x * om.x * om.x + I.y * om.y * om.y + I.z * om.z * om.z);
-    return {0.5 * m * fromPx(d->getLinearVelocity()).norm2() + rot, -m * w.gravity().dot(fromPx(com.p))};
+    return rigidEnergy(*d, w.gravity());
 }
 
 std::unique_ptr<Entity> makeGround(const Spec& s, World& w) {

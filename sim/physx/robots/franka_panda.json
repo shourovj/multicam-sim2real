@@ -1,0 +1,1144 @@
+{
+ "source": "franka_emika_panda/panda.xml",
+ "tcp": {
+  "link": "hand",
+  "offset": [
+   0,
+   0,
+   0.1034
+  ]
+ },
+ "home": [
+  0,
+  0,
+  0,
+  -1.57079,
+  0,
+  1.57079,
+  -0.7853
+ ],
+ "links": [
+  {
+   "name": "link0",
+   "parent": null,
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "quat_xyzw": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.1219,
+     "half_length": 0.00295,
+     "pos": [
+      -0.0447,
+      -0.00123,
+      0.06037
+     ],
+     "quat_xyzw": [
+      -0.005219,
+      -0.851858,
+      -0.00849,
+      0.523679
+     ]
+    }
+   ],
+   "visuals": [
+    {
+     "mesh": "franka_emika_panda/assets/link0_0.obj",
+     "rgba": [
+      0.901961,
+      0.921569,
+      0.929412,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link0_1.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link0_2.obj",
+     "rgba": [
+      0.901961,
+      0.921569,
+      0.929412,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link0_3.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link0_4.obj",
+     "rgba": [
+      0.901961,
+      0.921569,
+      0.929412,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link0_5.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link0_7.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link0_8.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link0_9.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link0_10.obj",
+     "rgba": [
+      0.901961,
+      0.921569,
+      0.929412,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link0_11.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    }
+   ],
+   "mass_kg": 0.629769,
+   "com": [
+    -0.041018,
+    -0.00014,
+    0.049974
+   ]
+  },
+  {
+   "name": "link1",
+   "parent": "link0",
+   "pos": [
+    0.0,
+    0.0,
+    0.333
+   ],
+   "quat_xyzw": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.09939,
+     "half_length": 0.04479,
+     "pos": [
+      -0.00275,
+      -0.0333,
+      -0.07733
+     ],
+     "quat_xyzw": [
+      0.281803,
+      0.017522,
+      -0.005147,
+      0.959298
+     ]
+    }
+   ],
+   "visuals": [
+    {
+     "mesh": "franka_emika_panda/assets/link1.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    }
+   ],
+   "joint": {
+    "name": "joint1",
+    "type": "revolute",
+    "axis": [
+     0,
+     0,
+     1
+    ],
+    "range": [
+     -2.8973,
+     2.8973
+    ]
+   },
+   "mass_kg": 4.970684,
+   "com": [
+    0.003875,
+    0.002081,
+    -0.04762
+   ]
+  },
+  {
+   "name": "link2",
+   "parent": "link1",
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "quat_xyzw": [
+    -0.7071067811865475,
+    0.0,
+    0.0,
+    0.7071067811865475
+   ],
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.09908,
+     "half_length": 0.04583,
+     "pos": [
+      0.00048,
+      -0.07888,
+      0.03441
+     ],
+     "quat_xyzw": [
+      0.003438,
+      0.872449,
+      -0.488655,
+      0.006138
+     ]
+    }
+   ],
+   "visuals": [
+    {
+     "mesh": "franka_emika_panda/assets/link2.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    }
+   ],
+   "joint": {
+    "name": "joint2",
+    "type": "revolute",
+    "axis": [
+     0,
+     0,
+     1
+    ],
+    "range": [
+     -1.7628,
+     1.7628
+    ]
+   },
+   "mass_kg": 0.646926,
+   "com": [
+    -0.003141,
+    -0.02872,
+    0.003495
+   ]
+  },
+  {
+   "name": "link3",
+   "parent": "link2",
+   "pos": [
+    0.0,
+    -0.316,
+    0.0
+   ],
+   "quat_xyzw": [
+    0.7071067811865475,
+    0.0,
+    0.0,
+    0.7071067811865475
+   ],
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.08611,
+     "half_length": 0.04034,
+     "pos": [
+      0.03088,
+      0.02603,
+      -0.03422
+     ],
+     "quat_xyzw": [
+      0.121018,
+      -0.861941,
+      0.243881,
+      0.427709
+     ]
+    }
+   ],
+   "visuals": [
+    {
+     "mesh": "franka_emika_panda/assets/link3_0.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link3_1.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link3_2.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link3_3.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    }
+   ],
+   "joint": {
+    "name": "joint3",
+    "type": "revolute",
+    "axis": [
+     0,
+     0,
+     1
+    ],
+    "range": [
+     -2.8973,
+     2.8973
+    ]
+   },
+   "mass_kg": 3.228604,
+   "com": [
+    0.027518,
+    0.039252,
+    -0.066502
+   ]
+  },
+  {
+   "name": "link4",
+   "parent": "link3",
+   "pos": [
+    0.0825,
+    0.0,
+    0.0
+   ],
+   "quat_xyzw": [
+    0.7071067811865475,
+    0.0,
+    0.0,
+    0.7071067811865475
+   ],
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.08616,
+     "half_length": 0.04146,
+     "pos": [
+      -0.05112,
+      0.0366,
+      0.02631
+     ],
+     "quat_xyzw": [
+      -0.119667,
+      -0.864671,
+      -0.245383,
+      0.421677
+     ]
+    }
+   ],
+   "visuals": [
+    {
+     "mesh": "franka_emika_panda/assets/link4_0.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link4_1.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link4_2.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link4_3.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    }
+   ],
+   "joint": {
+    "name": "joint4",
+    "type": "revolute",
+    "axis": [
+     0,
+     0,
+     1
+    ],
+    "range": [
+     -3.0718,
+     -0.0698
+    ]
+   },
+   "mass_kg": 3.587895,
+   "com": [
+    -0.05317,
+    0.104419,
+    0.027454
+   ]
+  },
+  {
+   "name": "link5",
+   "parent": "link4",
+   "pos": [
+    -0.0825,
+    0.384,
+    0.0
+   ],
+   "quat_xyzw": [
+    -0.7071067811865475,
+    0.0,
+    0.0,
+    0.7071067811865475
+   ],
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.07593,
+     "half_length": 0.02103,
+     "pos": [
+      0.00837,
+      0.02401,
+      -0.19933
+     ],
+     "quat_xyzw": [
+      0.029159,
+      -0.863759,
+      0.500539,
+      0.050319
+     ]
+    },
+    {
+     "type": "capsule",
+     "radius": 0.05364,
+     "half_length": 0.01381,
+     "pos": [
+      -0.00291,
+      0.0888,
+      -0.11954
+     ],
+     "quat_xyzw": [
+      0.005534,
+      -0.99349,
+      0.099446,
+      0.055289
+     ]
+    },
+    {
+     "type": "capsule",
+     "radius": 0.06756,
+     "half_length": 0.0001,
+     "pos": [
+      0.00374,
+      0.06928,
+      0.00133
+     ],
+     "quat_xyzw": [
+      -0.533455,
+      -0.500096,
+      -0.499904,
+      0.46414
+     ]
+    }
+   ],
+   "visuals": [
+    {
+     "mesh": "franka_emika_panda/assets/link5_0.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link5_1.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link5_2.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    }
+   ],
+   "joint": {
+    "name": "joint5",
+    "type": "revolute",
+    "axis": [
+     0,
+     0,
+     1
+    ],
+    "range": [
+     -2.8973,
+     2.8973
+    ]
+   },
+   "mass_kg": 1.225946,
+   "com": [
+    -0.011953,
+    0.041065,
+    -0.038437
+   ]
+  },
+  {
+   "name": "link6",
+   "parent": "link5",
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "quat_xyzw": [
+    0.7071067811865475,
+    0.0,
+    0.0,
+    0.7071067811865475
+   ],
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.0943,
+     "half_length": 0.0001,
+     "pos": [
+      0.04236,
+      0.01528,
+      0.01184
+     ],
+     "quat_xyzw": [
+      -0.102817,
+      0.769982,
+      0.128415,
+      0.616495
+     ]
+    }
+   ],
+   "visuals": [
+    {
+     "mesh": "franka_emika_panda/assets/link6_0.obj",
+     "rgba": [
+      0.901961,
+      0.921569,
+      0.929412,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_1.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_2.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_3.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_4.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_5.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_6.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_7.obj",
+     "rgba": [
+      0.039216,
+      0.541176,
+      0.780392,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_8.obj",
+     "rgba": [
+      0.039216,
+      0.541176,
+      0.780392,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_9.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_10.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_11.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_12.obj",
+     "rgba": [
+      0.0,
+      1.0,
+      0.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_13.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_14.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_15.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link6_16.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    }
+   ],
+   "joint": {
+    "name": "joint6",
+    "type": "revolute",
+    "axis": [
+     0,
+     0,
+     1
+    ],
+    "range": [
+     -0.0175,
+     3.7525
+    ]
+   },
+   "mass_kg": 1.666555,
+   "com": [
+    0.060149,
+    -0.014117,
+    -0.010517
+   ]
+  },
+  {
+   "name": "link7",
+   "parent": "link6",
+   "pos": [
+    0.088,
+    0.0,
+    0.0
+   ],
+   "quat_xyzw": [
+    0.7071067811865475,
+    0.0,
+    0.0,
+    0.7071067811865475
+   ],
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.05382,
+     "half_length": 0.01714,
+     "pos": [
+      0.01254,
+      0.01189,
+      0.08267
+     ],
+     "quat_xyzw": [
+      -0.287444,
+      0.628818,
+      0.269674,
+      0.670253
+     ]
+    }
+   ],
+   "visuals": [
+    {
+     "mesh": "franka_emika_panda/assets/link7_0.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link7_1.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link7_2.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link7_3.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link7_4.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link7_5.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link7_6.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/link7_7.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    }
+   ],
+   "joint": {
+    "name": "joint7",
+    "type": "revolute",
+    "axis": [
+     0,
+     0,
+     1
+    ],
+    "range": [
+     -2.8973,
+     2.8973
+    ]
+   },
+   "mass_kg": 0.735522,
+   "com": [
+    0.010517,
+    -0.004252,
+    0.061597
+   ]
+  },
+  {
+   "name": "hand",
+   "parent": "link7",
+   "pos": [
+    0.0,
+    0.0,
+    0.107
+   ],
+   "quat_xyzw": [
+    0.0,
+    0.0,
+    -0.38268341623423263,
+    0.9238795391929064
+   ],
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.04765,
+     "half_length": 0.05513,
+     "pos": [
+      0.0003,
+      -0.00163,
+      0.02269
+     ],
+     "quat_xyzw": [
+      -0.495947,
+      -0.492978,
+      -0.506925,
+      0.504021
+     ]
+    }
+   ],
+   "visuals": [
+    {
+     "mesh": "franka_emika_panda/assets/hand_0.obj",
+     "rgba": [
+      0.901961,
+      0.921569,
+      0.929412,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/hand_1.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/hand_2.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/hand_3.obj",
+     "rgba": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/hand_4.obj",
+     "rgba": [
+      0.901961,
+      0.921569,
+      0.929412,
+      1.0
+     ]
+    }
+   ],
+   "mass_kg": 0.73,
+   "com": [
+    -0.01,
+    0.0,
+    0.03
+   ]
+  },
+  {
+   "name": "left_finger",
+   "parent": "hand",
+   "pos": [
+    0.0,
+    0.0,
+    0.0584
+   ],
+   "quat_xyzw": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.01833,
+     "half_length": 0.0094,
+     "pos": [
+      0.00012,
+      0.01438,
+      0.02653
+     ],
+     "quat_xyzw": [
+      0.063565,
+      0.002979,
+      -0.00019,
+      0.997973
+     ]
+    }
+   ],
+   "visuals": [
+    {
+     "mesh": "franka_emika_panda/assets/finger_0.obj",
+     "rgba": [
+      0.901961,
+      0.921569,
+      0.929412,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/finger_1.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    }
+   ],
+   "joint": {
+    "name": "finger_joint1",
+    "type": "prismatic",
+    "axis": [
+     0,
+     1,
+     0
+    ],
+    "range": [
+     0,
+     0.04
+    ]
+   },
+   "mass_kg": 0.015,
+   "com": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "name": "right_finger",
+   "parent": "hand",
+   "pos": [
+    0.0,
+    0.0,
+    0.0584
+   ],
+   "quat_xyzw": [
+    0.0,
+    0.0,
+    1.0,
+    0.0
+   ],
+   "shapes": [
+    {
+     "type": "capsule",
+     "radius": 0.01833,
+     "half_length": 0.0094,
+     "pos": [
+      0.00012,
+      0.01438,
+      0.02653
+     ],
+     "quat_xyzw": [
+      0.063565,
+      0.002979,
+      -0.00019,
+      0.997973
+     ]
+    }
+   ],
+   "visuals": [
+    {
+     "mesh": "franka_emika_panda/assets/finger_0.obj",
+     "rgba": [
+      0.901961,
+      0.921569,
+      0.929412,
+      1.0
+     ]
+    },
+    {
+     "mesh": "franka_emika_panda/assets/finger_1.obj",
+     "rgba": [
+      0.25,
+      0.25,
+      0.25,
+      1.0
+     ]
+    }
+   ],
+   "joint": {
+    "name": "finger_joint2",
+    "type": "prismatic",
+    "axis": [
+     0,
+     1,
+     0
+    ],
+    "range": [
+     0,
+     0.04
+    ]
+   },
+   "mass_kg": 0.015,
+   "com": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  }
+ ]
+}

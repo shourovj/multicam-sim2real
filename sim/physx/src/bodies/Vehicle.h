@@ -6,7 +6,7 @@
 //    "mass_kg": 1500, "shapes": [...chassis collision shapes, body frame: +X forward, +Z up, origin on the ground],
 //    "wheels": {"radius_m": 0.33, "half_width_m": 0.11, "mass_kg": 20,
 //               "axles": [{"x": 1.35, "track_m": 1.6, "steer": true, "drive": false},
-//                         {"x": -1.35, "track_m": 1.6, "steer": false, "drive": true}]},
+//                         {"x": -1.35, "track_m": 1.6, "steer": false, "drive": true}]},   front to back
 //    "suspension": {"travel_m": 0.2, "frequency_hz": 1.6, "damping_ratio": 0.3},
 //    "tyre_friction": 0.9,
 //    "limits": {"max_wheel_torque_nm": 800, "max_brake_torque_nm": 2500, "max_steer_deg": 30},
@@ -16,6 +16,7 @@
 
 #include <optional>
 
+#include "bodies/RigidBody.h"
 #include "control/Driver.h"
 #include "snippetvehiclecommon/directdrivetrain/DirectDrivetrain.h"
 #include "world/World.h"
@@ -43,7 +44,8 @@ public:
     Vec3 velocity() const override;
 
 private:
-    physx::PxRigidDynamic& chassis() const;
+    physx::PxRigidDynamic& chassis();
+    const physx::PxRigidDynamic& chassis() const;
     Pose wheelPose(int i) const;
     void logActuators(World& w, double dt);
 
@@ -54,8 +56,9 @@ private:
     std::optional<Driver> driver_;
     VehicleLimits limits_{};
     int nWheels_ = 0;
-    double wheelRadius_ = 0.33, wheelHalfWidth_ = 0.11, peakAccel_ = 0, peakSpeed_ = 0;
-    Vec3 lastVel_;
+    double wheelRadius_ = 0.33, wheelHalfWidth_ = 0.11;
+    MotionPeaks peaks_;
+    std::string driveId_, brakesId_;  // actuator ids
     double manualBrake_ = -1;
     bool released_ = false;
     DriveCommand lastCmd_;

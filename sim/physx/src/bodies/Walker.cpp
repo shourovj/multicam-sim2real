@@ -10,22 +10,15 @@ constexpr double kStrideM = 1.5;  // one gait cycle; phase advances with distanc
 
 Walker::Walker(const Spec& s, World& w) : Entity(s.str("id"), "walker") {
     if (s.has("path")) {
-        const Spec p = s["path"];
-        for (size_t i = 0; i < p.size(); ++i) {
-            const auto& xy = p.at(i).raw();
-            if (!xy.is_array() || xy.size() != 2) p.at(i).fail("expected [x, y]");
-            path_.push_back({xy[0].get<double>(), xy[1].get<double>()});
-        }
-        if (path_.size() < 2) p.fail("needs at least two points");
-        knots_ = {0};
-        for (size_t i = 1; i < path_.size(); ++i)
-            knots_.push_back(knots_.back() + std::hypot(path_[i][0] - path_[i - 1][0], path_[i][1] - path_[i - 1][1]));
+        path_ = Polyline::parse(s["path"]);
         speed_ = s.positive("speed_mps", 1.4);
         startS_ = s.num("start_s", 0);
         offset_ = s.num("start_offset_m", 0);
+        if (offset_ < 0) s["start_offset_m"].fail("must be >= 0");
     } else {
-        const Vec3 at{s["idle_at"].at(0).asNum(), s["idle_at"].at(1).asNum(), 0};
-        path_ = {{at.x, at.y}};
+        const auto at = s.numbers("idle_at");
+        if (at.size() != 2) s["idle_at"].fail("expected [x, y]");
+        idleAt_ = {at[0], at[1], 0};
         yaw0_ = deg2rad(s.num("facing_deg", 0));
         mode_ = s.oneOf("pose", {"stand", "phone"}, "stand");
         sway_ = s.num("sway_m", 0.02);
@@ -33,6 +26,7 @@ Walker::Walker(const Spec& s, World& w) : Entity(s.str("id"), "walker") {
     height_ = s.positive("height_m", 1.75);
     radius_ = s.positive("radius_m", 0.25);
     groundZ_ = s.num("ground_z", 0);
+    if (height_ < 2 * radius_) s["height_m"].fail("must be at least twice radius_m");
     shapes_ = {Shape::capsule(radius_, height_ / 2 - radius_, Pose{{0, 0, height_ / 2}, {}})};
     shapes_.front().material = "flesh";
     actor_.reset(w.physics().createRigidDynamic(px(poseAt(0))));
@@ -43,30 +37,23 @@ Walker::Walker(const Spec& s, World& w) : Entity(s.str("id"), "walker") {
 }
 
 double Walker::distance(double t) const {
-    return std::min(offset_ + speed_ * std::max(0.0, t - startS_), knots_.back());
+    return std::min(offset_ + speed_ * std::max(0.0, t - startS_), path_.length());
 }
 
 bool Walker::walking(double t) const {
-    return mode_ == "walk" && t >= startS_ && distance(t) < knots_.back() - 1e-6;
+    return mode_ == "walk" && t >= startS_ && distance(t) < path_.length() - 1e-6;
 }
 
 Pose Walker::poseAt(double t) const {
-    double x = path_[0][0], y = path_[0][1], yaw = yaw0_;
     if (mode_ == "walk") {
         const double d = distance(t);
-        size_t i = 0;
-        while (i + 2 < knots_.size() && knots_[i + 1] < d) ++i;
-        const double u = (d - knots_[i]) / std::max(knots_[i + 1] - knots_[i], 1e-9);
-        x = path_[i][0] + u * (path_[i + 1][0] - path_[i][0]);
-        y = path_[i][1] + u * (path_[i + 1][1] - path_[i][1]);
-        yaw = std::atan2(path_[i + 1][1] - path_[i][1], path_[i + 1][0] - path_[i][0]);
-    } else {  // standing people are never quite still
-        const int k = int(id().size());
-        x += sway_ * std::sin(2 * kPi * 0.31 * t + k);
-        y += sway_ * std::sin(2 * kPi * 0.19 * t + 2 * k);
-        yaw += 0.04 * std::sin(2 * kPi * 0.23 * t + k);
+        const Vec3 dir = path_.tangent(d);
+        return {path_.at(d) + Vec3{0, 0, groundZ_}, Quat::axisAngle({0, 0, 1}, std::atan2(dir.y, dir.x))};
     }
-    return {{x, y, groundZ_}, Quat::axisAngle({0, 0, 1}, yaw)};
+    // Standing people are never quite still.
+    const int k = int(id().size());
+    const Vec3 sway{sway_ * std::sin(2 * kPi * 0.31 * t + k), sway_ * std::sin(2 * kPi * 0.19 * t + 2 * k), groundZ_};
+    return {idleAt_ + sway, Quat::axisAngle({0, 0, 1}, yaw0_ + 0.04 * std::sin(2 * kPi * 0.23 * t + k))};
 }
 
 Vec3 Walker::velocity() const {
@@ -79,11 +66,11 @@ void Walker::beforeStep(World& w, double dt) {
     actor_->setKinematicTarget(px(poseAt(w.time() + dt)));
 }
 
+void Walker::afterStep(World& w, double) { t_ = w.time(); }  // pose() matches the actor for post-step queries
+
 void Walker::record(World& w, Recorder& rec) {
     t_ = w.time();
-    const Pose p = pose();
-    rec.put("body/" + id() + "/pose",
-            {float(p.p.x), float(p.p.y), float(p.p.z), float(p.q.x), float(p.q.y), float(p.q.z), float(p.q.w)});
+    putPose(rec, "body/" + id() + "/pose", pose());
     const bool walk = walking(t_);
     const float phase = mode_ == "walk" ? float(std::fmod(distance(t_) / kStrideM, 1.0)) : 0.0f;
     const float poseId = mode_ == "walk" ? (walk ? 0.0f : 1.0f) : (mode_ == "phone" ? 2.0f : 1.0f);

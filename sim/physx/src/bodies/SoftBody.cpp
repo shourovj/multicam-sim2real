@@ -10,7 +10,7 @@ using namespace physx;
 namespace p2s {
 
 SoftBody::SoftBody(const Spec& s, World& w) : Entity(s.str("id"), "soft_body") {
-    const auto shapes = Shape::parse(s["shape"]);
+    const auto shapes = Shape::parse(s["shape"], /*allowConcave=*/true);
     if (shapes.size() != 1) s["shape"].fail("needs exactly one closed shape (a container is several)");
     shape_ = shapes.front();
     hostId_ = s.str("host", "");
@@ -37,6 +37,7 @@ SoftBody::SoftBody(const Spec& s, World& w) : Entity(s.str("id"), "soft_body") {
     if (resolution_ < 4 || resolution_ > 128) s["resolution"].fail("must be in 4..128");
     maxEdge_ = s.positive("max_edge_m", 0.12);
     iterations_ = s.integer("solver_iterations", 30);
+    if (iterations_ < 1 || iterations_ > 255) s["solver_iterations"].fail("must be in 1..255");
     maxDepen_ = s.positive("max_depenetration_mps", 2.0);
     velocity0_ = s.vec3("velocity", {0, 0, 0});
     if (shape_.type == ShapeType::Convex) s["shape"].fail("use a prism, box or mesh: a raw point cloud has no surface yet");
@@ -47,10 +48,8 @@ void SoftBody::link(World& w) { build(w); }
 void SoftBody::build(World& w) {
     PxPhysics& ph = w.physics();
     PxCudaContextManager& cuda = w.runtime().cuda();
-    std::optional<std::reference_wrapper<Entity>> hostRef;
-    if (!hostId_.empty()) hostRef = w.entity(hostId_, id());
-    if (hostRef && !hostRef->get().isRigid()) throw SpecError(id() + ": host '" + hostId_ + "' is not a rigid body");
-    Entity* host = hostRef ? &hostRef->get() : nullptr;  // PhysX attachments take the host actor by pointer
+    Entity* host = hostId_.empty() ? nullptr : &w.entity(hostId_, id());  // PhysX takes the host actor by pointer
+    if (host && !host->isRigid()) throw SpecError(id() + ": host '" + hostId_ + "' is not a rigid body");
     const Pose hostPose = host ? host->pose() : Pose{};
     const Pose place = host ? hostPose * shape_.local : pose_ * shape_.local;
 
@@ -73,8 +72,7 @@ void SoftBody::build(World& w) {
     sm.triangles.data = t.begin();
     mesh_.reset(PxDeformableVolumeExt::createDeformableVolumeMesh(cp, sm, PxU32(resolution_),
                                                                   ph.getPhysicsInsertionCallback()));
-    const PxPtr<PxDeformableVolumeMesh>& mesh = mesh_;
-    if (!mesh) throw SpecError(id() + ": tetrahedral meshing failed (is the shape closed and not too thin?)");
+    if (!mesh_) throw SpecError(id() + ": tetrahedral meshing failed (is the shape closed and not too thin?)");
 
     material_.reset(ph.createDeformableVolumeMaterial(float(youngs_), float(poisson_), float(friction_)));
     material_->setElasticityDamping(float(damping_));
@@ -86,14 +84,14 @@ void SoftBody::build(World& w) {
     body_.reset(ph.createDeformableVolume(cuda));
     if (!body_) throw std::runtime_error(id() + ": createDeformableVolume failed");
     PxDeformableVolumeMaterial* mats[] = {material_.get()};
-    pxShape_.reset(ph.createShape(PxTetrahedronMeshGeometry(mesh->getCollisionMesh()), mats, 1, true,
+    pxShape_.reset(ph.createShape(PxTetrahedronMeshGeometry(mesh_->getCollisionMesh()), mats, 1, true,
                                   PxShapeFlag::eSIMULATION_SHAPE));
-    const CollisionFilter filter = w.filterFor(id(), host ? hostId_ : "");
+    const CollisionFilter filter = w.filterFor(id(), host ? w.joinAssembly(*host) : "");
     pxShape_->setSimulationFilterData(filter.data());
     pxShape_->setContactOffset(0.01f);
     pxShape_->setRestOffset(0.0f);
     body_->attachShape(*pxShape_);
-    body_->attachSimulationMesh(*mesh->getSimulationMesh(), *mesh->getDeformableVolumeAuxData());
+    body_->attachSimulationMesh(*mesh_->getSimulationMesh(), *mesh_->getDeformableVolumeAuxData());
     w.scene().addActor(*body_);
 
     PxVec4 *sp, *sv, *cpos, *rp;
@@ -207,8 +205,6 @@ void SoftBody::readBack(World& w, bool velocities) {
         potential_ -= m * w.gravity().dot(fromPx(simPos_[size_t(i)].getXYZ()));
     }
 }
-
-void SoftBody::beforeStep(World&, double) {}
 
 void SoftBody::afterStep(World& w, double) { readBack(w, false); }
 

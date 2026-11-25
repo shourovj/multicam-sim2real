@@ -24,6 +24,20 @@ struct PoseKey {
 Pose interpolateKeys(const std::vector<PoseKey>& keys, double t);
 std::vector<PoseKey> parseKeys(const Spec& s, const std::string& key = "keys");
 
+// Kinetic (translation + rotation about the centre of mass) and gravitational energy of a PhysX body.
+Energy rigidEnergy(const physx::PxRigidDynamic& d, const Vec3& gravity);
+
+// Peak speed and peak acceleration beyond free fall (what the body's contents feel), updated after each step.
+struct MotionPeaks {
+    Vec3 lastVel;
+    double accel = 0, speed = 0;
+    void update(const Vec3& v, double dt, const Vec3& gravity) {
+        accel = std::max(accel, ((v - lastVel) / dt - gravity).norm());
+        speed = std::max(speed, v.norm());
+        lastVel = v;
+    }
+};
+
 class RigidBody : public Entity {
 public:
     RigidBody(const Spec& s, World& w, std::string kind = "rigid_body");
@@ -55,8 +69,7 @@ private:
     PxPtr<physx::PxRigidActor> actor_;
     std::vector<PoseKey> keys_;
     double linearDrag_ = 0, cd_ = 0, area_ = 0;
-    Vec3 lastVel_;
-    double peakAccel_ = 0, peakSpeed_ = 0;
+    MotionPeaks peaks_;
     struct Push {
         Vec3 force;
         double until;

@@ -74,8 +74,9 @@ void Multirotor::link(World& w) {
         M(0, int(i)) = kf_;
         M(1, int(i)) = kf_ * r.y;
         M(2, int(i)) = -kf_ * r.x;
-        M(3, int(i)) = -rotors_[i].spin * km_;
-        w.actuators().declare(rotorId(i), "rotor", m / n);
+        M(3, int(i)) = -rotors_[i].spin * km_;  // reaction torque, as applied in beforeStep
+        rotorIds_.push_back(id() + "/rotor" + std::to_string(i));
+        w.actuators().declare(rotorIds_.back(), "rotor", m / n);
     }
     mixer_ = M.pseudoInverse();
     home_ = pose().p;
@@ -97,6 +98,8 @@ Multirotor::Wrench Multirotor::control(World& w, double dt) {
     // PID with all three closed-loop poles at -wPos; the integral absorbs payloads hanging on joints.
     const Vec3 e = ref.pos - p.p;
     integral_ += e * dt;
+    const double windup = 0.5 * w.gravity().norm() / (wPos_ * wPos_ * wPos_);  // integral action capped at 0.5 g
+    if (integral_.norm() > windup) integral_ = integral_.normalized() * windup;
     Vec3 acc = ref.acc + e * (3 * wPos_ * wPos_) + (ref.vel - v) * (3 * wPos_) + integral_ * (wPos_ * wPos_ * wPos_) -
                w.gravity();
     // Lean no further than the tilt limit: keep the vertical part, shorten the horizontal part.
@@ -107,12 +110,14 @@ Multirotor::Wrench Multirotor::control(World& w, double dt) {
     const Vec3 xc{std::cos(yaw_), std::sin(yaw_), 0};
     const Vec3 yd = zd.cross(xc).normalized(), xd = yd.cross(zd);
     const Quat qd = Quat::fromAxes(xd, yd, zd);
-    const Vec3 eR = vee(qd, p.q);
+    // The inertia tensor is diagonal in the principal-axis frame, which may be rotated from the body frame.
+    const Quat qm = fromPx(d.getCMassLocalPose().q);
     const PxVec3 I = d.getMassSpaceInertiaTensor();
     const Vec3 J{I.x, I.y, I.z};
-    const Vec3 torque = -(eR.cwiseMul(J) * (wAtt_ * wAtt_)) - om.cwiseMul(J) * (2 * wAtt_) + om.cross(om.cwiseMul(J));
+    const Vec3 eR = qm.rotateInv(vee(qd, p.q)), omM = qm.rotateInv(om);
+    const Vec3 torque = -(eR.cwiseMul(J) * (wAtt_ * wAtt_)) - omM.cwiseMul(J) * (2 * wAtt_) + omM.cross(omM.cwiseMul(J));
     lastTilt_ = std::acos(std::clamp(p.q.axisZ().z, -1.0, 1.0));
-    return {m * acc.dot(p.q.axisZ()), torque};
+    return {m * acc.dot(p.q.axisZ()), qm.rotate(torque)};
 }
 
 void Multirotor::mix(const Wrench& want, double dt) {
@@ -132,14 +137,14 @@ void Multirotor::beforeStep(World& w, double dt) {
     }
     PxRigidDynamic& d = dynamic();
     const Pose p = pose();
+    const Vec3 z = p.q.axisZ();
     lastThrust_ = 0;
     for (size_t i = 0; i < rotors_.size(); ++i) {
         const Rotor& r = rotors_[i];
         const double thrust = kf_ * r.omega * r.omega;
-        const Vec3 z = p.q.axisZ();
         PxRigidBodyExt::addForceAtPos(d, px(z * thrust), px(p.transform(r.pos)));
         d.addTorque(px(z * (-r.spin * km_ * r.omega * r.omega)));
-        w.actuators().step(rotorId(i), thrust, km_ * r.omega * r.omega * r.omega, dt);
+        w.actuators().step(rotorIds_[i], thrust, km_ * r.omega * r.omega * r.omega, dt);
         lastThrust_ += thrust;
     }
 }
@@ -184,6 +189,7 @@ std::vector<std::string> Multirotor::verbs() const {
 
 void Multirotor::act(World& w, const Action& a) {
     if (a.verb == "kill") {
+        Spec::fromJson(a.params, id() + ".kill").rejectUnknownKeys();
         killed_ = true;
         w.events().emit(id() + ":kill", w.time());
         return;
@@ -191,7 +197,9 @@ void Multirotor::act(World& w, const Action& a) {
     if (a.verb == "goto") {
         const Spec p = Spec::fromJson(a.params, id() + ".goto");
         const Vec3 target = p.vec3("pos");
-        const Json goals = {{"goals", {{{"from_t", w.time()}, {"t", w.time() + p.positive("t_s")}, {"pos", toJson(target)}}}}};
+        const double duration = p.positive("t_s");
+        p.rejectUnknownKeys();
+        const Json goals = {{"goals", {{{"from_t", w.time()}, {"t", w.time() + duration}, {"pos", toJson(target)}}}}};
         goals_ = GoalPath(Spec::fromJson(goals, id() + ".goto"));
         onGround_ = false;
         return;

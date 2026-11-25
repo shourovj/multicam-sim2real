@@ -6,6 +6,7 @@
 #include <map>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "physx/Px.h"
 #include "world/Events.h"
@@ -46,6 +47,7 @@ private:
     NameOf nameOf_;
     double t_ = 0;
     std::map<std::pair<std::string, std::string>, PairStats> pairs_;
+    std::vector<physx::PxContactPairPoint> points_;  // scratch for onContact
 };
 
 // Filter shader: word0 = category bit, word1 = categories ignored, word2 = entity index, word3 = assembly id.

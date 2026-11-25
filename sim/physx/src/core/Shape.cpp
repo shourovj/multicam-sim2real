@@ -13,23 +13,60 @@ constexpr std::array<const char*, 7> kTypeNames = {"box", "sphere", "capsule", "
 
 double length2(double x, double y) { return std::sqrt(x * x + y * y); }
 
-// Signed distance to a convex CCW polygon in the plane (z of the vertices is ignored).
+// Signed distance to a simple polygon in the plane (z of the vertices is ignored): the distance to the nearest
+// edge, negative inside (crossing-number test).
 double polygonSdf(std::span<const Vec3> poly, double x, double y) {
     const size_t n = poly.size();
-    double inside = -1e300, outside = 1e300;
-    bool isInside = true;
+    double nearest = 1e300;
+    bool inside = false;
     for (size_t i = 0; i < n; ++i) {
         const Vec3& a = poly[i];
         const Vec3& b = poly[(i + 1) % n];
-        const double ex = b.x - a.x, ey = b.y - a.y, len = length2(ex, ey);
-        const double nx = ey / len, ny = -ex / len;  // outward for CCW
-        const double side = (x - a.x) * nx + (y - a.y) * ny;
-        inside = std::max(inside, side);
-        if (side > 0) isInside = false;
-        const double u = std::clamp(((x - a.x) * ex + (y - a.y) * ey) / (len * len), 0.0, 1.0);
-        outside = std::min(outside, length2(x - (a.x + u * ex), y - (a.y + u * ey)));
+        const double ex = b.x - a.x, ey = b.y - a.y;
+        const double u = std::clamp(((x - a.x) * ex + (y - a.y) * ey) / (ex * ex + ey * ey), 0.0, 1.0);
+        nearest = std::min(nearest, length2(x - (a.x + u * ex), y - (a.y + u * ey)));
+        if ((a.y > y) != (b.y > y) && x < a.x + (y - a.y) * ex / ey) inside = !inside;
     }
-    return isInside ? inside : outside;
+    return inside ? -nearest : nearest;
+}
+
+double cross2(const Vec3& o, const Vec3& a, const Vec3& b) { return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x); }
+
+// Triangulates a simple counter-clockwise polygon by ear clipping; returns index triples, counter-clockwise.
+std::vector<std::array<int, 3>> earClip(std::span<const Vec3> poly) {
+    std::vector<int> idx(poly.size());
+    for (size_t i = 0; i < idx.size(); ++i) idx[i] = int(i);
+    std::vector<std::array<int, 3>> out;
+    while (idx.size() > 3) {
+        bool clipped = false;
+        for (size_t k = 0; k < idx.size() && !clipped; ++k) {
+            const int a = idx[(k + idx.size() - 1) % idx.size()], b = idx[k], c = idx[(k + 1) % idx.size()];
+            if (cross2(poly[size_t(a)], poly[size_t(b)], poly[size_t(c)]) <= 1e-14) continue;  // reflex corner
+            bool empty = true;
+            for (int o : idx) {
+                if (o == a || o == b || o == c) continue;
+                const Vec3& p = poly[size_t(o)];
+                if (cross2(poly[size_t(a)], poly[size_t(b)], p) >= 0 && cross2(poly[size_t(b)], poly[size_t(c)], p) >= 0 &&
+                    cross2(poly[size_t(c)], poly[size_t(a)], p) >= 0)
+                    empty = false;
+            }
+            if (!empty) continue;
+            out.push_back({a, b, c});
+            idx.erase(idx.begin() + long(k));
+            clipped = true;
+        }
+        if (!clipped) break;  // only for degenerate input, which parseProfile rejects
+    }
+    if (idx.size() == 3) out.push_back({idx[0], idx[1], idx[2]});
+    return out;
+}
+
+bool segmentsCross(const std::array<double, 2>& a, const std::array<double, 2>& b, const std::array<double, 2>& c,
+                   const std::array<double, 2>& d) {
+    const auto orient = [](const std::array<double, 2>& p, const std::array<double, 2>& q, const std::array<double, 2>& r) {
+        return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+    };
+    return orient(a, b, c) * orient(a, b, d) < 0 && orient(c, d, a) * orient(c, d, b) < 0;
 }
 
 // Combines a 2D cross-section distance with a slab |z| distance, as for an extrusion.
@@ -109,8 +146,9 @@ std::vector<Shape> container(const Spec& s, const Pose& local) {
     return out;
 }
 
-// A prism profile: at least three [x, y] points forming a convex, counter-clockwise, simple polygon.
-std::vector<std::array<double, 2>> parseProfile(const Spec& prof) {
+// A prism profile: at least three [x, y] points forming a counter-clockwise simple polygon, convex unless
+// `allowConcave` (soft bodies, which are tetrahedralised rather than collided as convex hulls).
+std::vector<std::array<double, 2>> parseProfile(const Spec& prof, bool allowConcave) {
     if (!prof.isArray()) prof.fail("expected an array of [x, y]");
     std::vector<std::array<double, 2>> pts;
     for (size_t i = 0; i < prof.size(); ++i) {
@@ -130,13 +168,18 @@ std::vector<std::array<double, 2>> parseProfile(const Spec& prof) {
         const double ex = b[0] - a[0], ey = b[1] - a[1], fx = c[0] - b[0], fy = c[1] - b[1];
         if (length2(ex, ey) < 1e-9) prof.at((i + 1) % n).fail("repeats the previous point");
         const double cross = ex * fy - ey * fx;
-        if (cross < -1e-12)
-            prof.fail("profile must be convex and counter-clockwise; split concave outlines into several prisms");
+        if (cross < -1e-12 && !allowConcave)
+            prof.fail("profile must be convex and counter-clockwise; split concave outlines into several prisms "
+                      "(soft bodies accept concave outlines)");
         turning += std::atan2(cross, ex * fx + ey * fy);
         area2 += a[0] * b[1] - b[0] * a[1];
     }
-    if (area2 <= 1e-12) prof.fail("profile has no area");
-    if (std::fabs(turning - 2 * kPi) > 1e-6) prof.fail("profile must be a simple convex polygon, wound once");
+    if (area2 <= 1e-12) prof.fail("profile has no area or is clockwise; list the points counter-clockwise");
+    if (std::fabs(turning - 2 * kPi) > 1e-6) prof.fail("profile must be a simple polygon, wound once counter-clockwise");
+    for (size_t i = 0; i < n; ++i)
+        for (size_t j = i + 2; j < n; ++j)
+            if ((j + 1) % n != i && segmentsCross(pts[i], pts[(i + 1) % n], pts[j], pts[(j + 1) % n]))
+                prof.fail("profile edges cross each other");
     return pts;
 }
 
@@ -218,11 +261,11 @@ Shape Shape::mesh(std::vector<Vec3> vertices, std::vector<std::array<int, 3>> tr
 void Shape::buildPrismSurface() {
     const int n = static_cast<int>(vertices.size() / 2);
     const double z0 = vertices.front().z, z1 = vertices.back().z;
-    planes = {{{0, 0, -1}, z0}, {{0, 0, 1}, -z1}};
+    planes = {{{0, 0, -1}, z0}, {{0, 0, 1}, -z1}};  // complete only for convex profiles (rigid prisms)
     triangles.clear();
-    for (int k = 1; k + 1 < n; ++k) {
-        triangles.push_back({0, k + 1, k});             // bottom cap, facing -z
-        triangles.push_back({n, n + k, n + k + 1});     // top cap, facing +z
+    for (const auto& [a, b, c] : earClip(std::span(vertices).first(size_t(n)))) {
+        triangles.push_back({a, c, b});              // bottom cap, facing -z
+        triangles.push_back({n + a, n + b, n + c});  // top cap, facing +z
     }
     for (int i = 0; i < n; ++i) {
         const int j = (i + 1) % n;
@@ -234,7 +277,7 @@ void Shape::buildPrismSurface() {
     }
 }
 
-std::vector<Shape> Shape::parse(const Spec& s) {
+std::vector<Shape> Shape::parse(const Spec& s, bool allowConcave) {
     const std::string type =
         s.oneOf("type", {"box", "sphere", "capsule", "cylinder", "prism", "convex", "mesh", "container"});
     const Pose local = s.pose();
@@ -252,7 +295,7 @@ std::vector<Shape> Shape::parse(const Spec& s) {
     } else if (type == "cylinder") {
         out.push_back(cylinder(s.positive("radius"), s.positive("half_length"), local));
     } else if (type == "prism") {
-        const auto profile = parseProfile(s["profile"]);
+        const auto profile = parseProfile(s["profile"], allowConcave);
         const double z0 = s.num("z0"), z1 = s.num("z1");
         if (z1 <= z0) s["z1"].fail("z1 must be > z0");
         out.push_back(prism(profile, z0, z1, local));

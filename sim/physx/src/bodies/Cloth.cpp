@@ -42,11 +42,17 @@ Cloth::Cloth(const Spec& s, World&) : Entity(s.str("id"), "cloth") {
         ct_ = s["drag"].num("tangent", 0.15);
     }
     iterations_ = s.integer("solver_iterations", 30);
+    if (iterations_ < 1 || iterations_ > 255) s["solver_iterations"].fail("must be in 1..255");
 }
 
 void Cloth::link(World& w) {
     PxPhysics& ph = w.physics();
     PxCudaContextManager& cuda = w.runtime().cuda();
+    Entity* host = hostId_.empty() ? nullptr : &w.entity(hostId_, id());  // PhysX takes the host actor by pointer
+    if (host && !host->isRigid()) throw SpecError(id() + ": host '" + hostId_ + "' is not a rigid body");
+    const Pose hostPose = host ? host->pose() : Pose{};
+    const Pose world = hostPose * pose_;
+
     std::vector<PxVec3> verts;
     std::vector<PxU32> tris;
     for (int i = 0; i < nu_; ++i)
@@ -80,13 +86,11 @@ void Cloth::link(World& w) {
     PxDeformableSurfaceMaterial* mats[] = {material_.get()};
     pxShape_.reset(ph.createShape(PxTriangleMeshGeometry(mesh_.get()), mats, 1, true,
                                   PxShapeFlag::eVISUALIZATION | PxShapeFlag::eSIMULATION_SHAPE));
-    pxShape_->setSimulationFilterData(w.filterFor(id(), hostId_).data());
+    pxShape_->setSimulationFilterData(
+        w.filterFor(id(), hostId_.empty() ? "" : w.joinAssembly(w.entity(hostId_, id()))).data());
     surface_->attachShape(*pxShape_);
     w.scene().addActor(*surface_);
 
-    std::optional<std::reference_wrapper<Entity>> host;
-    if (!hostId_.empty()) host = w.entity(hostId_, id());
-    const Pose world = host ? host->get().pose() * pose_ : pose_;
     PxVec4 *p, *v, *r;
     nVerts_ = int(PxDeformableSurfaceExt::allocateAndInitializeHostMirror(*surface_, verts.data(), nullptr, verts.data(),
                                                                           0.5f, px(world), &cuda, p, v, r));
@@ -121,7 +125,6 @@ void Cloth::link(World& w) {
 
     std::vector<PxU32> pinIdx;
     std::vector<PxVec4> pinPos;
-    const Pose hostPose = host ? host->get().pose() : Pose{};
     for (int i = 0; i < nVerts_; ++i) {
         const Vec3 wp = fromPx(pos_[size_t(i)].getXYZ());
         const Vec3 local = world.transformInv(wp);
@@ -141,7 +144,7 @@ void Cloth::link(World& w) {
         ad.type[0] = PxDeformableAttachmentTargetType::eVERTEX;
         ad.indices[0].data = pinIdx.data();
         ad.indices[0].count = PxU32(pinIdx.size());
-        ad.actor[1] = host ? &host->get().actor() : nullptr;
+        ad.actor[1] = host ? &host->actor() : nullptr;
         ad.type[1] = host ? PxDeformableAttachmentTargetType::eRIGID : PxDeformableAttachmentTargetType::eWORLD;
         ad.coords[1].data = pinPos.data();
         ad.coords[1].count = PxU32(pinPos.size());

@@ -42,9 +42,8 @@ private:
     };
     Wrench control(World& w, double dt);
     void mix(const Wrench& want, double dt);
-    std::string rotorId(size_t i) const { return id() + "/rotor" + std::to_string(i); }
-
     std::vector<Rotor> rotors_;
+    std::vector<std::string> rotorIds_;  // actuator ids
     GoalPath goals_;
     double kf_ = 0, km_ = 0, omegaMax_ = 0, tau_ = 0.03, thrustToWeight_ = 2;
     double yaw_ = 0, tiltMax_ = 0, wPos_ = 2.2, wAtt_ = 25;

@@ -41,7 +41,7 @@ private:
     physx::PxRigidActor* actorOf(World& w, const std::string& id);  // PhysX joints take actor pointers; null = world
     void startMotor(World& w, const Motor& m);
 
-    std::string type_, a_, b_;
+    std::string type_, a_, b_, motorId_;
     Vec3 anchor_, axis_{1, 0, 0};
     std::optional<Range> limits_;
     std::optional<Motor> motor_;

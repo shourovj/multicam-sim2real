@@ -16,20 +16,23 @@ namespace {
 using Clk = std::chrono::steady_clock;
 double since(Clk::time_point a) { return std::chrono::duration<double>(Clk::now() - a).count(); }
 
-Aabb worldBounds(const Entity& e) {
-    Aabb box;
-    const Pose p = e.pose();
-    for (const Shape& s : e.shapes()) {
-        const Aabb b = s.bounds().transformed(p * s.local);
-        box.add(b.lo);
-        box.add(b.hi);
-    }
-    return box;
-}
+Aabb worldBounds(const Entity& e) { return boundsOf(e.shapes(), e.pose()); }
 
 double aabbGap(const Aabb& a, const Aabb& b) {
     const Vec3 gap = (a.lo - b.hi).cwiseMax(b.lo - a.hi).cwiseMax({0, 0, 0});
     return gap.norm();
+}
+
+Aabb pointBounds(std::span<const Vec3> pts) {
+    Aabb box;
+    for (const Vec3& p : pts) box.add(p);
+    return box;
+}
+
+Aabb grown(Aabb box, double margin) {
+    box.lo -= Vec3{margin, margin, margin};
+    box.hi += Vec3{margin, margin, margin};
+    return box;
 }
 
 }  // namespace
@@ -44,11 +47,19 @@ World::World(Runtime& runtime, const Spec& scene)
       materials_(runtime.physics()),
       shapeFactory_(runtime, materials_),
       contacts_(events_, [this](uint32_t i) { return entityName(i); }) {
-    build(scene);
+    try {
+        build(scene);
+    } catch (...) {
+        releaseEntities();  // the destructor does not run when the constructor throws
+        throw;
+    }
 }
 
-World::~World() {
-    entities_.clear();  // actors and joints go before the scene
+World::~World() { releaseEntities(); }
+
+void World::releaseEntities() {
+    // Newest first: joints, attachments and deformables go before the bodies they hold, and all before the scene.
+    while (!entities_.empty()) entities_.pop_back();
     scene_.reset();
 }
 
@@ -74,6 +85,22 @@ CollisionFilter World::filterFor(const std::string& entityId, const std::string&
         assemblyOf_[entityId] = assembly;
     }
     return f;
+}
+
+std::string World::joinAssembly(Entity& host) {
+    if (const auto it = assemblyOf_.find(host.id()); it != assemblyOf_.end()) return it->second;
+    const uint32_t aid = assemblies_.try_emplace(host.id(), uint32_t(assemblies_.size() + 1)).first->second;
+    assemblyOf_[host.id()] = host.id();
+    physx::PxRigidActor& actor = host.actor();
+    std::vector<physx::PxShape*> shapes(actor.getNbShapes());
+    actor.getShapes(shapes.data(), physx::PxU32(shapes.size()));
+    for (physx::PxShape* sh : shapes) {
+        physx::PxFilterData d = sh->getSimulationFilterData();
+        d.word3 = aid;
+        sh->setSimulationFilterData(d);
+        sh->setQueryFilterData(d);
+    }
+    return host.id();
 }
 
 void World::build(const Spec& s) {
@@ -162,6 +189,10 @@ void World::build(const Spec& s) {
         if (ref.factor < 1 || ref.factor > 128) r["factor"].fail("must be in 1..128");
         refinements_.push_back(ref);
     }
+    for (const auto& e : entities_) {
+        const auto it = assemblyOf_.find(e->id());
+        assemblyIds_.push_back(it == assemblyOf_.end() ? 0 : assemblies_.at(it->second));
+    }
     s.rejectUnknownKeys();
 }
 
@@ -191,59 +222,92 @@ void World::step(double h) {
     detectDeformableContacts();
 }
 
-void World::detectDeformableContacts() {
-    constexpr double kTouch = 0.015;     // m: closer than this counts as touching (PhysX contact offsets are ~1 cm)
-    constexpr size_t kMaxPoints = 4000;  // points tested per deformable per step
-    const auto sameAssembly = [this](const std::string& a, const std::string& b) {
-        const auto ia = assemblyOf_.find(a), ib = assemblyOf_.find(b);
-        return ia != assemblyOf_.end() && ib != assemblyOf_.end() && ia->second == ib->second;
+namespace {
+
+// m: closer than this counts as touching (PhysX contact offsets are ~1 cm). Point sets whose points rest
+// further from a surface (large particles) widen it to their contactRadius() plus kSlack.
+constexpr double kTouch = 0.015, kSlack = 0.005;
+constexpr size_t kMaxPoints = 4000;  // points tested per deformable per step
+
+size_t sampleStride(size_t n) { return std::max<size_t>(1, n / kMaxPoints); }
+
+}  // namespace
+
+bool World::pointsTouch(std::span<const Vec3> a, const Aabb& boxA, std::span<const Vec3> b, const Aabb& boxB,
+                        double touch) {
+    if (aabbGap(boxA, boxB) > touch) return false;
+    // Only points near the other set's box can touch it. Those of b go in a spatial hash (cell = touch distance)
+    // kept as a list sorted by packed cell key (x, y, z: 21 bits each), so a column of three cells is one range.
+    const Aabb nearA = grown(boxB, touch), nearB = grown(boxA, touch);
+    const Vec3 origin = nearA.lo - Vec3{touch, touch, touch};  // every sampled point is inside nearA
+    constexpr uint64_t kMaxCell = (uint64_t(1) << 21) - 2;
+    const auto cell = [&](const Vec3& p) {
+        const Vec3 c = (p - origin) / touch;
+        return std::array<uint64_t, 3>{std::min(uint64_t(c.x), kMaxCell), std::min(uint64_t(c.y), kMaxCell),
+                                       std::min(uint64_t(c.z), kMaxCell)};
     };
-    for (size_t ei = 0; ei < entities_.size(); ++ei) {
-        const Entity* e = entities_[ei].get();
-        const std::span<const Vec3> pts = e->contactPoints();
+    const auto key = [](uint64_t x, uint64_t y, uint64_t z) { return x << 42 | y << 21 | z; };
+    cells_.clear();
+    for (size_t i = 0; i < b.size(); i += sampleStride(b.size()))
+        if (nearB.contains(b[i])) {
+            const auto c = cell(b[i]);
+            cells_.push_back({key(c[0], c[1], c[2]), b[i]});
+        }
+    if (cells_.empty()) return false;
+    std::sort(cells_.begin(), cells_.end(), [](const auto& l, const auto& r) { return l.first < r.first; });
+    const auto byKey = [](const std::pair<uint64_t, Vec3>& entry, uint64_t k) { return entry.first < k; };
+    for (size_t i = 0; i < a.size(); i += sampleStride(a.size())) {
+        if (!nearA.contains(a[i])) continue;
+        const auto c = cell(a[i]);
+        for (uint64_t x = c[0] - 1; x <= c[0] + 1; ++x)
+            for (uint64_t y = c[1] - 1; y <= c[1] + 1; ++y) {
+                const uint64_t last = key(x, y, c[2] + 1);
+                for (auto it = std::lower_bound(cells_.begin(), cells_.end(), key(x, y, c[2] - 1), byKey);
+                     it != cells_.end() && it->first <= last; ++it)
+                    if ((it->second - a[i]).norm2() < touch * touch) return true;
+            }
+    }
+    return false;
+}
+
+void World::detectDeformableContacts() {
+    const size_t n = entities_.size();
+    pointBoxes_.assign(n, Aabb{});
+    bool any = false;
+    for (size_t i = 0; i < n; ++i) {
+        const std::span<const Vec3> pts = entities_[i]->contactPoints();
         if (pts.empty()) continue;
-        const size_t stride = std::max<size_t>(1, pts.size() / kMaxPoints);
-        Aabb box;
-        for (const Vec3& p : pts) box.add(p);
-        for (size_t oi = 0; oi < entities_.size(); ++oi) {
-            const Entity* o = entities_[oi].get();
-            if (oi == ei || sameAssembly(e->id(), o->id()) || o->id() == e->contactAlias()) continue;
-            const std::span<const Vec3> other = o->contactPoints();
+        pointBoxes_[i] = pointBounds(pts);
+        any = true;
+    }
+    if (!any) return;
+    for (size_t ei = 0; ei < n; ++ei) {
+        const Entity& e = *entities_[ei];
+        const std::span<const Vec3> pts = e.contactPoints();
+        if (pts.empty()) continue;
+        for (size_t oi = 0; oi < n; ++oi) {
+            const Entity& o = *entities_[oi];
+            const bool sameAssembly = assemblyIds_[ei] != 0 && assemblyIds_[ei] == assemblyIds_[oi];
+            if (oi == ei || sameAssembly || o.id() == e.contactAlias()) continue;
+            const std::span<const Vec3> other = o.contactPoints();
+            const double touch = std::max(kTouch, e.contactRadius() + o.contactRadius() + kSlack);
             bool touching = false;
             if (!other.empty()) {
                 if (oi < ei) continue;  // each deformable pair once
-                Aabb ob;
-                for (const Vec3& p : other) ob.add(p);
-                if (aabbGap(box, ob) > kTouch) continue;
-                // Spatial hash of the other body's points, cell = touch distance.
-                std::map<std::array<long, 3>, std::vector<Vec3>> grid;
-                const auto cell = [](const Vec3& p) {
-                    return std::array<long, 3>{long(std::floor(p.x / kTouch)), long(std::floor(p.y / kTouch)),
-                                               long(std::floor(p.z / kTouch))};
-                };
-                for (size_t i = 0; i < other.size(); i += std::max<size_t>(1, other.size() / kMaxPoints))
-                    grid[cell(other[i])].push_back(other[i]);
-                for (size_t i = 0; i < pts.size() && !touching; i += stride) {
-                    const auto c = cell(pts[i]);
-                    for (long dx = -1; dx <= 1 && !touching; ++dx)
-                        for (long dy = -1; dy <= 1 && !touching; ++dy)
-                            for (long dz = -1; dz <= 1 && !touching; ++dz) {
-                                const auto it = grid.find({c[0] + dx, c[1] + dy, c[2] + dz});
-                                if (it == grid.end()) continue;
-                                for (const Vec3& q : it->second)
-                                    if ((q - pts[i]).norm() < kTouch) touching = true;
-                            }
-                }
-            } else if (!o->shapes().empty()) {
-                if (aabbGap(box, worldBounds(*o)) > kTouch) continue;
-                const PosedShapes body{o->shapes(), o->pose()};
-                for (size_t i = 0; i < pts.size() && !touching; i += stride) touching = body.sdf(pts[i]) < kTouch;
+                touching = pointsTouch(pts, pointBoxes_[ei], other, pointBoxes_[oi], touch);
+            } else if (!o.shapes().empty()) {
+                const Aabb ob = worldBounds(o);
+                if (aabbGap(pointBoxes_[ei], ob) > touch) continue;
+                const Aabb near = grown(ob, touch);
+                const PosedShapes body{o.shapes(), o.pose()};
+                for (size_t i = 0; i < pts.size() && !touching; i += sampleStride(pts.size()))
+                    touching = near.contains(pts[i]) && body.sdf(pts[i]) < touch;
             }
             if (!touching) continue;
-            contacts_.touch(e->id(), o->id(), t_);
-            const std::string a = e->contactAlias().empty() ? e->id() : e->contactAlias();
-            const std::string b = o->contactAlias().empty() ? o->id() : o->contactAlias();
-            if (a != e->id() || b != o->id()) contacts_.touch(a, b, t_);
+            contacts_.touch(e.id(), o.id(), t_);
+            const std::string& a = e.contactAlias().empty() ? e.id() : e.contactAlias();
+            const std::string& b = o.contactAlias().empty() ? o.id() : o.contactAlias();
+            if (a != e.id() || b != o.id()) contacts_.touch(a, b, t_);
         }
     }
 }
@@ -332,6 +396,7 @@ Json World::describe() const {
             {"triggers", trig},
             {"events", events_.toJson()},
             {"contacts", contacts_.toJson()},
+            {"assemblies", assemblyOf_},
             {"actuators", actuators_.toJson()}};
 }
 

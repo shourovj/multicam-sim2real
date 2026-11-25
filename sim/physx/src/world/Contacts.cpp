@@ -42,7 +42,7 @@ void ContactReporter::endStep(double dt) {
 
 void ContactReporter::onContact(const PxContactPairHeader& header, const PxContactPair* pairs, PxU32 n) {
     if (header.flags & (PxContactPairHeaderFlag::eREMOVED_ACTOR_0 | PxContactPairHeaderFlag::eREMOVED_ACTOR_1)) return;
-    std::vector<PxContactPairPoint> pts;
+    std::vector<PxContactPairPoint>& pts = points_;
     for (PxU32 i = 0; i < n; ++i) {
         const PxContactPair& cp = pairs[i];
         if (cp.flags & (PxContactPairFlag::eREMOVED_SHAPE_0 | PxContactPairFlag::eREMOVED_SHAPE_1)) continue;

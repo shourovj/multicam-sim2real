@@ -12,20 +12,21 @@ TrafficSignal::TrafficSignal(const Spec& s, World&) : Entity(s.str("id"), "traff
     last_ = state(0);
 }
 
-std::string TrafficSignal::state(double t) const {
+const std::string& TrafficSignal::state(double t) const {
     for (const Phase& p : plan_)
         if (t < p.until) return p.state;
     return plan_.back().state;
 }
 
 void TrafficSignal::afterStep(World& w, double) {
-    const std::string now = state(w.time());
-    if (now != last_) w.events().emit(id() + ":" + now, w.time());
+    const std::string& now = state(w.time());
+    if (now == last_) return;
+    w.events().emit(id() + ":" + now, w.time());
     last_ = now;
 }
 
 void TrafficSignal::record(World& w, Recorder& rec) {
-    const std::string s = state(w.time());
+    const std::string& s = state(w.time());
     rec.put("signal/" + id(), {s == "red" ? 0.0f : s == "yellow" ? 1.0f : 2.0f});
 }
 

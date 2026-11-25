@@ -31,6 +31,8 @@ class Polyline {
 public:
     Polyline() = default;
     explicit Polyline(std::vector<std::array<double, 2>> pts);
+    // From a scene list [[x, y], ...] of at least two points.
+    static Polyline parse(const Spec& list);
     double length() const { return s_.back(); }
     Vec3 at(double s) const;          // point (z = 0)
     Vec3 tangent(double s) const;
@@ -50,10 +52,9 @@ public:
     explicit Driver(const Spec& s);
     void link(World& w, const std::string& owner);
 
-    // `s` is where the vehicle is: its centre, projected on the path.
-    DriveCommand update(World& w, const std::string& owner, const Pose& pose, double speed, const VehicleLimits& lim);
-    void brakeHard(double level) { forcedBrake_ = level; }
-    void release() { released_ = true; }
+    // Commands for the next step of length dt; `speed` is the forward speed of the vehicle at `pose` (its centre).
+    DriveCommand update(World& w, const std::string& owner, const Pose& pose, double speed, const VehicleLimits& lim,
+                        double dt);
     void setCruise(double v) { cruise_ = v; limit_ = path_.speedLimit(cruise_, latAccel_, brakeComfort_); }
     double arc() const { return s_; }
     Json toJson() const;
@@ -74,8 +75,8 @@ private:
     std::optional<std::reference_wrapper<TrafficSignal>> signal_;
     std::vector<std::reference_wrapper<Walker>> yield_;
     std::optional<bool> yellowGo_;
-    double s_ = 0, targetSpeed_ = 0, forcedBrake_ = -1;
-    bool released_ = false, stopped_ = false, passedStop_ = false, initialised_ = false;
+    double s_ = 0, targetSpeed_ = 0;
+    bool stopped_ = false, passedStop_ = false, initialised_ = false;
 };
 
 }  // namespace p2s

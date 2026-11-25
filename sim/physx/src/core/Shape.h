@@ -44,8 +44,9 @@ public:
     std::vector<std::array<int, 3>> triangles;  // mesh (and the triangulated surface of every polyhedron)
     std::vector<Plane> planes;        // prism, convex: the polyhedron's faces
 
-    // Parses one entry of a body's "shapes" list. A container returns several boxes.
-    static std::vector<Shape> parse(const Spec& s);
+    // Parses one entry of a body's "shapes" list. A container returns several boxes. Concave prism profiles are
+    // only allowed for deformables (they are tetrahedralised; rigid shapes must be convex for PhysX).
+    static std::vector<Shape> parse(const Spec& s, bool allowConcave = false);
     static Shape box(const Vec3& halfExtents, const Pose& local = {});
     static Shape sphere(double r, const Pose& local = {});
     static Shape capsule(double r, double halfLength, const Pose& local = {});

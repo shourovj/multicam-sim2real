@@ -32,6 +32,7 @@ public:
     void act(World& w, const Action& a) override;
     Energy energy(const World& w) const override;
     std::span<const Vec3> contactPoints() const override { return alivePoints_; }
+    double contactRadius() const override { return restOffset_; }
 
 private:
     enum class Kind { Fluid, Granular, Smoke };
@@ -72,7 +73,7 @@ private:
     std::vector<double> born_;  // birth time per slot; < -1e8 = free
     std::vector<int> free_;     // free slots, lowest index last
     std::vector<Vec3> alivePoints_;
-    float invMass_ = 1;
+    float invMass_ = 1, restOffset_ = 0;  // restOffset_: particle centre to solid surface at rest
     uint32_t phase_ = 0;
     double emitted_ = 0, kinetic_ = 0, potential_ = 0;
     bool dirty_ = false;

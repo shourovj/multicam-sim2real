@@ -74,11 +74,18 @@ public:
     CollisionFilter filterFor(const std::string& entityId, const std::string& assembly = "", uint32_t category = 1,
                               uint32_t ignores = 0);
     std::string entityName(uint32_t index) const;
+    // The assembly of a rigid entity, creating one named after it (and re-filtering its shapes) if it has none, so
+    // parts mounted on it (a crumple zone, a flag) never collide with it.
+    std::string joinAssembly(Entity& host);
 
 private:
     void build(const Spec& scene);
+    void releaseEntities();
     void step(double h);
     void detectDeformableContacts();
+    // Whether any sampled point of `a` is closer than `touch` to a sampled point of `b`.
+    bool pointsTouch(std::span<const Vec3> a, const Aabb& boxA, std::span<const Vec3> b, const Aabb& boxB,
+                     double touch);
     void recordFrame(int frame, Recorder& rec);
     bool refining();
     Json describe() const;
@@ -93,6 +100,9 @@ private:
     std::map<std::string, size_t> index_;
     std::map<std::string, uint32_t> assemblies_;
     std::map<std::string, std::string> assemblyOf_;  // entity id -> assembly name
+    std::vector<uint32_t> assemblyIds_;              // per entity, 0 = none
+    std::vector<Aabb> pointBoxes_;                   // contact-point bounds per entity, this step
+    std::vector<std::pair<uint64_t, Vec3>> cells_;   // spatial hash scratch for pointsTouch
     std::vector<std::unique_ptr<Camera>> cameras_;
     std::vector<Trigger> triggers_;
     std::vector<Refinement> refinements_;

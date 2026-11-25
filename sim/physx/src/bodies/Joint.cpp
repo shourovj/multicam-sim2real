@@ -8,6 +8,7 @@ Joint::Joint(const Spec& s, World&) : Entity(s.str("id"), "joint") {
     type_ = s.oneOf("type", {"fixed", "revolute", "prismatic", "spherical", "distance"});
     a_ = s.str("a", "world");
     b_ = s.str("b");
+    if (a_ == b_) s["b"].fail("a joint needs two different bodies");
     anchor_ = s.vec3("anchor");
     if (type_ == "revolute" || type_ == "prismatic") {
         axis_ = s.vec3("axis").normalized();
@@ -91,7 +92,8 @@ void Joint::startMotor(World& w, const Motor& m) {
     j.setDriveForceLimit(float(m.maxForce));
     j.setRevoluteJointFlag(PxRevoluteJointFlag::eDRIVE_ENABLED, true);
     const auto* body = w.entity(b_, id()).actor().is<PxRigidDynamic>();
-    w.actuators().declare(id() + "/motor", "joint_motor", body ? body->getMass() : 0.0, true);
+    motorId_ = id() + "/motor";
+    w.actuators().declare(motorId_, "joint_motor", body ? body->getMass() : 0.0, true);
     motor_ = m;
 }
 
@@ -107,8 +109,13 @@ void Joint::afterStep(World& w, double dt) {
         auto& j = static_cast<PxRevoluteJoint&>(*joint_);
         PxVec3 force, torque;
         j.getConstraint()->getForce(force, torque);
-        const double tau = torque.dot(j.getRelativeTransform().q.getBasisVector0());
-        w.actuators().step(id() + "/motor", tau, tau * j.getVelocity(), dt);
+        // The constraint torque is in world space; the hinge axis is the joint frame's X on actor 0.
+        PxRigidActor *a0 = nullptr, *a1 = nullptr;
+        j.getActors(a0, a1);
+        PxTransform frame = j.getLocalPose(PxJointActorIndex::eACTOR0);
+        if (a0) frame = a0->getGlobalPose() * frame;
+        const double tau = torque.dot(frame.q.getBasisVector0());
+        w.actuators().step(motorId_, tau, tau * j.getVelocity(), dt);
     }
 }
 
@@ -131,16 +138,20 @@ Json Joint::describe() const {
 }
 
 void Joint::act(World& w, const Action& a) {
-    if (broken_) return;
-    if (a.verb == "release") {
-        broken_ = true;
-        joint_.reset();
-        w.events().emit(id() + ":released", w.time());
+    const Spec p = Spec::fromJson(a.params, id() + "." + a.verb);
+    if (a.verb == "motor") {
+        if (type_ != "revolute") throw SpecError(id() + ": only revolute joints have a motor");
+        const double velocity = p.num("velocity");
+        const double maxForce = motor_ ? p.positive("max_force", motor_->maxForce) : p.positive("max_force");
+        p.rejectUnknownKeys();
+        if (!broken_) startMotor(w, {velocity, maxForce});
         return;
     }
-    if (type_ != "revolute") throw SpecError(id() + ": only revolute joints have a motor");
-    const Spec p = Spec::fromJson(a.params, id() + ".motor");
-    startMotor(w, {p.num("velocity"), p.positive("max_force", motor_ ? motor_->maxForce : 0)});
+    p.rejectUnknownKeys();
+    if (broken_) return;
+    broken_ = true;
+    joint_.reset();
+    w.events().emit(id() + ":released", w.time());
 }
 
 }  // namespace p2s

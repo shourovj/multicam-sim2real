@@ -7,6 +7,7 @@
 #pragma once
 
 #include "bodies/RigidBody.h"
+#include "control/Driver.h"
 
 namespace p2s {
 
@@ -15,6 +16,7 @@ public:
     Walker(const Spec& s, World& w);
 
     void beforeStep(World& w, double dt) override;
+    void afterStep(World& w, double dt) override;
     void record(World& w, Recorder& rec) override;
     Json describe() const override;
     bool isRigid() const override { return true; }
@@ -28,8 +30,8 @@ private:
     Pose poseAt(double t) const;
     double distance(double t) const;
 
-    std::vector<std::array<double, 2>> path_;
-    std::vector<double> knots_;
+    Polyline path_;  // walking
+    Vec3 idleAt_;    // standing
     double speed_ = 1.4, startS_ = 0, offset_ = 0, height_ = 1.75, radius_ = 0.25, groundZ_ = 0, sway_ = 0.02;
     double yaw0_ = 0, t_ = 0;
     std::string mode_ = "walk";

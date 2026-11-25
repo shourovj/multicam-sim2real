@@ -23,8 +23,11 @@ Vehicle::Vehicle(const Spec& s, World& w) : Entity(s.str("id"), "vehicle") {
         bool steer, drive;
     };
     std::vector<Axle> axles;
-    for (const Spec& a : ws.items("axles"))
+    for (const Spec& a : ws.items("axles")) {
         axles.push_back({a.num("x"), a.positive("track_m"), a.flag("steer", false), a.flag("drive", true)});
+        if (axles.size() > 1 && axles.back().x >= axles[axles.size() - 2].x)
+            a["x"].fail("list axles front to back (x decreasing; +X is forward)");
+    }
     if (axles.size() < 2) ws.fail("needs at least two axles");
     nWheels_ = int(axles.size() * 2);
     if (nWheels_ > int(PxVehicleLimits::eMAX_NB_WHEELS)) ws.fail("too many wheels");
@@ -37,12 +40,7 @@ Vehicle::Vehicle(const Spec& s, World& w) : Entity(s.str("id"), "vehicle") {
     const double maxSteer = deg2rad(lim.positive("max_steer_deg", 30));
     const double mass = s.positive("mass_kg"), g = w.gravity().norm();
 
-    Aabb box;
-    for (const Shape& sh : shapes_) {
-        const Aabb b = sh.bounds().transformed(sh.local);
-        box.add(b.lo);
-        box.add(b.hi);
-    }
+    const Aabb box = boundsOf(shapes_);
     const Vec3 dims = box.extent();
     const Vec3 com = s.vec3("com", {box.center().x, box.center().y, std::max(wheelRadius_, box.lo.z + 0.4 * dims.z)});
 
@@ -82,11 +80,10 @@ Vehicle::Vehicle(const Spec& s, World& w) : Entity(s.str("id"), "vehicle") {
     }
     std::vector<PxReal> sprung(static_cast<size_t>(nWheels_));
     PxVehicleComputeSprungMasses(PxU32(nWheels_), rel.data(), PxReal(mass), PxVehicleAxes::ePosZ, sprung.data());
-    int nDriven = 0, nSteer = 0;
+    int nDriven = 0;
     for (int i = 0; i < nWheels_; ++i) {
         const Axle& a = axles[size_t(i / 2)];
         nDriven += a.drive;
-        nSteer += a.steer;
         bp.brakeResponseParams[0].wheelResponseMultipliers[i] = 1.0f;
         bp.brakeResponseParams[1].wheelResponseMultipliers[i] = 0.0f;
         bp.steerResponseParams.wheelResponseMultipliers[i] = a.steer ? 1.0f : 0.0f;
@@ -128,9 +125,9 @@ Vehicle::Vehicle(const Spec& s, World& w) : Entity(s.str("id"), "vehicle") {
         wp.dampingRate = 0.25f;
     }
     if (nDriven == 0) ws.fail("no axle has drive: true");
-    if (nSteer > 0) {
-        bp.ackermannParams[0].wheelIds[0] = 0;
-        bp.ackermannParams[0].wheelIds[1] = 1;
+    if (axles.front().steer) {  // wheelIds: [0] on -Y (right), [1] on +Y (left); even wheel ids are the left ones
+        bp.ackermannParams[0].wheelIds[0] = 1;
+        bp.ackermannParams[0].wheelIds[1] = 0;
         bp.ackermannParams[0].wheelBase = float(axles.front().x - axles.back().x);
         bp.ackermannParams[0].trackWidth = float(axles.front().track);
         bp.ackermannParams[0].strength = 1.0f;
@@ -140,28 +137,39 @@ Vehicle::Vehicle(const Spec& s, World& w) : Entity(s.str("id"), "vehicle") {
 
     friction_.material = &w.materials().get("asphalt", id());
     friction_.friction = float(s.positive("tyre_friction", 0.9));
+    PxMaterial& tyre = w.materials().get("tyre", id());
+    const Pose start = s.pose();
+    const std::string assembly = s.str("assembly", id());
+    const double maxDepen = s.positive("max_depenetration_mps", 2.0);
+    const double v0 = s.num("speed_mps", 0);
+    if (s.has("driver")) driver_.emplace(s["driver"]);
+
     vehicle_.mPhysXParams.create(bp.axleDescription, PxQueryFilterData(PxFilterData(), PxQueryFlag::eSTATIC), nullptr,
                                  &friction_, 1, friction_.friction, px(Pose{com, {}}), PxVec3(0.3f), PxTransform(PxIdentity));
-    if (!vehicle_.initialize(w.physics(), w.runtime().cookingParams(), w.materials().get("tyre", id())))
+    if (!vehicle_.initialize(w.physics(), w.runtime().cookingParams(), tyre))
         throw SpecError(id() + ": the Vehicle SDK rejected these parameters");
-    vehicle_.mTransmissionCommandState.gear = PxVehicleDirectDriveTransmissionCommandState::eFORWARD;
-    const Pose start = s.pose();
-    vehicle_.setUpActor(w.scene(), px(start), id().c_str());
-
-    const std::string assembly = s.str("assembly", id());
-    w.shapeFactory().attach(chassis(), shapes_, w.filterFor(id(), assembly), id());
-    CollisionFilter wheelFilter = w.filterFor(id(), assembly, kWheelCategory, kGroundCategory);
-    for (int i = 0; i < nWheels_; ++i) {  // wheels hit other bodies, never the road: the suspension carries the car
-        PxShape* wsh = vehicle_.mPhysXState.physxActor.wheelShapes[i];
-        wsh->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
-        wsh->setSimulationFilterData(wheelFilter.data());
+    try {  // the destructor does not run if the constructor throws
+        vehicle_.mTransmissionCommandState.gear = PxVehicleDirectDriveTransmissionCommandState::eFORWARD;
+        vehicle_.setUpActor(w.scene(), px(start), id().c_str());
+        w.shapeFactory().attach(chassis(), shapes_, w.filterFor(id(), assembly), id());
+        const CollisionFilter wheelFilter = w.filterFor(id(), assembly, kWheelCategory, kGroundCategory);
+        for (int i = 0; i < nWheels_; ++i) {  // wheels hit other bodies, never the road: the suspension carries the car
+            PxShape* wsh = vehicle_.mPhysXState.physxActor.wheelShapes[i];
+            wsh->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+            wsh->setSimulationFilterData(wheelFilter.data());
+            // Rest pose until the vehicle's first step places it: on the road under its axle.
+            const Axle& a = axles[size_t(i / 2)];
+            wsh->setLocalPose(px(Pose{{a.x, (i % 2 == 0 ? 0.5 : -0.5) * a.track, wheelRadius_}, {}}));
+        }
+    } catch (...) {
+        vehicle_.destroy();
+        throw;
     }
     chassis().setSolverIterationCounts(16, 4);
-    chassis().setMaxDepenetrationVelocity(float(s.positive("max_depenetration_mps", 2.0)));
-    const double v0 = s.num("speed_mps", 0);
+    chassis().setMaxDepenetrationVelocity(float(maxDepen));
     chassis().setLinearVelocity(px(start.q.axisX() * v0));
     for (int i = 0; i < nWheels_; ++i) vehicle_.mBaseState.wheelRigidBody1dStates[i].rotationSpeed = float(v0 / wheelRadius_);
-    lastVel_ = velocity();
+    peaks_.lastVel = velocity();
 
     ctx_.setToDefault();
     ctx_.frame = bp.frame;
@@ -170,14 +178,19 @@ Vehicle::Vehicle(const Spec& s, World& w) : Entity(s.str("id"), "vehicle") {
     ctx_.physxScene = &w.scene();
     ctx_.physxActorUpdateMode = PxVehiclePhysXActorUpdateMode::eAPPLY_ACCELERATION;
 
-    if (s.has("driver")) driver_.emplace(s["driver"]);
-    w.actuators().declare(id() + "/drive", "wheel_drive", mass, true);
-    w.actuators().declare(id() + "/brakes", "brake", mass, true);
+    driveId_ = id() + "/drive";
+    brakesId_ = id() + "/brakes";
+    w.actuators().declare(driveId_, "wheel_drive", mass, true);
+    w.actuators().declare(brakesId_, "brake", mass, true);
 }
 
 Vehicle::~Vehicle() { vehicle_.destroy(); }
 
-PxRigidDynamic& Vehicle::chassis() const { return *vehicle_.mPhysXState.physxActor.rigidBody->is<PxRigidDynamic>(); }
+PxRigidDynamic& Vehicle::chassis() { return *vehicle_.mPhysXState.physxActor.rigidBody->is<PxRigidDynamic>(); }
+
+const PxRigidDynamic& Vehicle::chassis() const {
+    return *vehicle_.mPhysXState.physxActor.rigidBody->is<PxRigidDynamic>();
+}
 
 Pose Vehicle::pose() const { return fromPx(chassis().getGlobalPose()); }
 
@@ -195,9 +208,10 @@ void Vehicle::beforeStep(World& w, double dt) {
     PxVehicleCommandState& cmd = vehicle_.mCommandState;
     cmd.setToDefault();
     cmd.nbBrakes = 1;
-    const double speed = velocity().dot(pose().q.axisX());
+    const Pose p = pose();
+    const double speed = velocity().dot(p.q.axisX());
     DriveCommand dc;
-    if (driver_) dc = driver_->update(w, id(), pose(), speed, limits_);
+    if (driver_) dc = driver_->update(w, id(), p, speed, limits_, dt);
     if (released_) dc = {};
     if (manualBrake_ >= 0) dc = {0, manualBrake_, dc.steer};
     cmd.throttle = float(dc.throttle);
@@ -219,21 +233,15 @@ void Vehicle::logActuators(World& w, double dt) {
         brakeTorque += br;
         brakePower += br * std::fabs(omega);
     }
-    w.actuators().step(id() + "/drive", driveTorque, drivePower, dt);
-    w.actuators().step(id() + "/brakes", brakeTorque, -brakePower, dt);
+    w.actuators().step(driveId_, driveTorque, drivePower, dt);
+    w.actuators().step(brakesId_, brakeTorque, -brakePower, dt);
 }
 
-void Vehicle::afterStep(World& w, double dt) {
-    const Vec3 v = velocity();
-    peakAccel_ = std::max(peakAccel_, ((v - lastVel_) / dt - w.gravity()).norm());
-    peakSpeed_ = std::max(peakSpeed_, v.norm());
-    lastVel_ = v;
-}
+void Vehicle::afterStep(World& w, double dt) { peaks_.update(velocity(), dt, w.gravity()); }
 
 void Vehicle::record(World&, Recorder& rec) {
     const Pose p = pose();
-    rec.put("body/" + id() + "/pose",
-            {float(p.p.x), float(p.p.y), float(p.p.z), float(p.q.x), float(p.q.y), float(p.q.z), float(p.q.w)});
+    putPose(rec, "body/" + id() + "/pose", p);
     const PxVec3 v = chassis().getLinearVelocity(), om = chassis().getAngularVelocity();
     rec.put("body/" + id() + "/vel", {v.x, v.y, v.z, om.x, om.y, om.z});
     std::vector<float> wheels;
@@ -259,8 +267,8 @@ Json Vehicle::describe() const {
     Json j = {{"parts", parts},
               {"mass_kg", limits_.massKg},
               {"wheel_radius_m", wheelRadius_},
-              {"peak_accel_mps2", peakAccel_},
-              {"peak_speed_mps", peakSpeed_},
+              {"peak_accel_mps2", peaks_.accel},
+              {"peak_speed_mps", peaks_.speed},
               {"streams",
                {{"pose", "body/" + id() + "/pose"}, {"vel", "body/" + id() + "/vel"},
                 {"wheels", "vehicle/" + id() + "/wheels"}, {"controls", "vehicle/" + id() + "/controls"}}},
@@ -279,22 +287,17 @@ void Vehicle::act(World& w, const Action& a) {
         if (!driver_) throw SpecError(id() + ": set_speed needs a driver");
         driver_->setCruise(p.positive("mps"));
     }
+    p.rejectUnknownKeys();
     w.events().emit(id() + ":" + a.verb, w.time());
 }
 
 Energy Vehicle::energy(const World& w) const {
-    const PxRigidDynamic& d = chassis();
-    const double m = d.getMass();
-    const PxTransform com = d.getGlobalPose() * d.getCMassLocalPose();
-    const PxVec3 om = com.q.rotateInv(d.getAngularVelocity());
-    const PxVec3 I = d.getMassSpaceInertiaTensor();
-    const double rot = 0.5 * (I.x * om.x * om.x + I.y * om.y * om.y + I.z * om.z * om.z);
-    double wheels = 0;
+    Energy e = rigidEnergy(chassis(), w.gravity());
     for (int i = 0; i < nWheels_; ++i) {
         const double omega = vehicle_.mBaseState.wheelRigidBody1dStates[i].rotationSpeed;
-        wheels += 0.5 * vehicle_.mBaseParams.wheelParams[i].moi * omega * omega;
+        e.kinetic += 0.5 * vehicle_.mBaseParams.wheelParams[i].moi * omega * omega;
     }
-    return {0.5 * m * fromPx(d.getLinearVelocity()).norm2() + rot + wheels, -m * w.gravity().dot(fromPx(com.p))};
+    return e;
 }
 
 }  // namespace p2s

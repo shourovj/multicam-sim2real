@@ -27,7 +27,8 @@ add_library(p2s_physx STATIC ${PHYSX_SRC}
   ${VEHICLE_SNIPPETS}/base/Base.cpp
   ${VEHICLE_SNIPPETS}/directdrivetrain/DirectDrivetrain.cpp
   ${VEHICLE_SNIPPETS}/physxintegration/PhysXIntegration.cpp)
-target_compile_definitions(p2s_physx PUBLIC PX_PHYSX_STATIC_LIB NDEBUG)
+target_compile_definitions(p2s_physx PUBLIC PX_PHYSX_STATIC_LIB NDEBUG
+  P2S_ROBOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/robots")
 target_include_directories(p2s_physx PUBLIC ${PHYSX_ROOT}/include ${PHYSX_ROOT}/snippets ${CUDA_RT_DIR}/include)
 target_link_directories(p2s_physx PUBLIC ${PHYSX_LIB_DIR})
 target_link_libraries(p2s_physx PUBLIC p2s_core

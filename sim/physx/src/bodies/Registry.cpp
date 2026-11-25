@@ -5,8 +5,10 @@
 #include "bodies/Multirotor.h"
 #include "bodies/Particles.h"
 #include "bodies/RigidBody.h"
+#include "bodies/RobotArm.h"
 #include "bodies/Signal.h"
 #include "bodies/SoftBody.h"
+#include "bodies/TrackedVehicle.h"
 #include "bodies/Vehicle.h"
 #include "bodies/Walker.h"
 
@@ -28,6 +30,8 @@ World::FactoryList builtinEntities() {
         {"walkers", make<Walker>()},
         {"signals", make<TrafficSignal>()},
         {"vehicles", make<Vehicle>()},
+        {"tracked_vehicles", make<TrackedVehicle>()},
+        {"robot_arms", make<RobotArm>()},
         {"joints", make<Joint>()},
         {"soft_bodies", make<SoftBody>()},
         {"cloths", make<Cloth>()},

@@ -13,7 +13,7 @@ class TrafficSignal : public Entity {
 public:
     TrafficSignal(const Spec& s, World& w);
 
-    std::string state(double t) const;
+    const std::string& state(double t) const;
     void afterStep(World& w, double dt) override;
     void record(World& w, Recorder& rec) override;
     Json describe() const override;

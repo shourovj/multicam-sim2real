@@ -26,13 +26,12 @@ public:
     SoftBody(const Spec& s, World& w);
 
     void link(World& w) override;
-    void beforeStep(World& w, double dt) override;
     void afterStep(World& w, double dt) override;
     void record(World& w, Recorder& rec) override;
     Json describe() const override;
     Energy energy(const World& w) const override;
     std::span<const Vec3> contactPoints() const override { return surface_; }
-    std::string contactAlias() const override { return hostId_; }
+    const std::string& contactAlias() const override { return hostId_; }
 
 private:
     void build(World& w);

@@ -27,7 +27,8 @@ public:
     Json describe() const override;
     Energy energy(const World& w) const override;
     std::span<const Vec3> contactPoints() const override { return current_; }
-    std::string contactAlias() const override { return hostId_; }
+    double contactRadius() const override { return thickness_; }
+    const std::string& contactAlias() const override { return hostId_; }
 
 private:
     void readBack(World& w);

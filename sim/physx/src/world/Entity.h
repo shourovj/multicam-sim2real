@@ -57,10 +57,29 @@ public:
     // Deformables and particles: their current surface points in world space, for contact detection that
     // PhysX's rigid contact reports do not cover. A deformable mounted on a host also reports as the host.
     virtual std::span<const Vec3> contactPoints() const { return {}; }
-    virtual std::string contactAlias() const { return ""; }
+    // How far those points stay from a surface they rest on (particle radius, cloth thickness).
+    virtual double contactRadius() const { return 0; }
+    virtual const std::string& contactAlias() const { static const std::string none; return none; }
 
 private:
     std::string id_, kind_;
 };
+
+// World-space bounds of shapes placed at `pose` (each shape's own box, then merged).
+inline Aabb boundsOf(const std::vector<Shape>& shapes, const Pose& pose = {}) {
+    Aabb box;
+    for (const Shape& s : shapes) {
+        const Aabb b = s.bounds().transformed(pose * s.local);
+        if (b.empty()) continue;
+        box.add(b.lo);
+        box.add(b.hi);
+    }
+    return box;
+}
+
+// The "body/<id>/pose" row: position, then quaternion xyzw.
+inline void putPose(Recorder& rec, const std::string& key, const Pose& p) {
+    rec.put(key, {float(p.p.x), float(p.p.y), float(p.p.z), float(p.q.x), float(p.q.y), float(p.q.z), float(p.q.w)});
+}
 
 }  // namespace p2s

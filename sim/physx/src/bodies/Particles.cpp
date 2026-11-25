@@ -83,6 +83,7 @@ void ParticleSystem::link(World& w) {
     // more. Granular particles are spheres of one spacing diameter.
     const float half = float(0.5 * spacing_);
     const float rest = kind_ == Kind::Granular ? half : half / 0.6f;
+    restOffset_ = rest;
     system_->setRestOffset(rest);
     system_->setContactOffset(rest + 0.005f);
     system_->setParticleContactOffset(kind_ == Kind::Granular ? 1.2f * half : rest);
@@ -213,14 +214,14 @@ void ParticleSystem::upload(World& w) {
     buffer_->raiseFlags(PxParticleBufferFlag::eUPDATE_VELOCITY);
 }
 
-void ParticleSystem::beforeStep(World& w, double) {
+void ParticleSystem::beforeStep(World& w, double dt) {
     for (Emitter& e : emitters_)
         if (e.active) {
             if (e.startedAt < 0) e.startedAt = w.time();
             dirty_ |= emit(w, e);
         }
     if (kind_ == Kind::Smoke) {  // retire old smoke; the rest relaxes toward the local (turbulent) wind
-        const double relax = 1.0 - std::exp(-drag_ * w.clock().dt());
+        const double relax = 1.0 - std::exp(-drag_ * dt);
         for (int i = 0; i < highWater_; ++i) {
             if (born_[size_t(i)] <= kFree) continue;
             if (w.time() - born_[size_t(i)] > lifetime_) {
@@ -263,6 +264,7 @@ Json ParticleSystem::describe() const {
 }
 
 void ParticleSystem::act(World& w, const Action& a) {
+    Spec::fromJson(a.params, id() + "." + a.verb).rejectUnknownKeys();
     for (Emitter& e : emitters_) {
         e.active = a.verb == "start";
         if (e.active) e.startedAt = w.time();
