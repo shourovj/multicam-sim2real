@@ -18,6 +18,11 @@
 //     {"type": "deformation", "entity": "truck_front", "min_m": 0.1, "max_m": 0.5},
 //     {"type": "particles_in_region", "entity": "water", "min": [x, y, z], "max": [x, y, z], "at_s": 5, "min_fraction": 0.8},
 //     {"type": "obeys_signals"}]
+//
+// "In view" means at least one of the entity's surface sample points projects inside the image, within the clip
+// range, with no rigid part of another entity in front of it (the camera's own parent never occludes). Ids that
+// name no entity or camera, and contact events whose ids are unknown or not in alphabetical order, are SpecErrors
+// naming the JSON path.
 #pragma once
 
 #include "check/Report.h"
@@ -25,6 +30,8 @@
 
 namespace p2s {
 
+// One table per camera for the entities that move or that expectations name, plus a one-line summary of the static
+// scenery in frame.
 void runCameraCoverage(const RunData& run, const Spec& scene, Report& report);
 void runExpectations(const RunData& run, const Spec& scene, Report& report);
 

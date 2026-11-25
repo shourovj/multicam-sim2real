@@ -130,7 +130,8 @@ def convoy():
                        {"id": "gap_trucks", "type": "min_gap", "a": "truck_1", "b": "truck_2", "metres": 4},
                        {"id": "tank_drives", "type": "speed", "entity": "tank", "during_s": [1, DURATION], "min_mps": 4, "max_mps": 15},
                        {"id": "truck2_seen", "type": "in_view", "camera": "overhead", "entity": "truck_2", "min_fraction": 0.5},
-                       {"id": "tank_seen", "type": "in_view", "camera": "overhead", "entity": "tank", "min_fraction": 0.4},
+                       {"id": "tank_goes_under_canopy", "type": "leaves_view", "camera": "overhead", "entity": "tank",
+                        "inside_at_s": 0.0, "outside_by_s": 2.0},
                        {"id": "trucks_upright", "type": "upright", "entity": "truck_1", "max_tilt_deg": 15}]}
 
 

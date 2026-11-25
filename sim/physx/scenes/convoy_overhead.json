@@ -849,11 +849,12 @@
    "min_fraction": 0.5
   },
   {
-   "id": "tank_seen",
-   "type": "in_view",
+   "id": "tank_goes_under_canopy",
+   "type": "leaves_view",
    "camera": "overhead",
    "entity": "tank",
-   "min_fraction": 0.4
+   "inside_at_s": 0.0,
+   "outside_by_s": 2.0
   },
   {
    "id": "trucks_upright",

@@ -3,6 +3,7 @@
 // first-order error at the scene's step (dt = 1 / (fps * substeps)).
 #include <filesystem>
 
+#include "check/Expectations.h"
 #include "check/PhysicsChecks.h"
 #include "check/RunData.h"
 #include "physx/Runtime.h"
@@ -197,4 +198,11 @@ TEST_CASE("the checker reports bodies that start overlapping") {
     bool found = false;
     for (const Json& f : j.at("findings")) found |= f.at("check") == "initial_overlap";
     CHECK(found);
+
+    // Expectations naming what is not there are scene errors with the JSON path, not silent failures.
+    const auto expect = [&](const Json& e) { runExpectations(r, Spec::fromJson({{"expect", {e}}}), report); };
+    CHECK_THROWS_WITH_AS(expect({{"type", "upright"}, {"entity", "c"}}), doctest::Contains("scene.expect[0].entity"), SpecError);
+    CHECK_THROWS_WITH_AS(expect({{"type", "event"}, {"event", "contact:b:a"}}), doctest::Contains("contact:a:b"), SpecError);
+    CHECK_THROWS_WITH_AS(expect({{"type", "in_view"}, {"camera", "x"}, {"entity", "a"}}), doctest::Contains("scene.expect[0].camera"),
+                         SpecError);
 }

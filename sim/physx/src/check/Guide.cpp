@@ -16,9 +16,10 @@ struct Advice {
 const std::map<std::string, Advice>& advice() {
     static const std::map<std::string, Advice> table = {
         {"simulation",
-         {"p2s_sim did not produce X: the scene JSON was rejected or the solver failed.",
-          "Read the SCENE ERROR line: it names the JSON path (e.g. scene.bodies[2].mass_kg). Fix that key; unknown "
-          "keys are typos or keys that entity kind does not take."}},
+         {"p2s_sim did not produce a complete X: the scene JSON was rejected, the solver failed, or the run was "
+          "interrupted.",
+          "Read p2s_sim's SCENE ERROR line: it names the JSON path (e.g. scene.bodies[2].mass_kg). Fix that key; "
+          "unknown keys are typos or keys that entity kind does not take. Without one, re-run p2s_sim."}},
         {"finite",
          {"A position, velocity or energy became NaN or infinite: the solver blew up.",
           "Look for huge forces (push, impulse, motor max_force), zero or tiny masses, overlapping bodies at t=0, "
@@ -90,7 +91,7 @@ const std::map<std::string, Advice>& advice() {
         {"expect_enters_view",
          {"An entity was supposed to come into a camera's view during the clip but did not (or was visible too early).",
           "Shift the entity's start position or the camera so it starts outside the frustum and crosses into it before "
-          "by_s."}},
+          "inside_by_s."}},
         {"expect_leaves_view",
          {"An entity was supposed to leave a camera's view but stayed in it.",
           "Extend its path or speed, or narrow/turn the camera."}},
@@ -150,12 +151,9 @@ std::string iterationGuide(const std::set<std::string>& failingChecks) {
           "penetration findings downstream.\n\n";
     if (failingChecks.empty()) return md.str();
     md << "What the failing checks measure and how to fix them:\n\n";
-    for (const std::string& c : failingChecks) {
-        const std::string base = c.rfind("expect_", 0) == 0 ? c : c.substr(0, c.find(':'));
-        const auto it = advice().find(base);
-        if (it == advice().end()) continue;
-        md << "- **" << base << "**: " << it->second.meaning << " " << it->second.fixes << "\n";
-    }
+    for (const std::string& c : failingChecks)
+        if (const auto it = advice().find(c); it != advice().end())
+            md << "- **" << c << "**: " << it->second.meaning << " " << it->second.fixes << "\n";
     return md.str() + "\n";
 }
 

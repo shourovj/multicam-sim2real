@@ -1,7 +1,8 @@
-// Core (no GPU): geometry, the spec reader, cameras, recorder.
+// Core (no GPU): geometry, the spec reader, cameras, recorder, the report's status logic.
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "third_party/doctest.h"
 
+#include "check/Report.h"
 #include "core/Camera.h"
 #include "core/Shape.h"
 #include "core/Spec.h"
@@ -90,4 +91,37 @@ TEST_CASE("cameras: Blender convention, projection, attached cameras look along 
     const Pose dp = dash.update(0, [&](const std::string&) { return car; });
     CHECK(project(dp, dash.intrinsics(), {5, 50, 1}).inFrame(dash.intrinsics()));
     CHECK(project(dp, dash.intrinsics(), {5, -50, 1}).depth < 0);
+}
+
+TEST_CASE("report: only warnings can be acknowledged, with a reason") {
+    const auto report = [] {
+        Report r;
+        r.add({"acceleration", Severity::Warn, "truck", "80 g", ""});
+        r.add({"energy", Severity::Fail, "", "gained 5 kJ", ""});
+        return r;
+    };
+    Report r = report();
+    r.acknowledge(Spec::fromJson({{"acknowledge", {{{"check", "acceleration:truck"}, {"reason", "head-on crash at 16 m/s"}},
+                                                   {{"check", "energy"}, {"reason", "it is fine, trust me"}}}}}));
+    CHECK(r.count(Severity::Warn) == 0);
+    CHECK(r.count(Severity::Fail) == 1);
+    CHECK(r.count(Severity::Info) == 1);  // a note that failures cannot be acknowledged
+    Report shortReason = report();
+    const Spec ok = Spec::fromJson({{"acknowledge", {{{"check", "acceleration:truck"}, {"reason", "ok"}}}}});
+    CHECK_THROWS_WITH_AS(shortReason.acknowledge(ok), doctest::Contains("scene.acknowledge[0].reason"), SpecError);
+}
+
+TEST_CASE("report: PASS, STOP_MAX_ITERATIONS and STOP_STUCK") {
+    Report clean;
+    clean.add({"finite", Severity::Pass, "", "all finite", ""});
+    CHECK(clean.decide(8, 8, {}) == Status::Pass);
+
+    Report failing;
+    failing.add({"expect_event", Severity::Fail, "crash", "never happened", ""});
+    const Json same = {{"iteration", 1}, {"blocking", {"expect_event:crash"}}};
+    const Json other = {{"iteration", 1}, {"blocking", {"energy"}}};
+    CHECK(failing.decide(2, 8, {same}) == Status::Fail);
+    CHECK(failing.decide(3, 8, {other, same}) == Status::Fail);
+    CHECK(failing.decide(3, 8, {same, same}) == Status::StopStuck);
+    CHECK(failing.decide(8, 8, {}) == Status::StopMaxIterations);
 }

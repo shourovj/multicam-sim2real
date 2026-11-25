@@ -24,7 +24,8 @@ $P/p2s_check $RUN/it1/scene.json $RUN/it1                                     # 
 
 - `p2s_sim` exits 0 when it simulated, **2** when S is invalid (stderr names the JSON path, e.g.
   `scene.vehicles[0].wheels.radius_m: must be > 0`), 3 on a solver failure.
-- `p2s_check` exits 0 **PASS**, 1 **FAIL** (iterate), 3 **STOP** (give up and report to a human), 2 bad input.
+- `p2s_check` exits 0 **PASS**, 1 **FAIL** (iterate), 3 **STOP** (give up and report to a human), 2 bad input
+  (then r.md says `STATUS: ERROR` with the JSON path of the problem, e.g. an expectation naming an unknown entity).
 - Keep every iteration in its own folder (`it1`, `it2`, ...) with its own copy of S. All iterations of a scene
   share `$RUN/history.jsonl`, so each report shows how earlier iterations went.
 - Pick a free GPU with `nvidia-smi` (use one with < 1 GB used).
@@ -341,7 +342,13 @@ fails with `expect_coverage` if a camera has none or there is no physical outcom
 | `particles_in_region` | `entity`, `min`, `max`, `at_s`, `min_fraction` 0.8 | that share of particles is in the box |
 | `obeys_signals` | | no vehicle crosses its stop line on red |
 
-Give each expectation an `id`; findings are keyed `expect_<type>:<id>`.
+Give each expectation a unique `id`; findings are keyed `expect_<type>:<id>`.
+
+- `within_s` is optional: without it an `event` only has to happen. Events during `clock.preroll_s` have negative
+  times, and a contact that began in the preroll (a tank resting on the ground) is not a new contact after t = 0.
+- `min_gap` measures surface to surface (a body includes the soft bodies mounted on it) and counts a contact as 0.
+- Ids that name no entity or camera, and contact events with ids out of alphabetical order, are errors.
+- In camera checks only rigid bodies block the view; cloth, soft bodies, smoke and liquids never hide anything.
 
 ## 8. What r checks besides your expectations
 
@@ -352,8 +359,9 @@ Give each expectation an `id`; findings are keyed `expect_<type>:<id>`.
   1 g in free fall) and whether a contact explains it; per actuator, thrust-to-weight, W/kg and braking g against the usual ranges. Out-of-range values are
   warnings: fix them, or acknowledge them when the prompt really asks for it.
 - **Cameras, from geometry alone:** where each image's corner rays meet the ground (what the camera covers), and
-  per entity the share of frames it is visible, how much of it is unoccluded, its screen size and an in/out
-  timeline.
+  for every moving entity and every entity an expectation names: the share of frames it is visible, how much of it
+  is unoccluded, its screen size and an in/out timeline; static scenery gets one summary line per camera.
+- Failures are listed in the order to fix them (simulation and overlap first, expectations last).
 - **Fact card:** measured events, start and end positions, peak speeds, contacts with peak forces, deformation.
   Use these numbers, not your intentions, when describing the scene later.
 

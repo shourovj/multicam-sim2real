@@ -38,9 +38,9 @@ public:
     void table(Table t) { tables_.push_back(std::move(t)); }
     void fact(const std::string& key, Json value) { facts_[key] = std::move(value); }
     const Json& facts() const { return facts_; }
-    void section(const std::string& title, const std::string& markdown) { sections_.push_back({title, markdown}); }
 
-    // Applies the scene's "acknowledge" list: warnings named there (by key) stop blocking a PASS.
+    // Applies the scene's "acknowledge" list: warnings named there (by key) stop blocking a PASS. Throws SpecError
+    // for a malformed entry or a reason under 10 characters; adds a note for entries that match no warning.
     void acknowledge(const Spec& scene);
     // Decides the status. `history` holds earlier iterations' r.json summaries (oldest first).
     Status decide(int iteration, int maxIterations, const std::vector<Json>& history);
@@ -55,7 +55,6 @@ public:
 private:
     std::vector<Finding> findings_;
     std::vector<Table> tables_;
-    std::vector<std::pair<std::string, std::string>> sections_;
     Json facts_ = Json::object();
     Status status_ = Status::Fail;
     std::string stopReason_;

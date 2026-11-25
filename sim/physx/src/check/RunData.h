@@ -2,6 +2,7 @@
 // particle point sets, camera tracks, events, contacts, actuators and energy. No PhysX.
 #pragma once
 
+#include <functional>
 #include <map>
 #include <optional>
 #include <set>
@@ -14,6 +15,10 @@
 
 namespace p2s {
 
+inline bool overlaps(const Aabb& a, const Aabb& b) {
+    return a.lo.x <= b.hi.x && b.lo.x <= a.hi.x && a.lo.y <= b.hi.y && b.lo.y <= a.hi.y && a.lo.z <= b.hi.z && b.lo.z <= a.hi.z;
+}
+
 // One rigid piece that moves as a unit: a body, a vehicle chassis, a wheel.
 struct Part {
     std::string entity, name, kind;  // kind: the entity's kind, or "wheel"
@@ -22,12 +27,13 @@ struct Part {
     std::vector<Vec3> samples;       // surface sample points in the part frame
     Aabb local;                      // bounds in the part frame
     double minHalfExtent = 1e9;      // of the thinnest shape: penetration tolerance scales with it
+    bool moving = false;             // its pose changes during the run
 
     Aabb worldBounds(int frame) const { return local.transformed(poses[size_t(frame)]); }
     double sdf(int frame, const Vec3& world) const { return PosedShapes{shapes, poses[size_t(frame)]}.sdf(world); }
 };
 
-// Deformable or particle matter: a cloud of points per frame.
+// Deformable or particle matter: a cloud of points per frame (one entry per frame, possibly empty).
 struct PointSet {
     std::string entity, kind, host;  // kind: soft_body, cloth, particles
     std::vector<std::vector<Vec3>> frames;
@@ -49,10 +55,12 @@ struct EntityInfo {
     Json desc;
     std::vector<Vec3> velocity;      // per frame, if recorded
     double mass = 0;
+    bool moving = false;             // a part of it moved, or it is deformable or particle matter
 };
 
 class RunData {
 public:
+    // Throws SpecError if there is no x.json, std::runtime_error if X is malformed (no frames, short streams).
     explicit RunData(const std::string& dir);
 
     const Json& x() const { return x_; }
@@ -64,6 +72,7 @@ public:
     bool hasGround() const { return hasGround_; }
 
     const std::vector<Part>& parts() const { return parts_; }
+    std::vector<std::reference_wrapper<const Part>> partsOf(const std::string& id) const;  // main part first
     const std::vector<PointSet>& pointSets() const { return points_; }
     const std::vector<CameraTrack>& cameras() const { return cameras_; }
     const std::map<std::string, EntityInfo>& entities() const { return entities_; }
@@ -77,11 +86,14 @@ public:
     std::vector<Vec3> samples(const std::string& id, int frame, size_t maxPoints = 400) const;
     // First time of an event; nullopt if it never happened.
     std::optional<double> eventTime(const std::string& name) const;
-    std::vector<std::array<double, 4>> energy() const;  // per frame: kinetic, potential, net work, work in
+    // Per frame: kinetic, potential, net work, work in. Empty if X has no energy stream.
+    std::vector<std::array<double, 4>> energy() const;
 
 private:
     void loadParts(const Json& e, const EntityInfo& info, const StreamReader& sr);
     void loadPoints(const Json& e, const StreamReader& sr);
+    // A fixed stream's data, checked to hold the same whole number of `width`-float rows in every frame.
+    std::vector<float> readFixed(const StreamReader& sr, const std::string& key, size_t width) const;
 
     Json x_;
     std::string dir_;
@@ -89,6 +101,7 @@ private:
     double fps_ = 24, groundZ_ = 0;
     bool hasGround_ = false;
     std::vector<Part> parts_;
+    std::map<std::string, std::vector<size_t>> partIndex_;  // entity -> indices into parts_
     std::vector<PointSet> points_;
     std::vector<CameraTrack> cameras_;
     std::map<std::string, EntityInfo> entities_;

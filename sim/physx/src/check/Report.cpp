@@ -22,6 +22,16 @@ const char* severityName(Severity s) {
     return "?";
 }
 
+// Order in which to fix things: causes before their symptoms (an overlap at t=0 injects energy and acceleration),
+// physics before expectations, which often pass once the physics is right.
+int fixOrder(const std::string& check) {
+    static const std::vector<std::string> order = {
+        "simulation", "finite", "physx_errors", "initial_overlap", "below_ground", "penetration", "particles_in_solids",
+        "escaped", "fem_inverted", "energy", "acceleration", "speed", "jitter", "actuator", "expect_coverage"};
+    const auto it = std::find(order.begin(), order.end(), check);
+    return it != order.end() ? int(it - order.begin()) : int(order.size());
+}
+
 std::set<std::string> blockingKeys(const Json& summary) {
     std::set<std::string> keys;
     for (const Json& k : summary.value("blocking", Json::array())) keys.insert(k.get<std::string>());
@@ -39,17 +49,28 @@ std::string fmt(double v, int digits) {
 }
 
 void Report::acknowledge(const Spec& scene) {
-    if (!scene.has("acknowledge")) return;
-    const Json& acks = scene["acknowledge"].opaque();
-    for (const Json& a : acks) {
-        const std::string key = a.value("check", "");
-        const std::string reason = a.value("reason", "");
-        for (Finding& f : findings_)
-            if (f.severity == Severity::Warn && f.key() == key && reason.size() >= 10) {
+    std::vector<Finding> notes;
+    for (const Spec& a : scene.items("acknowledge")) {
+        const std::string key = a.str("check"), reason = a.str("reason");
+        if (reason.size() < 10) a["reason"].fail("say why the warning is right for this scene (at least 10 characters)");
+        a.rejectUnknownKeys();
+        bool warned = false, failed = false;
+        for (Finding& f : findings_) {
+            if (f.key() != key) continue;
+            if (f.severity == Severity::Warn) {
                 f.acknowledged = true;
                 f.ackReason = reason;
+                warned = true;
             }
+            failed |= f.severity == Severity::Fail;
+        }
+        if (failed)
+            notes.push_back({"acknowledge", Severity::Info, key, "`" + key + "` is a failure: failures cannot be acknowledged, fix it", ""});
+        else if (!warned)
+            notes.push_back({"acknowledge", Severity::Info, key, "`" + key + "` matches no warning in this report (fixed, or "
+                             "not the bold key of a WARN finding); remove it from acknowledge", ""});
     }
+    for (Finding& n : notes) add(std::move(n));
 }
 
 int Report::count(Severity s, bool includeAcknowledged) const {
@@ -59,6 +80,7 @@ int Report::count(Severity s, bool includeAcknowledged) const {
 }
 
 Status Report::decide(int iteration, int maxIterations, const std::vector<Json>& history) {
+    stopReason_.clear();
     const bool clean = count(Severity::Fail) == 0 && count(Severity::Warn) == 0;
     if (clean) return status_ = Status::Pass;
     if (iteration >= maxIterations) {
@@ -125,16 +147,18 @@ std::string Report::toMarkdown(const std::string& sceneName, int iteration, int 
         for (const Finding& f : findings_)
             if (f.severity == s && f.acknowledged == acked) rows.push_back(f);
         if (rows.empty()) return;
+        std::stable_sort(rows.begin(), rows.end(), [](const Finding& a, const Finding& b) { return fixOrder(a.check) < fixOrder(b.check); });
         md << "## " << title << "\n\n";
         for (const Finding& f : rows) {
             md << "- **" << f.key() << "**: " << f.message << "\n";
-            if (!f.fix.empty() && s != Severity::Pass) md << "  - Fix: " << f.fix << "\n";
             if (acked) md << "  - Acknowledged: " << f.ackReason << "\n";
+            else if (!f.fix.empty() && s != Severity::Pass) md << "  - Fix: " << f.fix << "\n";
         }
         md << "\n";
     };
-    list(Severity::Fail, "Failures (must fix)", false);
+    list(Severity::Fail, "Failures (must fix, in this order: earlier ones often cause later ones)", false);
     list(Severity::Warn, "Warnings (fix, or acknowledge with a reason in `acknowledge`)", false);
+    list(Severity::Info, "Notes", false);
     list(Severity::Warn, "Acknowledged warnings", true);
 
     for (const Table& t : tables_) {
@@ -152,9 +176,7 @@ std::string Report::toMarkdown(const std::string& sceneName, int iteration, int 
         }
         md << "\n";
     }
-    for (const auto& [title, body] : sections_) md << "## " << title << "\n\n" << body << "\n\n";
     list(Severity::Pass, "Passed checks", false);
-    list(Severity::Info, "Notes", false);
 
     md << "## Fact card (measured; use these numbers when describing the scene)\n\n";
     for (const auto& [key, value] : facts_.items()) {
