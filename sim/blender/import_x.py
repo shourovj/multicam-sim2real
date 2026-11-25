@@ -1,7 +1,7 @@
 """Build a Blender scene from the physics output X of p2s_sim. Fixed code: nothing in it is written per scene.
 
   sim/blender/.deps/blender-4.2.1-linux-x64/blender -b --python sim/blender/import_x.py -- <x_dir> <out.blend> \
-      [--preview <camera_id> <frame> <out.png>]
+      [--preview <camera_id,...> <frame,...> <out_prefix>]     (renders <out_prefix>_<camera>_<frame>.png)
 
 What it builds (all in X's world frame, Z up, metres; one Blender frame per X frame):
   - every rigid part (bodies, vehicle chassis and wheels, robot links, walkers) as an empty keyframed from its pose
@@ -56,13 +56,24 @@ class X:
 
 
 def material(name, color):
+    """Clay with a tint. Back faces are transparent, so a camera inside a body (a dashcam in its car's cabin box,
+    a wrist camera in the hand) sees out of it, in Eevee and Cycles alike."""
     m = bpy.data.materials.get(name)
     if m is None:
         m = bpy.data.materials.new(name)
         m.use_nodes = True
-        bsdf = m.node_tree.nodes["Principled BSDF"]
+        nt = m.node_tree
+        bsdf = nt.nodes["Principled BSDF"]
         bsdf.inputs["Base Color"].default_value = (*color, 1.0)
         bsdf.inputs["Roughness"].default_value = 0.6
+        geo, clear, mix = nt.nodes.new("ShaderNodeNewGeometry"), nt.nodes.new("ShaderNodeBsdfTransparent"), nt.nodes.new("ShaderNodeMixShader")
+        out = nt.nodes["Material Output"]
+        nt.links.new(geo.outputs["Backfacing"], mix.inputs["Fac"])
+        nt.links.new(bsdf.outputs["BSDF"], mix.inputs[1])
+        nt.links.new(clear.outputs["BSDF"], mix.inputs[2])
+        nt.links.new(mix.outputs["Shader"], out.inputs["Surface"])
+        m.blend_method = "HASHED"
+        m.use_backface_culling = True
     return m
 
 
@@ -163,6 +174,30 @@ def cached_mesh(name, verts0, faces, frames_xyz, pc2_dir, mat, entity, index):
     return ob
 
 
+def visual_meshes(part, empty, entity, index):
+    """A robot link's MJCF visual meshes (in the link frame), if the Menagerie files are available."""
+    root = os.path.join(os.environ.get("S2R_ROOT", os.path.join(os.path.dirname(__file__), "..", "physx", ".deps")),
+                        "mujoco_menagerie")
+    files = [(os.path.join(root, v["mesh"]), v.get("rgba", [0.8, 0.8, 0.8, 1])) for v in part.get("visuals", [])]
+    if not files or not all(os.path.exists(f) for f, _ in files):
+        return False
+    for k, (path, rgba) in enumerate(files):
+        before = set(bpy.data.objects)
+        if path.lower().endswith(".stl"):
+            bpy.ops.wm.stl_import(filepath=path)
+        else:
+            bpy.ops.wm.obj_import(filepath=path, forward_axis="Y", up_axis="Z")
+        for ob in set(bpy.data.objects) - before:
+            ob.name = f"{entity}.{part['name']}.visual{k}"
+            ob.data.materials.clear()
+            ob.data.materials.append(material("p2s_rgba_%.2f_%.2f_%.2f" % tuple(rgba[:3]), tuple(rgba[:3])))
+            ob["p2s_entity"] = entity
+            ob.pass_index = index
+            ob.parent = empty
+            ob.location, ob.rotation_euler = (0, 0, 0), (0, 0, 0)
+    return True
+
+
 def build_parts(x, e, index):
     for part in e.get("parts", []):
         poses = x.stream(part["stream"])[:, part["row"], :]
@@ -170,6 +205,8 @@ def build_parts(x, e, index):
         empty["p2s_entity"] = e["id"]
         bpy.context.scene.collection.objects.link(empty)
         keyframe_poses(empty, poses)
+        if visual_meshes(part, empty, e["id"], index):
+            continue
         for k, s in enumerate(part["shapes"]):
             verts, faces = shape_geometry(s)
             mat = material("p2s_" + s.get("material", "default"), TINT.get(s.get("material"), (0.7, 0.7, 0.7)))
@@ -276,16 +313,19 @@ def main():
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(out_blend))
     print(f"[import_x] {len(x.meta['entities'])} entities, {len(x.meta['cameras'])} cameras -> {out_blend}")
 
-    if preview:
-        cam_id, frame, png = preview[0], int(preview[1]), preview[2]
-        cam = bpy.data.objects[cam_id]
-        scene.camera = cam
-        scene.render.resolution_x, scene.render.resolution_y = cam["p2s_resolution"]
+    if preview:  # for developers checking a result by eye; the SceneAgent never sees images
+        cam_ids, frames, prefix = preview[0].split(","), [int(f) for f in preview[1].split(",")], preview[2]
         scene.render.engine = "BLENDER_EEVEE_NEXT"
-        scene.frame_set(frame + 1)
-        scene.render.filepath = os.path.abspath(png)
-        bpy.ops.render.render(write_still=True)
-        print(f"[import_x] preview {cam_id} frame {frame} -> {png}")
+        for cam_id in cam_ids:
+            cam = bpy.data.objects[cam_id]
+            scene.camera = cam
+            scene.render.resolution_x, scene.render.resolution_y = cam["p2s_resolution"]
+            scene.render.resolution_percentage = 50
+            for frame in frames:
+                scene.frame_set(frame + 1)
+                scene.render.filepath = os.path.abspath(f"{prefix}_{cam_id}_{frame:04d}.png")
+                bpy.ops.render.render(write_still=True)
+        print(f"[import_x] previews {cam_ids} x {frames} -> {prefix}_*.png")
 
 
 if __name__ == "__main__":

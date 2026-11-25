@@ -15,6 +15,7 @@ if [ ! -x "$DEPS/cuda13/bin/python" ]; then
 fi
 CUDA=$DEPS/cuda13/lib/python3.11/site-packages/nvidia/cu13
 [ -e "$CUDA/lib/libcudart.so" ] || ln -s libcudart.so.13 "$CUDA/lib/libcudart.so"
+[ -e "$CUDA/lib64" ] || ln -s lib "$CUDA/lib64"   # nvcc.profile links against lib64
 
 if [ ! -d "$DEPS/physx-src" ]; then
   git clone -q https://github.com/NVIDIA-Omniverse/PhysX.git "$DEPS/physx-src"
@@ -24,9 +25,7 @@ fi
 
 cd "$DEPS/physx-src/physx"
 export PATH=$CUDA/bin:$PATH CUDACXX=$CUDA/bin/nvcc CUDA_PATH=$CUDA
-./generate_projects.sh linux-gcc
-cmake -S compiler/linux-gcc-release -B compiler/linux-gcc-release \
-  -DCMAKE_CUDA_COMPILER="$CUDA/bin/nvcc" -DCUDAToolkit_ROOT="$CUDA" > /dev/null
+./generate_projects.sh linux-gcc   # configures compiler/linux-gcc-*; CUDACXX picks the CUDA 13 compiler
 cmake --build compiler/linux-gcc-release -j "$(nproc)"
 ls bin/linux.x86_64/release/libPhysXGpu_64.so bin/linux.x86_64/release/libPhysX_static_64.a
 echo "PhysX 5.9.1 (p2s patch) built in $DEPS/physx-src/physx/bin/linux.x86_64/release"
