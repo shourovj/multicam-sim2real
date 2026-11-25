@@ -171,9 +171,13 @@ void checkPointPenetration(const RunData& run, Report& r) {
                        fmt(100 * worstFraction) + "% of " + ps.entity + " particles are inside solids at t=" + fmt(run.time(fractionFrame)) + " s",
                        "thicken walls (>= 2 particle spacings), lower emitter speed, raise substeps"});
         } else if (worst.depth > kPenetrationM) {
-            r.add({"penetration", Severity::Fail, ps.entity + "/" + against,
-                   ps.entity + " surface is " + fmt(worst.depth) + " m inside " + against + " at t=" + fmt(run.time(worst.frame)) + " s",
-                   "add a refine window around the impact, raise substeps or the soft body's youngs_pa / solver_iterations",
+            const bool deep = ps.kind != "soft_body" || worst.depth > 0.12;
+            r.add({"penetration", deep ? Severity::Fail : Severity::Warn, ps.entity + "/" + against,
+                   ps.entity + " surface is " + fmt(worst.depth) + " m inside " + against + " at t=" + fmt(run.time(worst.frame)) +
+                       " s" + (deep ? "" : " (a soft body crushing into what it hits: up to 0.12 m is a warning)"),
+                   deep ? "first add a refine window around the impact; then make the crumple zone (or the panel it hits) "
+                          "deeper so it absorbs the crash before reaching the rigid body behind it"
+                        : "acknowledge it if the crash is violent and the dent hides it, or make the panel it hits deeper",
                    {{"depth_m", worst.depth}, {"t", run.time(worst.frame)}}});
         }
     }

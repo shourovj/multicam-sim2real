@@ -40,7 +40,7 @@ $P/p2s_check $RUN/it1/scene.json $RUN/it1                                     # 
 5. Stop when the status is:
    - `PASS`: no failures, every warning fixed or acknowledged, every expectation met. X is ready for rendering.
    - `STOP_MAX_ITERATIONS` (default 8, `meta.max_iterations`) or `STOP_STUCK` (the same findings three times in a
-     row): stop, and report the remaining findings and what you tried to a human.
+     row, none of them getting at least 10% smaller): stop, and report the remaining findings and what you tried to a human.
 
 A warning that is right for this scene (a genuine 80 g crash deceleration) can be acknowledged instead of fixed:
 `"acknowledge": [{"check": "acceleration:truck", "reason": "head-on crash at 16 m/s; 80 g is expected"}]`. The
@@ -97,7 +97,7 @@ should be seen and touched**: a truck is a cab box, a bed box, a front-end prism
 | `sphere` | `radius` | |
 | `capsule` | `radius`, `half_length` | axis along local Z, `half_length` excludes the caps |
 | `cylinder` | `radius`, `half_length` | axis along local Z (rotate with `roll_deg: 90` for a wheel or a log) |
-| `prism` | `profile` [[x, y], ...] convex, counter-clockwise; `z0`, `z1` | an outline extruded along Z (car noses, wedges, panels) |
+| `prism` | `profile` [[x, y], ...] convex, counter-clockwise; `z0`, `z1` | an outline extruded along Z (car noses, wedges, panels); with `roll_deg: 90` the profile's y becomes the body's z and the extrusion runs along the body's -y (so `z0: -1.45, z1: -0.95` spans y 0.95..1.45) |
 | `convex` | `points` [[x, y, z], ...] | convex hull of the points |
 | `mesh` | `vertices`, `triangles` | static bodies only (terrain, ramps) |
 | `container` | `radius`, `height`, `wall` (0.006), `base` (0.01), `segments` (16) | open-topped cup, glass, bucket, tank; origin at the bottom centre |
@@ -206,10 +206,14 @@ All rigid-body keys (`shapes`, `pos`, `mass_kg`, `drag`) plus:
   `<id>:passes_stop_line` (with the light's colour).
 - List axles front to back. Typical numbers: car 1.2-2 t with 800-1500 N m per driven wheel and 2500-3500 N m of
   brake per wheel; truck 7-15 t with 3000 N m and 6000 N m; r reports the result in W/kg and g so you can compare.
-- Verbs: `brake {level 0..1}` (the driver stamps on the brake: after a crash), `release` (lets go of everything),
+- Verbs: `brake {level 0..1}` (the driver stamps on the brake: after a crash; the torque is level x
+  `max_brake_torque_nm`, so lower the level if r says the braking g is too high), `release` (lets go of everything),
   `set_speed {mps}`.
 - A driver without `signal` ignores the lights (it runs a red); one without `leader` ignores other vehicles and
   drives into them: that is how a crash is staged.
+- A driver hit hard (over 4 g) lets go of the wheel and the pedals (event `<id>:crashed`), so the vehicle slides
+  and turns as the crash sends it; `"after_crash": "continue"` keeps it driving. A crash turns a vehicle when it is
+  hit near a corner, far from its centre of mass; a struck van typically turns 10-40 degrees.
 - `com` [x, y, z] (body frame) sets the centre of mass. A van or truck hit side-on rolls over unless it is low
   (about a third of the body's height); lower it if r shows wheels `below_ground` after a side impact.
 - `substeps`: 20 at 24 fps suits cars; crash precision comes from a `refine` window (factor 8). Raising substeps and
@@ -251,7 +255,7 @@ and slows for bends. Verbs: rigid-body verbs plus `brake` and `set_speed {mps}`.
 ```
 
 Kinematic capsules (`height_m` 1.75, `radius_m` 0.25): they push things and are never pushed. The renderer poses a
-human from their walk phase.
+human from their walk phase. A walker stands still at its path's start until `start_s`.
 
 ### 6.7 `signals`: traffic lights
 
@@ -288,6 +292,12 @@ human from their walk phase.
   contact (too soft for its mass and the host's accelerations): raise `youngs_pa` and `yield_strain`.
 - `fem_inverted`: a few percent of inverted tetrahedra at a crush face is normal for a hard crash (warning from
   0.5%; acknowledge it if the deformation numbers look right); above 10% the solve failed (failure).
+- A crumple zone pushing a few centimetres into the rigid body behind the panel it hits is a `penetration`
+  warning up to 0.12 m (the dent hides it: acknowledge it), a failure beyond. Fix it in this order: a `refine`
+  window, then a deeper panel on the struck side (it must absorb the crush before the rigid body behind it).
+  More `solver_iterations` does not help.
+- Dent depth depends strongly on `yield_strain`: for a thin side panel struck at 10-15 m/s, start at 0.001 with
+  `youngs_pa` 5e6-1e7 and a panel 0.3-0.4 m deep.
 
 ### 6.9 `cloths`: flags, banners, tarps, sheets
 
@@ -377,7 +387,9 @@ Each trigger fires once. `do` must be a verb of the target's kind:
   `yaw_deg` > 0 turns left, **`pitch_deg` > 0 tilts the view down** (so a dashcam looking slightly up has
   `pitch_deg: -4`), `roll_deg` rolls. `part` picks a part of the parent (a robot link: `"part": "hand"`).
 - Handheld cameras may ride a walker (`parent`, `offset.pos`) and still aim at `look_at` or `look_at_entity`.
-- A camera's own parent never blocks its view in the checker (a dashcam sees out of its car).
+- A camera's own parent never blocks its view in the checker (a dashcam sees out of its car). Any other body it
+  sits in or on does (`camera_inside`): put a pole-mounted camera 0.2-0.5 m beside or above the pole top, and aim it
+  so the action stays in frame as people move (a camera looking down at its own pole's base loses them).
 - `satellite`-style views: a high fixed camera with a narrow `fov_deg` and `clip_m` that reaches the ground.
 
 ## 7. `expect`: what the prompt asks for

@@ -69,6 +69,12 @@ const std::map<std::string, Advice>& advice() {
           "crush face is normal and only a warning.",
           "Raise youngs_pa and yield_strain so it dents less deep, make the crumple zone bigger than the impact patch, "
           "and add a refine window for the pair; use plastic for permanent dents instead of very soft elastic material."}},
+        {"expect_turns",
+         {"An entity turned less (or more) about the vertical than the prompt asks.",
+          "A crash turns a vehicle when it is hit far from its centre of mass: aim the impact at a corner (front or "
+          "rear axle), not the middle; a lighter or faster striker turns it more; drivers let go after a hard hit "
+          "unless after_crash is \"continue\". Soft crumple zones absorb part of the blow: deeper panels turn it less. "
+          "A struck van typically turns 10-40 degrees, not a full spin."}},
         {"deformed_early",
          {"A soft body deformed before it touched anything: it sags or flops under its own weight and its host's "
           "acceleration. This makes its vehicle or host behave erratically and later checks fail for no visible reason.",

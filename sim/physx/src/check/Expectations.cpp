@@ -447,7 +447,8 @@ private:
         return {rmin >= lo && rmax <= hi, msg};
     }
 
-    // Total heading change of the main part about the vertical (a car spinning out, a door swinging).
+    // Largest heading change of the main part about the vertical from the window's start (a car spun round by
+    // a crash, a door swinging open), following the rotation through full turns.
     Outcome turns(const Spec& s) {
         const std::string ent = entityId(run_, s, "entity");
         const auto parts = run_.partsOf(ent);
@@ -459,9 +460,12 @@ private:
             const Vec3 x = poses[size_t(f)].q.rotate({1, 0, 0});
             return std::atan2(x.y, x.x);
         };
-        double total = 0;
-        for (int f = f0 + 1; f <= f1; ++f) total += std::remainder(heading(f) - heading(f - 1), 2 * kPi);
-        const double deg = std::fabs(rad2deg(total));
+        double total = 0, most = 0;
+        for (int f = f0 + 1; f <= f1; ++f) {
+            total += std::remainder(heading(f) - heading(f - 1), 2 * kPi);
+            most = std::max(most, std::fabs(total));
+        }
+        const double deg = rad2deg(most);
         return {deg >= lo && deg <= hi, ent + " turned " + fmt(deg) + " deg about the vertical between " + fmt(run_.time(f0)) +
                                             " and " + fmt(run_.time(f1)) + " s (wanted " + fmt(lo) + "-" + fmt(hi) + " deg)"};
     }
@@ -560,6 +564,18 @@ void runCameraCoverage(const RunData& run, const Spec& scene, Report& r) {
         note << "Camera at " << where(p0.p) << ", fov " << fmt(cam.k.fovDeg) << " deg, " << cam.k.width << "x"
              << cam.k.height << ".";
         if (!cam.parent.empty()) note << " Rides on " << cam.parent << " (never an occluder, not listed).";
+        // A lens inside a solid (a CCTV camera at the very top of its pole) sees nothing but that solid.
+        for (int f = 0; f < run.frames(); f += std::max(1, run.frames() / 24)) {
+            const Part* inside = nullptr;
+            for (const Part& part : run.parts())
+                if (part.entity != cam.parent && part.sdf(f, cam.poses[size_t(f)].p) < 0.05) inside = &part;
+            if (!inside) continue;
+            r.add({"camera_inside", Severity::Fail, cam.id,
+                   cam.id + " is inside or touching " + inside->entity + " at t=" + fmt(run.time(f)) +
+                       " s, so that body blocks its view",
+                   "move the camera out of it (at least 0.2 m clear of a pole top or a wall)"});
+            break;
+        }
         if (run.hasGround()) {
             note << " Image corners on the ground at t=0: " << footprint(cam, p0, run.groundZ()) << ".";
             if ((p1.p - p0.p).norm() > 0.5 || p1.q.axisZ().dot(p0.q.axisZ()) < std::cos(deg2rad(5)))

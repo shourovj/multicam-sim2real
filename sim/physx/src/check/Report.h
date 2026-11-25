@@ -2,6 +2,8 @@
 // tables for the LLM to judge plausibility, the fact card, and the iteration guide.
 #pragma once
 
+#include <optional>
+
 #include <string>
 #include <vector>
 
@@ -43,6 +45,8 @@ public:
     // for a malformed entry or a reason under 10 characters; adds a note for entries that match no warning.
     void acknowledge(const Spec& scene);
     // Decides the status. `history` holds earlier iterations' r.json summaries (oldest first).
+    // Size of each blocking finding (key -> number), recorded in the history to tell progress from being stuck.
+    Json measures() const;
     Status decide(int iteration, int maxIterations, const std::vector<Json>& history);
     Status status() const { return status_; }
     static std::string statusName(Status s);

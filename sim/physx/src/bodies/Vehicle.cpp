@@ -143,6 +143,7 @@ Vehicle::Vehicle(const Spec& s, World& w) : Entity(s.str("id"), "vehicle") {
     const double maxDepen = s.positive("max_depenetration_mps", 2.0);
     const double v0 = s.num("speed_mps", 0);
     if (s.has("driver")) driver_.emplace(s["driver"]);
+    crashRelease_ = s.oneOf("after_crash", {"release", "continue"}, "release") == "release";
 
     vehicle_.mPhysXParams.create(bp.axleDescription, PxQueryFilterData(PxFilterData(), PxQueryFlag::eSTATIC), nullptr,
                                  &friction_, 1, friction_.friction, px(Pose{com, {}}), PxVec3(0.3f), PxTransform(PxIdentity));
@@ -237,7 +238,17 @@ void Vehicle::logActuators(World& w, double dt) {
     w.actuators().step(brakesId_, brakeTorque, -brakePower, dt);
 }
 
-void Vehicle::afterStep(World& w, double dt) { peaks_.update(velocity(), dt, w.gravity()); }
+void Vehicle::afterStep(World& w, double dt) {
+    const Vec3 before = peaks_.lastVel;
+    peaks_.update(velocity(), dt, w.gravity());
+    // A driver hit hard lets go: the vehicle slides and spins as the crash sends it, instead of steering back
+    // into its lane. Bumps and hard braking stay well under 4 g.
+    const double accel = ((velocity() - before) / dt).norm();
+    if (driver_ && crashRelease_ && !released_ && accel > 4 * 9.81) {
+        released_ = true;
+        w.events().emit(id() + ":crashed", w.time());
+    }
+}
 
 void Vehicle::record(World&, Recorder& rec) {
     const Pose p = pose();

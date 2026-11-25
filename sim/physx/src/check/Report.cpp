@@ -26,10 +26,17 @@ const char* severityName(Severity s) {
 // physics before expectations, which often pass once the physics is right.
 int fixOrder(const std::string& check) {
     static const std::vector<std::string> order = {
-        "simulation", "finite", "physx_errors", "initial_overlap", "deformed_early", "below_ground", "penetration", "particles_in_solids",
+        "simulation", "finite", "physx_errors", "initial_overlap", "camera_inside", "deformed_early", "below_ground", "penetration", "particles_in_solids",
         "escaped", "fem_inverted", "energy", "acceleration", "speed", "jitter", "actuator", "expect_coverage"};
     const auto it = std::find(order.begin(), order.end(), check);
     return it != order.end() ? int(it - order.begin()) : int(order.size());
+}
+
+// A blocking finding's size (its first number other than a time), to tell progress from being stuck.
+std::optional<double> measureOf(const Json& data) {
+    for (const auto& [k, v] : data.items())
+        if (k != "t" && v.is_number()) return std::fabs(v.get<double>());
+    return std::nullopt;
 }
 
 std::set<std::string> blockingKeys(const Json& summary) {
@@ -87,16 +94,36 @@ Status Report::decide(int iteration, int maxIterations, const std::vector<Json>&
         stopReason_ = "iteration " + std::to_string(iteration) + " reached max_iterations " + std::to_string(maxIterations);
         return status_ = Status::StopMaxIterations;
     }
-    // Stuck: the same blocking findings in this and the two previous iterations.
+    // Stuck: the same blocking findings in this and the two previous iterations, none of them 10% smaller than
+    // its best before (a penetration going 0.14 -> 0.07 m is progress, not stuck).
     std::set<std::string> now;
     for (const Finding& f : findings_)
         if ((f.severity == Severity::Fail || f.severity == Severity::Warn) && !f.acknowledged) now.insert(f.key());
-    if (history.size() >= 2 && blockingKeys(history[history.size() - 1]) == now &&
-        blockingKeys(history[history.size() - 2]) == now) {
-        stopReason_ = "the same findings blocked the last three iterations";
-        return status_ = Status::StopStuck;
+    const size_t n = history.size();
+    if (n >= 2 && blockingKeys(history[n - 1]) == now && blockingKeys(history[n - 2]) == now) {
+        bool improving = false;
+        const Json m = measures();
+        for (const auto& [key, value] : m.items()) {
+            double best = 1e300;
+            for (size_t i = n - 2; i < n; ++i)
+                if (history[i].contains("measures") && history[i]["measures"].contains(key))
+                    best = std::min(best, history[i]["measures"][key].get<double>());
+            improving |= best < 1e300 && value.get<double>() < 0.9 * best;
+        }
+        if (!improving) {
+            stopReason_ = "the same findings blocked the last three iterations without getting smaller";
+            return status_ = Status::StopStuck;
+        }
     }
     return status_ = Status::Fail;
+}
+
+Json Report::measures() const {
+    Json out = Json::object();
+    for (const Finding& f : findings_)
+        if ((f.severity == Severity::Fail || f.severity == Severity::Warn) && !f.acknowledged)
+            if (const auto v = measureOf(f.data)) out[f.key()] = *v;
+    return out;
 }
 
 std::string Report::statusName(Status s) {

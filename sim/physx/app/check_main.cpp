@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
         std::ofstream(outDir + "/r.json") << summary.dump(1);
         std::ofstream(outDir + "/r.md") << report.toMarkdown(name, iteration, maxIterations, history);
         p2s::Json line = {{"iteration", iteration}, {"status", summary["status"]}, {"counts", summary["counts"]},
-                          {"blocking", summary["blocking"]}};
+                          {"blocking", summary["blocking"]}, {"measures", report.measures()}};
         std::ofstream(historyPath, std::ios::app) << line.dump() << "\n";
         std::printf("STATUS: %s (%d fail, %d warn) -> %s/r.md\n", p2s::Report::statusName(status).c_str(),
                     report.count(p2s::Severity::Fail), report.count(p2s::Severity::Warn), outDir.c_str());
