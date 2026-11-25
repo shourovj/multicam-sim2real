@@ -277,7 +277,7 @@ The rectangle lies in its local x-y plane from (0, 0) to `size_m`; `pin` boxes a
 
 - Presets: `water oil honey` (kind fluid), `sand` (granular), `smoke`. Override `density viscosity cohesion
   adhesion surface_tension friction damping`; smoke also `buoyancy` (fraction of g, 0.12), `lifetime_s` (4),
-  `drag` (1/s toward the wind, 1.0).
+  `drag` (1/s toward the wind, 1.0), `diffusion_mps` (random mixing that widens the plume, 0.4).
 - `blocks` fill boxes at t = 0; `emitters` (on a `host` or in the world) shoot disc layers along `direction`;
   `phases` change the radius and speed over time after the emitter starts (a gush, then a trickle).
 - Emitters with `"active": false` wait for a trigger `start` (verbs `start`, `stop`).

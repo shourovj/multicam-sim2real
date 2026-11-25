@@ -241,7 +241,12 @@ def build_particles(x, e, index, pc2_dir):
     tree.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
     gin, gout = tree.nodes.new("NodeGroupInput"), tree.nodes.new("NodeGroupOutput")
     to_points = tree.nodes.new("GeometryNodeMeshToPoints")
-    to_points.inputs["Radius"].default_value = e.get("particle_radius_m", 0.005) * (2.0 if e["preset"] == "smoke" else 1.2)
+    smoke = e.get("particle_kind") == "smoke"
+    to_points.inputs["Radius"].default_value = e.get("particle_radius_m", 0.005) * (5.0 if smoke else 1.2)
+    if smoke:  # soft, see-through puffs that overlap into a plume
+        bsdf = mat.node_tree.nodes["Principled BSDF"]
+        bsdf.inputs["Alpha"].default_value = 0.15
+        mat.blend_method = "HASHED"
     set_mat = tree.nodes.new("GeometryNodeSetMaterial")
     set_mat.inputs["Material"].default_value = mat
     tree.links.new(gin.outputs[0], to_points.inputs["Mesh"])

@@ -50,6 +50,8 @@ ParticleSystem::ParticleSystem(const Spec& s, World&) : Entity(s.str("id"), "par
     buoyancy_ = s.num("buoyancy", p.buoyancy);
     lifetime_ = s.positive("lifetime_s", p.lifetime);
     drag_ = s.num("drag", p.drag);
+    diffusion_ = s.num("diffusion_mps", kind_ == Kind::Smoke ? 0.4 : 0.0);
+    if (diffusion_ < 0) s["diffusion_mps"].fail("must be >= 0");
     for (const Spec& b : s.items("blocks")) {
         Block blk;
         blk.box.add(b.vec3("min"));
@@ -222,6 +224,10 @@ void ParticleSystem::beforeStep(World& w, double dt) {
         }
     if (kind_ == Kind::Smoke) {  // retire old smoke; the rest relaxes toward the local (turbulent) wind
         const double relax = 1.0 - std::exp(-drag_ * dt);
+        // Small-scale mixing the wind field does not resolve: an Ornstein-Uhlenbeck kick whose stationary velocity
+        // spread is diffusion_ (with the drag above as its relaxation), so a plume widens as it rises.
+        const double kick = diffusion_ * std::sqrt(2.0 * drag_ * dt);
+        std::normal_distribution<double> gauss(0.0, 1.0);
         for (int i = 0; i < highWater_; ++i) {
             if (born_[size_t(i)] <= kFree) continue;
             if (w.time() - born_[size_t(i)] > lifetime_) {
@@ -231,7 +237,8 @@ void ParticleSystem::beforeStep(World& w, double dt) {
                 vel_[size_t(i)] = PxVec4(0.0f);
             } else {
                 const Vec3 rel = w.wind().at(w.time(), fromPx(pos_[size_t(i)].getXYZ())) - fromPx(vel_[size_t(i)].getXYZ());
-                vel_[size_t(i)] += PxVec4(px(rel * relax), 0);
+                const Vec3 mix{gauss(w.rng()), gauss(w.rng()), gauss(w.rng())};
+                vel_[size_t(i)] += PxVec4(px(rel * relax + mix * kick), 0);
             }
         }
         dirty_ = true;
