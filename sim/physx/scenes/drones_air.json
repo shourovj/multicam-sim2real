@@ -1,0 +1,291 @@
+{
+ "p2s_version": 1,
+ "name": "drones_air",
+ "meta": {
+  "iteration": 1,
+  "source": "port of configs/scenes/drones_air_phys.yaml",
+  "prompt": "Two quadcopters cross in mid-air in a light wind, one heading right and one heading left, then hover. Static ground camera."
+ },
+ "clock": {
+  "fps": 30,
+  "duration_s": 5.066666666666666,
+  "substeps": 16
+ },
+ "world": {
+  "ground": {
+   "material": "concrete"
+  },
+  "wind": {
+   "velocity": [
+    1.0,
+    0,
+    0
+   ],
+   "gust": 0.3,
+   "turbulence": 0.4,
+   "turbulence_length_m": 3.0
+  }
+ },
+ "multirotors": [
+  {
+   "id": "drone_1",
+   "pos": [
+    -2.5,
+    7.0,
+    2.6
+   ],
+   "yaw_deg": 0,
+   "mass_kg": 1.2,
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      0.2,
+      0.2,
+      0.08
+     ],
+     "material": "plastic"
+    },
+    {
+     "type": "cylinder",
+     "radius": 0.11,
+     "half_length": 0.008,
+     "pos": [
+      0.1556,
+      0.1556,
+      0.05
+     ],
+     "material": "plastic"
+    },
+    {
+     "type": "cylinder",
+     "radius": 0.11,
+     "half_length": 0.008,
+     "pos": [
+      -0.1556,
+      0.1556,
+      0.05
+     ],
+     "material": "plastic"
+    },
+    {
+     "type": "cylinder",
+     "radius": 0.11,
+     "half_length": 0.008,
+     "pos": [
+      -0.1556,
+      -0.1556,
+      0.05
+     ],
+     "material": "plastic"
+    },
+    {
+     "type": "cylinder",
+     "radius": 0.11,
+     "half_length": 0.008,
+     "pos": [
+      0.1556,
+      -0.1556,
+      0.05
+     ],
+     "material": "plastic"
+    }
+   ],
+   "rotors": {
+    "layout": "quad_x",
+    "arm_m": 0.22,
+    "height_m": 0.05
+   },
+   "rotor": {
+    "thrust_to_weight": 2.2,
+    "max_rpm": 9500
+   },
+   "drag": {
+    "cd": 1.0,
+    "area_m2": 0.06
+   },
+   "controller": {
+    "goals": [
+     {
+      "t": 5.066666666666666,
+      "pos": [
+       2.4,
+       7.3,
+       2.85
+      ]
+     }
+    ],
+    "yaw_deg": 0
+   },
+   "velocity": [
+    0.94,
+    0.12,
+    0.12
+   ]
+  },
+  {
+   "id": "drone_2",
+   "pos": [
+    3.3,
+    10.0,
+    3.25
+   ],
+   "yaw_deg": 45,
+   "mass_kg": 1.2,
+   "shapes": [
+    {
+     "type": "box",
+     "size": [
+      0.2,
+      0.2,
+      0.08
+     ],
+     "material": "plastic"
+    },
+    {
+     "type": "cylinder",
+     "radius": 0.11,
+     "half_length": 0.008,
+     "pos": [
+      0.1556,
+      0.1556,
+      0.05
+     ],
+     "material": "plastic"
+    },
+    {
+     "type": "cylinder",
+     "radius": 0.11,
+     "half_length": 0.008,
+     "pos": [
+      -0.1556,
+      0.1556,
+      0.05
+     ],
+     "material": "plastic"
+    },
+    {
+     "type": "cylinder",
+     "radius": 0.11,
+     "half_length": 0.008,
+     "pos": [
+      -0.1556,
+      -0.1556,
+      0.05
+     ],
+     "material": "plastic"
+    },
+    {
+     "type": "cylinder",
+     "radius": 0.11,
+     "half_length": 0.008,
+     "pos": [
+      0.1556,
+      -0.1556,
+      0.05
+     ],
+     "material": "plastic"
+    }
+   ],
+   "rotors": {
+    "layout": "quad_x",
+    "arm_m": 0.22,
+    "height_m": 0.05
+   },
+   "rotor": {
+    "thrust_to_weight": 2.2,
+    "max_rpm": 9500
+   },
+   "drag": {
+    "cd": 1.0,
+    "area_m2": 0.06
+   },
+   "controller": {
+    "goals": [
+     {
+      "t": 5.066666666666666,
+      "pos": [
+       -3.2,
+       9.7,
+       3.1
+      ]
+     }
+    ],
+    "yaw_deg": 45
+   },
+   "velocity": [
+    -1.24,
+    -0.12,
+    -0.12
+   ]
+  }
+ ],
+ "cameras": [
+  {
+   "id": "ground_cam",
+   "type": "fixed",
+   "position": [
+    0,
+    0,
+    1.6
+   ],
+   "look_at": [
+    0,
+    10,
+    2.3
+   ],
+   "fov_deg": 50,
+   "resolution": [
+    832,
+    480
+   ]
+  }
+ ],
+ "expect": [
+  {
+   "id": "no_collision",
+   "type": "min_gap",
+   "a": "drone_1",
+   "b": "drone_2",
+   "metres": 0.5
+  },
+  {
+   "id": "d1_arrives",
+   "type": "reaches",
+   "entity": "drone_1",
+   "point": [
+    2.4,
+    7.3,
+    2.85
+   ],
+   "within_m": 0.4,
+   "by_s": 5.066666666666666
+  },
+  {
+   "id": "d2_arrives",
+   "type": "reaches",
+   "entity": "drone_2",
+   "point": [
+    -3.2,
+    9.7,
+    3.1
+   ],
+   "within_m": 0.4,
+   "by_s": 5.066666666666666
+  },
+  {
+   "id": "sees_drone_1",
+   "type": "in_view",
+   "camera": "ground_cam",
+   "entity": "drone_1",
+   "min_fraction": 0.9
+  },
+  {
+   "id": "sees_drone_2",
+   "type": "in_view",
+   "camera": "ground_cam",
+   "entity": "drone_2",
+   "min_fraction": 0.9
+  }
+ ]
+}

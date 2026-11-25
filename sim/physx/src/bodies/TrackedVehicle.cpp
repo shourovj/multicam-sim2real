@@ -15,6 +15,10 @@ TrackedVehicle::TrackedVehicle(const Spec& s, World& w) : RigidBody(s, w, "track
     mu_ = t.positive("mu", 0.7);
     halfLength_ = t.positive("track_half_length_m", 1.8);
     response_ = t.positive("response_s", 0.25);
+    if (t.has("path")) {
+        path_ = Polyline::parse(t["path"]);
+        limit_ = path_->speedLimit(std::max(target_, 0.1), t.positive("lat_accel_max", 2.0), 1.5);
+    }
 }
 
 void TrackedVehicle::link(World& w) {
@@ -36,13 +40,23 @@ void TrackedVehicle::beforeStep(World& w, double dt) {
     const double m = mass(), g = w.gravity().norm();
     const Vec3 fwd = p.q.axisX(), side = p.q.axisY(), v = velocity();
     const double fMax = mu_ * m * g;
-    const double ff = std::clamp(m * (target_ - v.dot(fwd)) / response_, -fMax, fMax);
+    const double vFwd = v.dot(fwd);
+    double target = target_, wantYawRate = 0;
+    if (path_) {  // follow the path: bend speed limit, and the yaw rate that pure pursuit asks for
+        const double s = path_->project(p.p);
+        if (target_ > 0) target = std::min(target_, limit_[size_t(std::clamp(int(s), 0, int(limit_.size()) - 1))]);
+        const double look = std::max(5.0, 1.0 * std::fabs(vFwd));
+        const Vec3 aim = path_->at(s + look), local = p.transformInv(Vec3{aim.x, aim.y, p.p.z});
+        wantYawRate = vFwd * 2 * std::sin(std::atan2(local.y, std::max(local.x, 0.1))) / look;
+    }
+    const double ff = std::clamp(m * (target - vFwd) / response_, -fMax, fMax);
     const double fs = std::clamp(-m * v.dot(side) / kSideResponseS, -fMax, fMax);
     d.addForce(px(fwd * ff + side * fs));
-    // Skid steering holds the heading: yaw torque limited by track friction times half the track length.
+    // Skid steering: yaw torque toward the wanted yaw rate, limited by track friction times half the track length.
     const double wz = d.getAngularVelocity().z;
     const double izz = d.getMassSpaceInertiaTensor().z;
-    d.addTorque(PxVec3(0, 0, float(std::clamp(-izz * wz / kYawResponseS, -fMax * halfLength_, fMax * halfLength_))));
+    const double tMax = fMax * halfLength_;
+    d.addTorque(PxVec3(0, 0, float(std::clamp(izz * (wantYawRate - wz) / kYawResponseS, -tMax, tMax))));
     lastForce_ = ff;
     w.actuators().step(id() + "/tracks", ff, ff * v.dot(fwd), dt);
 }
