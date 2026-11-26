@@ -1,10 +1,10 @@
-"""The eval metrics (eval/common/metrics.py) on made-up arrays. Run:  python tests/test_eval_metrics.py"""
+"""The eval metrics (p2s/4_score/common/metrics.py) on made-up arrays. Run:  python tests/test_eval_metrics.py"""
 import os
 import sys
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "eval", "common"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "p2s", "4_score", "common"))
 import metrics as M  # noqa: E402
 
 rng = np.random.default_rng(0)

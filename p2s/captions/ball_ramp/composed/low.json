@@ -1,0 +1,16 @@
+{
+ "temporal_caption": "Filmed from a camera on the floor just behind the boxes, facing the ramp. In a workshop, a red rubber ball rolls down a wooden ramp onto a concrete floor and knocks over a stack of three cardboard boxes.",
+ "aesthetics": {},
+ "cinematography": {
+  "camera_motion": "Static"
+ },
+ "style_medium": "Live-action video, photoreal",
+ "context": "Realistic real-world video, natural lighting and motion, not a rendering.",
+ "resolution": {
+  "W": 832,
+  "H": 480
+ },
+ "aspect_ratio": "16,9",
+ "duration": "0:07",
+ "fps": 16
+}

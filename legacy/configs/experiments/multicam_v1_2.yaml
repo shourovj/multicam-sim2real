@@ -1,0 +1,36 @@
+# multicam_v1.2: the same scenes (rev 2, clay), cameras, cuts and prompts as multicam_v1.1, on Cosmos3-Nano-Sim-Transfer,
+# NVIDIA's checkpoint distilled for simulator-to-real transfer. It takes ONE control per clip, so each condition is one
+# control. Settings follow NVIDIA's Stage 3 recipe (gen/run_cosmos_simtransfer_multicam.sh); no first frame.
+experiment: multicam_v1.2
+out_root: poc/multi-cam
+
+scenes:
+  intersection_4way: {rev: 2, spec: legacy/configs/scenes/intersection_4way.yaml, prompts: legacy/configs/prompts/multicam_v1/intersection_4way}
+  robot_pour:        {rev: 2, spec: legacy/configs/scenes/robot_pour.yaml,        prompts: legacy/configs/prompts/multicam_v1/robot_pour}
+
+model:
+  name: cosmos3-nano-sim-transfer
+  family: sim-transfer
+  hf: nvidia/Cosmos3-Nano-Sim-Transfer
+  revision: 45510d5b8cefa338b7abc01eb702cf1e9cdf6742
+  text_tokenizer: nvidia/Cosmos3-Nano@e59a53c25979a090fa8706c9acc0c254a6e89b92
+  vae: Wan-AI/Wan2.2-TI2V-5B@921dbaf3f1674a56f47e83fb80a34bac8a8f203e
+  framework_commit: 5950e7b4ea3677b99a2de279a7ed7058b5446e42
+
+video: {num_frames: 113, fps: 16, resolution: "480", aspect_ratio: "16,9"}   # same clips as v1.1, so the two models compare like for like
+sampler: {num_steps: 4, guidance: 1.0, control_guidance: 1.0, shift: 5.0}    # fixed by the distilled checkpoint
+first_frame: none
+
+conditions:
+  D: {depth: {}}                                            # depth video from the bundle (near bright, sky black)
+  S: {seg: {}}                                              # segmentation video from the bundle (one colour per object)
+  E: {edge: {from: rgb, preset_edge_threshold: medium}}     # Canny 100/200, computed by Cosmos from the clay render
+
+cuts:
+  intersection_4way: {cut3: [{cam: cctv, frames: [0, 36]}, {cam: dashcam, frames: [37, 76]}, {cam: phone, frames: [77, 112]}]}
+  robot_pour:        {cut3: [{cam: side, frames: [0, 36]}, {cam: wrist, frames: [37, 76]}, {cam: cctv, frames: [77, 112]}]}
+
+seeds: [0]
+seeds_by_condition: {D: [0, 1], S: [0, 1]}    # a second seed for depth and segmentation (added 2026-11-19); edges keep seed 0
+
+gpu: {min_free_gib: 40, max_parallel: 4, launch_gap_s: 60, retries: 1}

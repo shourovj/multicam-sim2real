@@ -1,0 +1,31 @@
+# The frozen run: every scene x condition x seed on one model. Run by legacy/gen/run_matrix.py.
+# Jobs go seed by seed, scene by scene, in the condition order below, so a full one-seed picture exists first.
+model: vacefun-a14b            # Wan2.2-VACE-Fun-A14B, gen/run_vacefun.sh
+steps: 30                      # sampling steps; outputs go to <condition>/<model>-s<steps>/seed<k>/
+scenes: [drones_air_phys, drone_takeoff_phys, convoy_overhead_phys]   # motion from legacy/sim/physics
+seeds: [0, 1, 2]
+seeds_override: {A: [0], Aplus: [0]}   # text-only conditions get one seed
+
+# A condition is only a choice of inputs. Each name is also the folder holding its inputs,
+# $S2R_DATA/poc/single-cam/<scene>/<condition>/inputs/ (legacy/sim/controls.py); A and Aplus need none.
+conditions:
+  Bbox_edit: edited frame 0 + box outlines for the whole clip      # the sparse-control condition; runs first
+  C0: depth, no frame 0
+  B_edit: text + edited frame 0
+  P1_edit: edited frame 0 + box outlines for the first second only
+  A: text
+  Aplus: detailed text describing the path
+  C: simulator frame 0 + depth
+  # The same two with the simulator's own frame 0, to compare against the edited frame.
+  Bbox: simulator frame 0 + box outlines for the whole clip
+  B: text + simulator frame 0
+
+# GPU use on the shared server. A GPU is used only if it has this much free memory right before launch,
+# and never while one of our own jobs is on it.
+gpu:
+  max_parallel: 4
+  retries: 2                    # a failed job goes to the back of the queue this many times
+  modes:                        # tried in this order; the first whose memory fits is used
+    - {name: model_cpu_offload, min_free_gib: 55}        # one transformer on the GPU at a time; peaks at about 53 GB
+    # Fallback for a full server, off for this run: layer by layer, about 8 GB, 2-4 times slower.
+    # - {name: sequential_cpu_offload, min_free_gib: 14}

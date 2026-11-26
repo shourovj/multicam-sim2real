@@ -2,10 +2,11 @@
 
 From a text prompt to a realistic video whose motion comes from a physics simulator.
 
-1. An LLM turns the prompt into a **scene spec**: the world, the objects, what each object does, and the cameras.
-2. The **simulator** moves every object once, on one clock, and checks the result against rules in the spec.
-3. **Blender** renders that one simulated world from every camera as plain grey "clay", and exports control videos: depth, segmentation, edges.
-4. A **video-to-video model** gets the control videos and a text prompt. The controls carry the structure and motion; the text carries how things look. Four models are set up: Cosmos3-Nano, Cosmos3-Nano-Sim-Transfer, Wan2.2-VACE-Fun-A14B and LTX-2.5.
+1. A **prompt file** names the scene, the camera views and the clip format. It is the only input.
+2. An LLM, the **SceneAgent**, writes a physics scene from the prompt. **PhysX** simulates it, a checker reports what is wrong (physics, timing, what each camera sees), and the agent fixes the scene until the report passes.
+3. **Blender** renders that one simulated world from every camera and exports control videos: depth, segmentation, edges.
+4. A **video-to-video model** gets a control video and a text prompt for each view. The control carries the structure and motion; the text carries how things look. Four models are set up: Cosmos3-Nano, Cosmos3-Nano-Sim-Transfer, Wan2.2-VACE-Fun-A14B and LTX-2.5.
+5. Every generated clip is **scored against the simulator**.
 
 Two parts of this pipeline get evaluated:
 
@@ -14,56 +15,136 @@ Two parts of this pipeline get evaluated:
 
 This repo started as a copy of branch `shourov/pilot-v0` of [Sim2Real-VideoGen](https://github.com/UTAustin-SwarmLab/Sim2Real-VideoGen) at commit `0b3e23c` (2026-11-22), with its history kept.
 
-## Pipeline
+## The pipeline
+
+Everything for it is in [`p2s/`](p2s/), one folder per stage, in the order the stages run:
 
 ```
-text prompt                                   configs/scenes/<scene>.source.md
-   │  [1] LLM writes the scene spec           (by hand-in-the-loop for now, recorded in the .source.md)
+p2s/prompts/<scene>.yaml           INPUT   the prompt, the camera views, the clip format
+p2s/experiments/v1/<model>.yaml    INPUT   which scenes, controls, model and seeds
+   │
+   │  1 scene     p2s/1_scene/      SceneAgent writes the scene; PhysX simulates; the checker reports; repeat until PASS
    ▼
-scene spec                                    configs/scenes/<scene>.yaml  (spec v2: world, signals, objects, cameras, checks)
-   │  [2] simulate once, run the checks        sim/simulate_world.py  (numpy only, no GPU)
+world/                             scene.json, x.json + streams/ (every pose per frame), r.md (the report), spec.yaml
+   │  2 render    p2s/2_render/     Blender renders each camera; the exporter writes its bundle
    ▼
-world/                                        world.npz (every part's pose per frame), world.json (signals, events, check results)
-   │  [3] render each camera in Blender        sim/render_world.py
-   │  [4] export a bundle per camera           sim/export_world.py
+cams/<cam>/bundle/                 rgb, depth, masks, tracks; controls/ depth.mp4, seg.mp4, edge.mp4, normals.mp4, rgb.mp4
+   │  3 generate  p2s/3_generate/   captions + one control video → one clip per view, control and seed
    ▼
-cams/<cam>/bundle/                            rgb, depth, instance masks, boxes, tracks, visibility, checks
-cams/<cam>/bundle/controls/                   depth.mp4, seg.mp4, edge.mp4, normals.mp4, rgb.mp4 (clay), controls_sheet.jpg
-   │  [5] compose the prompt                   gen/compose_prompts.py  (world block + camera block → composed/<view>.json or .txt)
-   │  [6] generate on free GPUs                gen/run_multicam.py  (one experiment file per model; gen/<model>/run.sh does one job)
+gen/<cam>/<control>/<model>/seed<k>/out_video.mp4
+   │  4 score     p2s/4_score/      depth, masks and tracks read from the clip, compared with the simulator's
    ▼
-gen/<view>/<cond>/<model>/seed<k>/            out_video.mp4, the prompt, request.json, run.json (hashes of every input)
-   │  [7] score against the simulator          eval/run_eval.py  (three scores per camera, two across cameras)
-   ▼
-scores/<experiment>/                          eval2.csv, eval3.csv, eval_summary.json
+scores/<experiment>/, tables/<experiment>.csv
 ```
 
-Steps 1 and 5 are the LLM jobs. Everything else is deterministic code. Each step reads and writes files, so any step can be re-run alone.
+Stages 1 and the captions of stage 3 are the LLM jobs. Everything else is deterministic code. Each stage reads and writes files, so any stage can be run alone. [`p2s/README.md`](p2s/README.md) has the details.
 
-`sim/build_world.sh` runs steps 2 to 4 for every camera of a scene.
+## Run it
 
-## What is in the repo
+```bash
+source ~/.sim2real.env
+bash p2s/run.sh p2s/experiments/v1/smoke_ltx25.yaml        # smallest end-to-end run: one scene, three clips, a few minutes
+bash p2s/run.sh p2s/experiments/v1/ltx25.yaml 5,6,7        # a full experiment; the GPU list is for the Blender renders
+```
+
+`p2s/run.sh` runs all four stages for every scene the experiment file names and skips what is already done. The server is shared: read `nvidia-smi` first. Measured on an A100:
+
+| Stage | Time | Peak GPU memory |
+| --- | --- | --- |
+| 1 scene: the SceneAgent's iterations (`ball_ramp`: three) | about 5 minutes | not measured |
+| 2 render and export, per camera | about 3.5 minutes | not measured |
+| 3 generate, LTX-2.5 distilled, per clip | 49 s | 36.5 GiB |
+| 3 generate, LTX-2.5 full model at 50 steps, per clip | about 6.5 minutes | 36.6 GiB |
+| 4 score, per clip | about 45 s | not measured |
+
+## Repo map
+
+```
+p2s/                  ★ the pipeline
+├── run.sh            one command for an experiment file
+├── prompts/          INPUT: one prompt file per scene
+├── experiments/v1/   INPUT: one file per model
+├── captions/         what each view's video prompt says, per scene
+├── 1_scene/          prompt file → accepted PhysX world
+├── 2_render/         world → camera bundles and control videos
+├── 3_generate/       control + prompt → video; models/<model>/ holds each model's scripts
+└── 4_score/          video against the simulator → scores, tables, figures
+sim/physx/            the PhysX simulator and checker (C++), and the SceneAgent's manual
+sim/blender/          builds the Blender scene from the physics output
+legacy/               the earlier route: hand-written scene specs, a numpy simulator, their experiments
+setup/                clone script, env specs, the full setup guide
+docs/                 design docs, the evaluation report, the literature review
+tests/                unit tests for the metrics and the older motion models
+```
 
 | Folder | What it holds |
 | --- | --- |
-| [`configs/scenes/`](configs/scenes/) | Scene specs (`<scene>.yaml`) and the prompt each was written from (`<scene>.source.md`). `history/` keeps old revisions byte for byte. |
-| [`configs/prompts/`](configs/prompts/) | Prompt blocks per experiment and scene: `world.json`, `cams/<cam>.json`, `cut3.json`, the exact prompts in `composed/` (`.json` captions for Cosmos, `.txt` paragraphs for Wan and LTX), and for text-only runs the simulator facts in `facts/`. |
-| [`configs/experiments/`](configs/experiments/) | One file per experiment: scenes, model and revision, sampler, conditions, seeds, GPU limits. [`cvp_v1/`](configs/experiments/cvp_v1/) holds the four-model benchmark, one file per model. |
-| [`sim/world/`](sim/world/) | The multi-camera simulator: spec loading, layouts, kinematics, cameras, checks, controls, and Blender mesh builders. Read [`sim/world/__init__.py`](sim/world/__init__.py) first. |
-| [`sim/physics/`](sim/physics/) | Motion models: quadrotor, ground and lane vehicles, pedestrian, robot arm, pour, rigid body. |
-| [`sim/physx/`](sim/physx/) | Prompt to sim (p2s): GPU physics on PhysX 5.9 from an LLM-written JSON scene, and the checker whose report drives the SceneAgent's loop. [`sim/physx/README.md`](sim/physx/README.md) has the build, the programs and the SceneAgent prompt. |
-| [`sim/blender/`](sim/blender/) | `import_x.py`: builds the Blender scene from p2s physics output, with no per-scene code. |
-| [`gen/`](gen/) | The GPU job runner and prompt composing at the top, shared code in `common/`, and one folder per model. [`gen/README.md`](gen/README.md) has the layout and how to add a model. |
-| [`eval/`](eval/) | Scoring against the simulator: five scene-independent scores (`run_eval.py`), the metric functions, and one folder per reader model. [`eval/README.md`](eval/README.md) has the definitions. |
-| [`setup/`](setup/) | Clone script for third-party code, env specs, asset fetcher, and the full setup guide. |
-| [`smoke/`](smoke/), [`tests/`](tests/) | Tool smoke tests and physics unit tests. |
-| [`docs/`](docs/) | Design docs, findings and the literature review from Sim2Real-VideoGen. |
+| [`p2s/`](p2s/) | The pipeline. [`p2s/README.md`](p2s/README.md) has the prompt file's format, what each stage reads and writes, and how to add a scene, a control or a model. |
+| [`p2s/3_generate/`](p2s/3_generate/) | The GPU job runner, prompt composing, and one folder per model. [README](p2s/3_generate/README.md). |
+| [`p2s/4_score/`](p2s/4_score/) | Scoring against the simulator: five scene-independent scores, the metric functions, one folder per reader model. [README](p2s/4_score/README.md). |
+| [`sim/physx/`](sim/physx/) | GPU physics on PhysX 5.9 from a JSON scene, and the checker whose report drives the SceneAgent's loop. [README](sim/physx/README.md). |
+| [`sim/blender/`](sim/blender/) | `import_x.py`: builds the Blender scene from the physics output, with no per-scene code. |
+| [`legacy/`](legacy/) | The earlier route and its experiments, still runnable. [README](legacy/README.md). |
+| [`setup/`](setup/) | Clone script for third-party code, env specs, asset fetcher, and the [full setup guide](setup/README.md). |
 
-Single-camera scripts from the earlier rounds (`sim/build_bundle.sh`, `sim/controls.py`, `gen/run_matrix.py`, the `singlecam_*` scripts in the model folders) still work. See [`setup/README.md`](setup/README.md) and the [round 2 guide](docs/2026-11-11-1304-pilot-v0-branch-guide.md).
+## Where outputs go
 
-## 1. Setup
+```
+$S2R_DATA/cv-project/p2s/               the experiments' out_root
+  manifest.jsonl                        one line per launch and finish
+  STOP                                  if present, the runner starts no new jobs
+  tables/<experiment>.csv               one score table per experiment
+  <scene>/r<rev>/
+    agent/                              the SceneAgent's task and iterations: it<N>/scene.json, x.json, r.md
+    world/                              the accepted iteration, spec.yaml, world.json
+    cams/<cam>/bundle/                  rgb, depth, instance, boxes, tracks, visibility, controls/
+    cut/<cut>/                          several cameras joined into one clip by the experiment's schedule
+    gen/<view>/<control>/<model>/seed<k>/   out_video.mp4, the prompt, request.json, run.log, run.json
+    gen_smoke/...                       smoke-test runs
+    gen/.../seed<k>/est/                reader outputs for scoring: depth, masks, point tracks
+    scores/<experiment>/                eval2.csv, eval3.csv, eval_summary.json
+```
 
-Pick the path for where you are. Both end with the same [check](#check-the-install-both-paths), then section 2.
+`run.json` records the git commit, whether the tree was dirty, hashes of every input, the model revision, the GPU and the peak memory. A finished clip is redone only if one of those inputs changes.
+
+## Evaluation
+
+### Prompt → sim
+
+The checker (`sim/physx`, `p2s_check`) runs on every iteration and its report decides whether the scene is accepted:
+
+| Check | Status |
+| --- | --- |
+| Physics: finite values, no interpenetration, nothing below ground or flung away, no energy gained beyond what actuators delivered | Runs on every iteration |
+| The scene's own expectations: event timing and order, speeds, gaps, what each camera must see | Runs on every iteration |
+| What each camera sees, from geometry alone: share of frames in view, occlusion, screen size | Written into every report |
+| Does the scene's expectation list cover the prompt? | **Not built yet** |
+
+### Sim → video
+
+[`p2s/4_score/run_eval.py`](p2s/4_score/run_eval.py) scores every finished run of an experiment. The five scores are the same for every scene, because every reference comes from the camera bundles. All are in [0, 1], 1 best. Definitions, files and limits: [`p2s/4_score/README.md`](p2s/4_score/README.md). Equations, figures and first results: the [evaluation report](docs/2026-11-24-1158-eval-report.md).
+
+| Score | Question | Simulator reference | Read from the video with |
+| --- | --- | --- | --- |
+| `depth` | Is the scene's shape where the simulator put it? | Rendered depth | Depth Anything 3 |
+| `mask_iou` | Is each object where the simulator put it, in every frame? | Rendered object masks | SAM 2.1, started from the simulator's box |
+| `track` | Does each surface point move as in the simulation? | Surface points on every moving part | CoTracker3 |
+| `object_colour` | Is the same object the same colour in every camera? | Object masks of two cameras at one instant | Colour inside the masks |
+| `surface_colour` | Is the same surface point the same colour in every camera? | Depth and camera poses, which give exact pixel pairs | Colour at the pairs |
+
+- **Eval2, per camera.** `eval2` is the harmonic mean of `depth`, `mask_iou` and `track`, each averaged over the cameras first.
+- **Eval3, across cameras.** `object_colour` and `surface_colour` compare the separate camera views of one condition and seed. They count only objects and surfaces that are where the simulator puts them in both cameras, and report that share (`object_in_place`, `surface_in_place`).
+- **One table across experiments.** [`p2s/4_score/summarize.py`](p2s/4_score/summarize.py) lists every model and condition from the densest control to text only.
+- **Ceilings.** `--on-render` scores the simulator's own render with the same readers. Read the generated clips' scores against it: the readers are not perfect even on a clip that follows the simulator exactly.
+
+Also in the repo: [`legacy/eval/score_multicam.py`](legacy/eval/score_multicam.py), the earlier scorer, names each object's colour and reads the traffic-light state per frame (`colour.csv`, `lights.csv`). The light check is specific to scenes with signals and belongs with text → sim.
+
+Not built: optical flow (the renderer does not write motion vectors; `track` covers motion), a realism score, and a judge model for object identity beyond colour.
+
+
+## Setup
+
+Pick the path for where you are. Both end with the same [check](#check-the-install-both-paths), then [Run it](#run-it). The PhysX simulator is built separately, once: [`sim/physx/README.md`](sim/physx/README.md).
 
 | Where you are | Path | What you install | Time |
 | --- | --- | --- | --- |
@@ -142,7 +223,7 @@ uv tool install blenderproc==2.8.0
 
 Don't run `blenderproc pip install`. The shared Blender already has what it needs, and you can't write to it.
 
-**A5. Fetch the scene assets into your data folder.** About 35 MB of CC0 Poly Haven textures and models, listed in [`configs/assets/polyhaven.yaml`](configs/assets/polyhaven.yaml).
+**A5. Fetch the scene assets into your data folder.** About 35 MB of CC0 Poly Haven textures and models, listed in [`legacy/configs/assets/polyhaven.yaml`](legacy/configs/assets/polyhaven.yaml).
 
 ```bash
 $S2R_ROOT/envs/eval/.venv/bin/python setup/fetch_assets.py
@@ -282,11 +363,11 @@ The Wan2.1 VACE and Wan-Move models of the earlier rounds, and the SAM 2 and CoT
 source ~/.sim2real.env
 PY=$S2R_ROOT/envs/eval/.venv/bin/python
 $PY tests/test_physics.py                                                                   # physics unit tests, no GPU
-$PY sim/simulate_world.py configs/scenes/robot_pour.yaml $S2R_DATA/check/robot_pour/world   # simulate + checks, seconds, no GPU
+$PY legacy/sim/simulate_world.py legacy/configs/scenes/robot_pour.yaml $S2R_DATA/check/robot_pour/world   # simulate + checks, seconds, no GPU
 nvidia-smi                                                                                  # find a GPU with a few GB free
 GPU=0                                                                                       # set to that GPU's index
-CUDA_VISIBLE_DEVICES=$GPU blenderproc run --blender-install-path $S2R_ROOT/blender sim/render_world.py \
-    configs/scenes/robot_pour.yaml $S2R_DATA/check/robot_pour/world side $S2R_DATA/check/preview --frames 0 --samples 8
+CUDA_VISIBLE_DEVICES=$GPU blenderproc run --blender-install-path $S2R_ROOT/blender legacy/sim/render_world.py \
+    legacy/configs/scenes/robot_pour.yaml $S2R_DATA/check/robot_pour/world side $S2R_DATA/check/preview --frames 0 --samples 8
 ```
 
 - The tests print `ok` lines.
@@ -297,222 +378,23 @@ The first render on a new account or machine spends about 6 minutes compiling CU
 
 Known problems and fixes for the tools: [Step 1 gotchas](docs/2026-11-10-0945-step1-environment-gotchas.md).
 
-## 2. Run the pipeline on one scene
+## The earlier route
 
-The shared server has other users. Read `nvidia-smi` right before each GPU step.
+Scenes written by hand as spec v2 files, a numpy simulator, and the experiments run on them (`multicam_v1*`, `cvp_v1`) are in [`legacy/`](legacy/), with their own [README](legacy/README.md). They run with the same generation and scoring code as the pipeline. Documents in [`docs/`](docs/) dated before 2026-11-25 name files by their old paths; the table below maps them.
 
-| Step | Time on an A100 | Peak GPU memory |
-| --- | --- | --- |
-| Simulate and check | Seconds | None |
-| Render and export, per camera | About 3 minutes (plus 6 minutes of kernel compiling on your first render) | A few GB |
-| Cosmos3-Nano with controls, 50 steps, 113 frames (`multicam_v1.1`) | About 28 minutes | 38.8 GiB |
-| The same, 4-step smoke test | About 5 minutes | 38.8 GiB |
-| Cosmos3-Nano-Sim-Transfer, 4 steps (`multicam_v1.2`) | About 2 minutes | 39.0 GiB |
-| Cosmos3-Nano text-to-video, 35 steps (`multicam_v1.3`) | About 3 minutes | 38.7 GiB |
-
-A full `multicam_v1.1` is 16 runs, about 7.5 GPU-hours. The runner runs up to 4 at once, on whichever GPUs have room.
-
-The commands use the scene `intersection_4way` and the experiment `multicam_v1.1`, which is Cosmos3-Nano with depth and segmentation controls. Outputs go to `$S2R_DATA/<out_root>/<scene>/r<rev>/`, where `out_root` and `rev` come from the experiment file.
-
-```bash
-source ~/.sim2real.env
-PY=$S2R_ROOT/envs/eval/.venv/bin/python
-S=intersection_4way
-OUT=$S2R_DATA/poc/multi-cam/$S/r2
-EXP=configs/experiments/multicam_v1_1.yaml
-```
-
-**Step 1. Simulate and check (no GPU, seconds).** This writes `world/world.npz` and `world/world.json`. It exits with an error if any check in the spec's `checks:` list fails.
-
-```bash
-$PY sim/simulate_world.py configs/scenes/$S.yaml $OUT/world
-```
-
-**Step 2. Preview one camera (three frames, low samples).** Look at the framing before a full render.
-
-```bash
-CUDA_VISIBLE_DEVICES=$GPU blenderproc run --blender-install-path $S2R_ROOT/blender sim/render_world.py configs/scenes/$S.yaml \
-    $OUT/world cctv $S2R_DATA/preview/$S --frames 0,56,112 --samples 16
-```
-
-**Step 3. Build every camera.** This simulates again (same result), renders each camera, and exports its bundle and control videos. The third argument lists GPUs; cameras render in parallel, one per GPU. One GPU works too, one camera after another.
-
-```bash
-bash sim/build_world.sh configs/scenes/$S.yaml $OUT 0,2,7        # GPUs that nvidia-smi shows as free
-```
-
-Look at `$OUT/cams/<cam>/bundle/controls/controls_sheet.jpg` and `overlay.mp4`. The `visible check` lines at the end say whether each camera sees the objects the spec requires.
-
-**Step 4. Check the prompts.** The runner refuses to start a job whose caption file is missing or out of date. `--check` only reports. If you edited prompt blocks, run it without `--check` to rewrite the captions, and commit them.
-
-```bash
-$PY gen/compose_prompts.py --exp $EXP --check
-```
-
-**Step 5. Generate.** Look at what would run, try a 4-step smoke test (it writes to `gen_smoke/`, never over real runs), then run the experiment. The runner picks GPUs with enough free memory and re-checks before each launch.
-
-```bash
-$PY gen/run_multicam.py --exp $EXP --status
-$PY gen/run_multicam.py --exp configs/experiments/multicam_v1_1_smoke.yaml --only scene=$S
-$PY gen/run_multicam.py --exp $EXP --only scene=$S
-```
-
-`--status` gives each job one of these states:
-
-| State | Meaning |
+| Before | Now |
 | --- | --- |
-| `blocked` | The scene's renders are not there yet. Run step 3. |
-| `pending` | Ready to run, or a past attempt failed. |
-| `running` | Running now. |
-| `done` | Finished, and none of its inputs changed since. It won't run again. |
-| `stale` | Finished, but an input (spec, world, prompt, settings, code) changed since. It reruns only with `--rerun-stale`, which keeps the old video as `out_video.stale_<time>.mp4`. |
+| `gen/` (runner, `common/`, model folders) | `p2s/3_generate/` (model folders under `models/`) |
+| `eval/` | `p2s/4_score/` |
+| `sim/world/export.py`, `sim/world/controls.py` | `p2s/2_render/bundle.py`, `p2s/2_render/control_videos.py` |
+| `sim/` (everything but `physx/` and `blender/`), `configs/`, `smoke/` | `legacy/sim/`, `legacy/configs/`, `legacy/smoke/` |
+| `gen/run_matrix.py`, `gen/camera_facts.py`, `singlecam_*`, `eval/score_multicam.py` | `legacy/gen/`, `legacy/eval/` |
 
-To stop starting new jobs, `touch $S2R_DATA/poc/multi-cam/STOP`; running jobs finish.
+## Known problems
 
-**Step 6. Score.** Three scores per camera and two across cameras (section 4.2). It needs a GPU with a few GB free.
-
-```bash
-$PY eval/run_eval.py --exp $EXP --only scene=$S
-```
-
-**Your own experiments.** Copy an experiment file under a new name and change `experiment:` (the name in run IDs and the scores folder) and, to keep your runs apart from earlier ones, `out_root:`. Don't edit the existing files: each is the record of runs that already exist.
-
-## 3. Experiments so far
-
-| File | Model | What the model gets |
-| --- | --- | --- |
-| [`multicam_v1.yaml`](configs/experiments/multicam_v1.yaml) | Cosmos3-Nano | The textured render as a blur control (V). The model copied the render; kept as a baseline. Uses the rev-1 specs in `configs/scenes/history/`. |
-| [`multicam_v1_1.yaml`](configs/experiments/multicam_v1_1.yaml) | Cosmos3-Nano, 50 steps | Clay render; depth + segmentation (G). Appearance only from the prompt. |
-| [`multicam_v1_2.yaml`](configs/experiments/multicam_v1_2.yaml) | Cosmos3-Nano-Sim-Transfer, 4 steps | One control per clip: depth (D), segmentation (S) or edges (E). |
-| [`multicam_v1_3.yaml`](configs/experiments/multicam_v1_3.yaml) | Cosmos3-Nano text-to-video | Text only, no control. A baseline for how much the controls add. |
-
-Each experiment covers two scenes, `intersection_4way` (cars, pedestrians, traffic lights; CCTV, dashcam, phone) and `robot_pour` (a Panda arm pours water; side, wrist, CCTV), plus `cut3`, one video that cuts between the three cameras. The design and the findings are in the [multi-camera v1 design doc](docs/2026-11-18-1739-multicam-v1-design.md), §14 for the clay revision.
-
-### The four-model benchmark (cvp_v1)
-
-The same clips on four models. The files in [`configs/experiments/cvp_v1/`](configs/experiments/cvp_v1/) differ only in the model:
-
-| File | Model | Steps | Prompt format |
-| --- | --- | --- | --- |
-| [`cosmos3_nano.yaml`](configs/experiments/cvp_v1/cosmos3_nano.yaml) | Cosmos3-Nano | 50 | Structured caption |
-| [`cosmos3_sim_transfer.yaml`](configs/experiments/cvp_v1/cosmos3_sim_transfer.yaml) | Cosmos3-Nano-Sim-Transfer | 4, distilled | Structured caption |
-| [`wan22_vace_fun.yaml`](configs/experiments/cvp_v1/wan22_vace_fun.yaml) | Wan2.2-VACE-Fun-A14B | 50 | One paragraph |
-| [`ltx25.yaml`](configs/experiments/cvp_v1/ltx25.yaml) | LTX-2.5, 22B distilled | 8, distilled | One paragraph |
-
-What is held equal:
-
-- **Scenes, cameras, cut, seeds.** Both scenes at rev 2 (clay), three cameras plus `cut3`, seeds 0 and 1: 16 clips per model, 64 in all.
-- **Clip.** 113 frames at 16 fps, 832×480.
-- **Control.** One condition, `D`: the simulator's depth video, the same file for every model, and no first frame. Depth is the one control all four take. Sim-Transfer takes a single control, and Wan and LTX have no segmentation input.
-- **Prompt content.** Each view's prompt is composed from the same world and camera blocks, as a structured caption for the Cosmos models and as one paragraph for Wan and LTX (`composed/<view>.json` and `.txt`).
-- **Output root.** All four write under `$S2R_DATA/cv-project/multi-cam/`, so they share one simulated world and one set of bundles, and a view's four results sit side by side in `gen/<view>/D/<model name>/`.
-
-What is not equal, and belongs in any comparison:
-
-- **Step count.** Sim-Transfer and LTX-2.5 are distilled few-step models with no guidance; the other two run 50 steps with guidance. Each model uses its own recommended settings.
-- **Clip length for Wan.** Wan2.2-VACE-Fun was trained on 81-frame clips; 113 frames is longer than that.
-- **Size for LTX.** LTX-2.5 generates at 832×512 and the result is resized to 832×480 (its control adapter needs a height that is a multiple of 64). It also generates audio, which is dropped.
-- **Depth convention.** The depth video is inverse depth with one scale per clip, the Cosmos convention. VACE's own depth annotator scales each frame separately.
-
-Run it, one model at a time or several runners at once:
-
-```bash
-for M in cosmos3_sim_transfer ltx25 cosmos3_nano wan22_vace_fun; do
-  $PY gen/compose_prompts.py --exp configs/experiments/cvp_v1/$M.yaml --check
-  $PY gen/run_multicam.py --exp configs/experiments/cvp_v1/$M.yaml
-  $PY eval/run_eval.py --exp configs/experiments/cvp_v1/$M.yaml
-done
-```
-
-`smoke_cosmos3_nano.yaml` and `smoke_wan22_vace_fun.yaml` are 4-step smoke tests that write to `gen_smoke/`. The two distilled models are quick enough to try with `--only scene=robot_pour,view=side,seed=0` on the real file.
-
-Cost per clip on an A100 80 GB, at the benchmark's clip (113 frames, depth control):
-
-| Model | Time | Peak GPU memory | Measured? |
-| --- | --- | --- | --- |
-| Cosmos3-Nano, 50 steps | About 10 minutes | 37.4 GiB | Estimate: a 4-step run took 150 s, about 9.5 s per step (2026-11-23) |
-| Cosmos3-Nano-Sim-Transfer, 4 steps | About 2 minutes | 39.0 GiB | Yes, in `multicam_v1.2` |
-| Wan2.2-VACE-Fun-A14B, 50 steps | About 33 minutes | 58.5 GiB | Estimate: a 4-step run took 331 s, about 36 s per step (2026-11-23) |
-| LTX-2.5, 8 steps | Not known | Not known | Not run yet: the weights are not on the server |
-
-**Status on 2026-11-23.** The bundles for both scenes are built under `cv-project/multi-cam`. Cosmos3-Nano and Wan2.2-VACE-Fun each passed a 4-step smoke test through the runner. The Sim-Transfer request was checked against `multicam_v1.2`'s and is identical. LTX-2.5 has its code, environment and experiment file, and its launcher's imports were checked in that environment, but it has not generated a clip: the server is not logged in to Hugging Face, so the gated weights are not downloaded (setup step B8).
-
-### Text-only runs (multicam_v1.3)
-
-With no control, the prompt has to say where each object is in each camera's frame and when. Those claims come from the simulator:
-
-```bash
-$PY gen/camera_facts.py --exp configs/experiments/multicam_v1_3.yaml     # needs the bundles from step 3
-```
-
-This writes `configs/prompts/multicam_v1_3/<scene>/facts/<camera>.{json,txt}`. The camera blocks in `cams/<camera>.json` are written from those facts. Then run steps 4 to 6 with `multicam_v1_3.yaml`.
-
-## 4. Evaluation
-
-### 4.1 Text → sim
-
-| Check | Where | Status |
-| --- | --- | --- |
-| Rules in the spec: minimum gap between objects, cars obey signals and yield to pedestrians, events in order, robot joint limits | `checks:` in the spec, [`sim/world/checks.py`](sim/world/checks.py); results in `world/world.json` | Runs on every simulation; a failed check stops it |
-| Each camera sees the objects it should | `visible` checks, evaluated after rendering into `cams/<cam>/bundle/checks.json` | Runs on every build |
-| What each camera sees, written as text (position in frame, size, direction, on-screen times) | [`gen/camera_facts.py`](gen/camera_facts.py) → `facts/<camera>.txt` | Runs on demand |
-| Provenance: the frozen prompt, who wrote the spec, every revision | `configs/scenes/<scene>.source.md` | Kept by hand |
-| Does the spec do what the prompt says (each claim in the prompt checked against `world.json` and the facts) | | **Not built yet** |
-
-### 4.2 Sim → video
-
-[`eval/run_eval.py`](eval/run_eval.py) scores every finished run of an experiment. The five scores are the same for every scene, because every reference comes from the camera bundles. All are in [0, 1], 1 best. Definitions, files and limits: [`eval/README.md`](eval/README.md). Equations, figures and first results: the [evaluation report](docs/2026-11-24-1158-eval-report.md).
-
-| Score | Question | Simulator reference | Read from the video with |
-| --- | --- | --- | --- |
-| `depth` | Is the scene's shape where the simulator put it? | Rendered depth | Depth Anything 3 |
-| `mask_iou` | Is each object where the simulator put it, in every frame? | Rendered object masks | SAM 2.1, started from the simulator's box |
-| `track` | Does each surface point move as in the simulation? | Surface points on every moving part | CoTracker3 |
-| `object_colour` | Is the same object the same colour in every camera? | Object masks of two cameras at one instant | Colour inside the masks |
-| `surface_colour` | Is the same surface point the same colour in every camera? | Depth and camera poses, which give exact pixel pairs | Colour at the pairs |
-
-- **Eval2, per camera.** `eval2` is the harmonic mean of `depth`, `mask_iou` and `track`, each averaged over the cameras first.
-- **Eval3, across cameras.** `object_colour` and `surface_colour` compare the separate camera views of one condition and seed. They count only objects and surfaces that are where the simulator puts them in both cameras, and report that share (`object_in_place`, `surface_in_place`).
-- **One table across experiments.** [`eval/summarize.py`](eval/summarize.py) lists every model and condition from the densest control to text only.
-- **Ceilings.** `--on-render` scores the simulator's own render with the same readers. Read the generated clips' scores against it: the readers are not perfect even on a clip that follows the simulator exactly.
-
-Also in the repo: [`eval/score_multicam.py`](eval/score_multicam.py), the earlier scorer, names each object's colour and reads the traffic-light state per frame (`colour.csv`, `lights.csv`). The light check is specific to scenes with signals and belongs with text → sim.
-
-Not built: optical flow (the renderer does not write motion vectors; `track` covers motion), a realism score, and a judge model for object identity beyond colour.
-
-## 5. Add a new scene
-
-1. Write the user prompt and the spec's provenance in `configs/scenes/<name>.source.md`.
-2. Write the spec, `configs/scenes/<name>.yaml` (`spec_version: 2`). Copy `intersection_4way.yaml` or `robot_pour.yaml` and keep the conventions in [`sim/world/__init__.py`](sim/world/__init__.py): Z up, metres, +X east, +Y north.
-3. Iterate on step 1 of section 2 until every check passes, then on step 2 until the framing is right.
-4. Write the prompt blocks in `configs/prompts/<experiment>/<name>/`: `world.json`, `cams/<cam>.json`, and a cut file if you want one.
-5. Add the scene to an experiment file, then run steps 3 to 6.
-
-A new kind of object needs a motion model in `sim/physics/`, a kinematics function in `sim/world/kinematics.py` and a mesh builder in `sim/world/blender/`. A new camera kind is one function in `sim/world/cameras.py`.
-
-## 6. Where outputs go
-
-```
-$S2R_DATA/<out_root>/                   poc/multi-cam for the experiments so far
-  manifest.jsonl                        one line per launch and finish
-  STOP                                  if present, the runner starts no new jobs
-  <scene>/r<rev>/
-    world/                              world.npz, world.json, spec.yaml
-    cams/<cam>/bundle/                  rgb, depth, instance, boxes, tracks, visibility, checks, controls/
-    cut/cut3/                           the same, joined by the experiment's schedule
-    gen/<view>/<cond>/<model>/seed<k>/  out_video.mp4, prompt.json, request.json, run.log, run.json
-    gen_smoke/...                       smoke-test runs
-    gen/.../seed<k>/est/                reader outputs for scoring: depth, masks, point tracks
-    scores/<experiment>/                eval2.csv, eval3.csv, eval_summary.json (and colour.csv, lights.csv)
-```
-
-`run.json` records the git commit, whether the tree was dirty, hashes of the spec, prompt, experiment file and controls, the model revision, the GPU and the peak memory.
-
-## 7. Known problems
-
-- `gen/cosmos3_nano/run.sh`, `gen/cosmos3_sim_transfer/run.sh` and `gen/cosmos3_nano/singlecam_run.sh` default to `/mnt/Data/sj37434/hf/hub` for weights. Both setup paths set `COSMOS_HF_CACHE`, which overrides it.
+- `p2s/3_generate/models/cosmos3_nano/run.sh`, `p2s/3_generate/models/cosmos3_sim_transfer/run.sh` and `legacy/gen/cosmos3_nano/singlecam_run.sh` default to `/mnt/Data/sj37434/hf/hub` for weights. Both setup paths set `COSMOS_HF_CACHE`, which overrides it.
 - If you run `setup/clone.sh` without sourcing `~/.sim2real.env`, it clones into `~/code/sim2real-videogen`, which on the lab server is the nearly full root disk.
-- Cosmos3-Nano runs (`gen/cosmos3_nano/run.sh`, `gen/cosmos3_nano/singlecam_run.sh`) turn offline mode off and ask Hugging Face which commit `main` of `nvidia/Cosmos3-Nano` is. On path A, `run.log` then shows `Ignored error while writing commit hash ... Read-only file system`. That line is harmless: the run loads the cached snapshot `45666784`, the revision the experiment files pin, which is `main` as of 2026-11-22. If NVIDIA moves `main`, a run will try to download the new version. On path A that fails; on path B it silently uses a different model from the one the experiment file names.
+- Cosmos3-Nano runs (`p2s/3_generate/models/cosmos3_nano/run.sh`, `legacy/gen/cosmos3_nano/singlecam_run.sh`) turn offline mode off and ask Hugging Face which commit `main` of `nvidia/Cosmos3-Nano` is. On path A, `run.log` then shows `Ignored error while writing commit hash ... Read-only file system`. That line is harmless: the run loads the cached snapshot `45666784`, the revision the experiment files pin, which is `main` as of 2026-11-22. If NVIDIA moves `main`, a run will try to download the new version. On path A that fails; on path B it silently uses a different model from the one the experiment file names.
 - The shared workspace of path A depends on its folders staying readable. An earlier shared workspace on this server became private overnight. If yours stops working with `Permission denied`, use path B.
 - Every Wan model needs flash-attn; there is no fallback. Cosmos and LTX do not.
 - More: [Step 1 gotchas](docs/2026-11-10-0945-step1-environment-gotchas.md).

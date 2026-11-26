@@ -1,0 +1,20 @@
+# Prompt file for the prompt-to-sim pipeline (p2s/README.md). One file is one scene; this is its only input.
+#   bash p2s/build_scene.sh p2s/prompts/intersection.yaml
+name: intersection
+rev: 1
+
+prompt: >
+  A four-way intersection with traffic lights: two cars cross north-south on green while two cars wait on red
+  east-west; two pedestrians cross; a bystander films on a phone.
+
+# The views: every clip is rendered and generated from each of these. The id names the camera everywhere downstream.
+cameras:
+  cctv: CCTV on a building corner
+  dashcam: a dashcam in the waiting car
+  phone: the bystander's phone
+
+clip: {fps: 16, frames: 113, resolution: [832, 480]}      # the benchmark's clip: 7 s, the same for every scene and model
+
+# A scene already written for this prompt (ported from legacy/configs/scenes/intersection_4way.yaml). Remove this line to have
+# the SceneAgent write the scene from the prompt.
+scene: sim/physx/scenes/intersection.json

@@ -1,0 +1,21 @@
+# Prompt file for the prompt-to-sim pipeline (p2s/README.md). One file is one scene; this is its only input.
+#   bash p2s/build_scene.sh p2s/prompts/robot_pour.yaml
+name: robot_pour
+rev: 1
+
+prompt: >
+  A Franka Panda arm on a table pours water from a pitcher into a glass.
+
+# The views: every clip is rendered and generated from each of these. The id names the camera everywhere downstream.
+cameras:
+  wrist: a wrist camera
+  side: a side tripod
+  cctv: a CCTV camera in the corner of the room
+
+clip: {fps: 16, frames: 113, resolution: [832, 480]}      # the benchmark's clip: 7 s, the same for every scene and model
+
+# A scene already written for this prompt (ported from legacy/configs/scenes/robot_pour.yaml; the water is a particle fluid).
+# Remove this line to have the SceneAgent write the scene from the prompt.
+scene: sim/physx/scenes/robot_pour.json
+
+score_static: [glass]      # the glass never moves, but the prompt names it, so eval scores it as an object

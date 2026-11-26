@@ -1,0 +1,8 @@
+{
+ "_about": "Camera block: side (a tripod camera to one side, seeing the ramp and the boxes); written by sim/p2s/write_captions.py from configs/p2s/ball_ramp.yaml (starter block: only what the prompt file says).",
+ "temporal_caption": "Filmed from a tripod camera to one side, seeing the ramp and the boxes. In a workshop, a red rubber ball rolls down a wooden ramp onto a concrete floor and knocks over a stack of three cardboard boxes.",
+ "cinematography": {
+  "camera_motion": "Static"
+ },
+ "style_medium": "Live-action video, photoreal"
+}

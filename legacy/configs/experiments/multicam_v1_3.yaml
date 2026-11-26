@@ -1,0 +1,38 @@
+# multicam_v1.3: the same two scenes and cameras as multicam_v1.1 / v1.2, but text only. Cosmos3-Nano text-to-video:
+# no control video and no first frame, so the prompt has to carry everything the controls carried before: the layout,
+# where each camera is, where each object is in each camera's frame and when, and how it moves.
+# Why: a baseline. If views generated from text alone disagree as much as the controlled ones, the control is not
+# what breaks consistency; appearance carried only by text is. It also shows how rich and real the scene gets unconstrained.
+# Prompts: legacy/configs/prompts/multicam_v1_3/<scene>/ (world + camera blocks, written by Claude Code from the simulator
+# facts in facts/<camera>.txt, legacy/gen/camera_facts.py); composed/<view>.json is the exact caption (p2s/3_generate/compose_prompts.py).
+# Only the simulated objects: the prompt says there is no other traffic and no other people.
+# Settings: Nano's own text-to-video defaults (cosmos_framework/inference/defaults/text2video/sample_args.json).
+experiment: multicam_v1.3
+out_root: poc/multi-cam
+mode: text2video
+
+scenes:
+  intersection_4way: {rev: 2, spec: legacy/configs/scenes/intersection_4way.yaml, prompts: legacy/configs/prompts/multicam_v1_3/intersection_4way}
+  robot_pour:        {rev: 2, spec: legacy/configs/scenes/robot_pour.yaml,        prompts: legacy/configs/prompts/multicam_v1_3/robot_pour}
+
+model:
+  name: cosmos3-nano
+  hf: nvidia/Cosmos3-Nano
+  revision: 45666784803b3a7ad577e0def405f9afcc3bddb2
+  framework_commit: 5950e7b4ea3677b99a2de279a7ed7058b5446e42
+
+video: {num_frames: 113, fps: 16, resolution: "480", aspect_ratio: "16,9"}
+sampler: {num_steps: 35, guidance: 6.0, shift: 10.0}          # Nano's text-to-video defaults
+negative_prompt: p2s/3_generate/negative_prompts/cosmos3_t2v_negative_prompt.json   # frozen copy of the text-to-video default (defaults/neg_prompts.json)
+first_frame: none
+
+conditions:
+  T: {}                     # text only
+
+cuts:
+  intersection_4way: {cut3: [{cam: cctv, frames: [0, 36]}, {cam: dashcam, frames: [37, 76]}, {cam: phone, frames: [77, 112]}]}
+  robot_pour:        {cut3: [{cam: side, frames: [0, 36]}, {cam: wrist, frames: [37, 76]}, {cam: cctv, frames: [77, 112]}]}
+
+seeds: [0, 1]
+
+gpu: {min_free_gib: 45, max_parallel: 4, launch_gap_s: 60, retries: 1}

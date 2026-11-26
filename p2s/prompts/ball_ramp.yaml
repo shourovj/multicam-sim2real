@@ -1,0 +1,17 @@
+# Prompt file for the prompt-to-sim pipeline (p2s/README.md). One file is one scene; this is its only input.
+#   bash p2s/build_scene.sh p2s/prompts/ball_ramp.yaml
+# No `scene:` here, so the SceneAgent writes the scene from the prompt.
+name: ball_ramp
+rev: 1
+
+prompt: >
+  In a workshop, a red rubber ball rolls down a wooden ramp onto a concrete floor and knocks over a stack of three
+  cardboard boxes.
+
+# The views: every clip is rendered and generated from each of these. The id names the camera everywhere downstream.
+cameras:
+  side: a tripod camera to one side, seeing the ramp and the boxes
+  overhead: a ceiling camera looking straight down at the floor
+  low: a camera on the floor just behind the boxes, facing the ramp
+
+clip: {fps: 16, frames: 113, resolution: [832, 480]}      # the benchmark's clip: 7 s, the same for every scene and model

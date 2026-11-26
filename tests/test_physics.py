@@ -1,10 +1,10 @@
-"""Physics models (sim/physics). Run:  python -m pytest tests   or   python tests/test_physics.py"""
+"""Physics models (legacy/sim/physics). Run:  python -m pytest tests   or   python tests/test_physics.py"""
 import os
 import sys
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "sim"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "legacy", "sim"))
 import motion  # noqa: E402
 import physics  # noqa: E402
 

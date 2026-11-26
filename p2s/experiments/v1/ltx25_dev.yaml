@@ -1,0 +1,53 @@
+# p2s_v1: the prompt-to-sim pipeline end to end, on LTX-2.5 (22B), the FULL model with guidance.
+# The same scenes, views, controls, seeds and clip as ltx25.yaml (the distilled model: 8 steps, no guidance); only the
+# checkpoint and the sampler differ, so the two files measure what distillation costs. The sampler matches the
+# benchmark's other full model, Cosmos3-Nano: 50 steps, classifier-free guidance 3.0, with a negative prompt.
+# The control still goes in through the LTX-2.3 Union Control adapter, one stage at 832x512 resized to 832x480.
+# The repo's control pipeline is written for the distilled model; p2s/3_generate/models/ltx25/launch.py hands it a guided denoiser for
+# the full one. The other guidance settings are the repo's defaults for the checkpoint and are recorded per run.
+# Needs diffusion_models/ltx-2.5-22b-dev-transformer-bf16.safetensors in the Hugging Face cache (setup/README.md).
+# Prompt: each scene's caption blocks (the `prompts:` folder below), as paragraph (composed/<view>.txt).
+# Runner: p2s/3_generate/run_multicam.py; this model's scripts: p2s/3_generate/models/ltx25/.
+experiment: p2s_v1_ltx25_dev
+out_root: cv-project/p2s
+
+scenes:      # p2s: the prompt file the scene is built from (bash p2s/build_scene.sh <file>); prompts: the video models' captions
+  intersection: {rev: 1, p2s: p2s/prompts/intersection.yaml, prompts: p2s/captions/intersection}
+  robot_pour:   {rev: 1, p2s: p2s/prompts/robot_pour.yaml,   prompts: p2s/captions/robot_pour}
+  ball_ramp:    {rev: 1, p2s: p2s/prompts/ball_ramp.yaml,    prompts: p2s/captions/ball_ramp}      # scene written by the SceneAgent; starter captions (p2s/3_generate/write_captions.py)
+
+model:
+  name: ltx25-dev
+  family: ltx25
+  hf: Lightricks/LTX-2.5
+  revision: 49b093a39c19169a8a81721dcc541e07e945232f
+  files:
+    transformer: diffusion_models/ltx-2.5-22b-dev-transformer-bf16.safetensors      # the full model (39 GiB), not the distilled one
+    text_encoder: text_encoders/gemma4-12b-with-proj-ltx-2.5-bf16.safetensors
+    video_vae: vae/ltx-2.5-video-vae-bf16.safetensors
+    audio_vae: vae/ltx-2.5-audio-vae-bf16.safetensors
+    spatial_upsampler: latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors
+  control_adapter:
+    hf: Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control
+    revision: 20a580c8606c06a0988d40375a61309e0fe5893d
+    file: ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors
+  framework: LTX-2
+  framework_commit: daa6b16fc7f0f1628f2c9e36a303e3312b333cc6
+
+sampler: {num_steps: 50, guidance: 3.0}     # Cosmos3-Nano's steps and guidance scale; the repo's own default for this checkpoint is 30 steps at 3.0
+negative_prompt: p2s/3_generate/negative_prompts/ltx25_negative_prompt.txt     # frozen copy of ltx_pipelines' DEFAULT_NEGATIVE_PROMPT
+
+video: {num_frames: 113, fps: 16, resolution: "480", aspect_ratio: "16,9"}     # 832x480, 7.06 s: the same clip for every model
+first_frame: none
+
+conditions:      # the simulator's control videos, from each camera's bundle (p2s/2_render/control_videos.py)
+  D: {depth: {}}                # depth video: inverse depth, near bright, one scale per clip
+  E: {edge: {}}                 # geometry edges: object outlines, depth steps and creases, white on black
+
+cuts:
+  intersection: {cut3: [{cam: cctv, frames: [0, 36]}, {cam: dashcam, frames: [37, 76]}, {cam: phone, frames: [77, 112]}]}
+  robot_pour:   {cut3: [{cam: side, frames: [0, 36]}, {cam: wrist, frames: [37, 76]}, {cam: cctv, frames: [77, 112]}]}
+
+seeds: [0, 1]
+
+gpu: {min_free_gib: 45, max_parallel: 4, launch_gap_s: 60, retries: 1}      # estimate: about 6.5 min per clip (6.8 s per guided step, measured 2026-11-25 on 4 steps), 36.6 GiB peak

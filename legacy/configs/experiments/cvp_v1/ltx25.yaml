@@ -1,0 +1,51 @@
+# cvp_v1, the four-model benchmark: LTX-2.5 (22B, distilled).
+# The four files in this folder differ only in the model. Same two scenes (rev 2, clay), cameras, cut, seeds and clip
+# (113 frames at 16 fps, 832x480), same out_root, so they share one simulated world and one set of bundles, and each
+# model's runs sit next to the others' under gen/<view>/D/<model name>/. One control, the simulator's depth video, and
+# no first frame: depth is the one control all four models take. Appearance comes only from the prompt.
+# Prompt: the blocks in legacy/configs/prompts/multicam_v1/<scene>/, as one paragraph (composed/<view>.txt, p2s/3_generate/compose_prompts.py).
+# Runner: p2s/3_generate/run_multicam.py; this model's scripts: p2s/3_generate/models/ltx25/.
+# LTX-2.5 follows a control through an IC-LoRA on its distilled checkpoint: the LTX-2.3 Union Control adapter, the one
+# Lightricks' own LTX-2.5 workflow uses. One stage at full size, 8 fixed steps, no guidance, so no negative prompt.
+# The model generates at 832x512 and the result is resized to 832x480; its audio is dropped (p2s/3_generate/models/ltx25/launch.py).
+experiment: cvp_v1_ltx25
+out_root: cv-project/multi-cam
+
+scenes:
+  intersection_4way: {rev: 2, spec: legacy/configs/scenes/intersection_4way.yaml, prompts: legacy/configs/prompts/multicam_v1/intersection_4way}
+  robot_pour:        {rev: 2, spec: legacy/configs/scenes/robot_pour.yaml,        prompts: legacy/configs/prompts/multicam_v1/robot_pour}
+
+model:
+  name: ltx25-distilled
+  family: ltx25
+  hf: Lightricks/LTX-2.5
+  revision: 49b093a39c19169a8a81721dcc541e07e945232f
+  files:
+    transformer: diffusion_models/ltx-2.5-22b-distilled-transformer-bf16.safetensors
+    text_encoder: text_encoders/gemma4-12b-with-proj-ltx-2.5-bf16.safetensors
+    video_vae: vae/ltx-2.5-video-vae-bf16.safetensors
+    audio_vae: vae/ltx-2.5-audio-vae-bf16.safetensors
+    spatial_upsampler: latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors
+  control_adapter:
+    hf: Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control
+    revision: 20a580c8606c06a0988d40375a61309e0fe5893d
+    file: ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors
+  framework: LTX-2
+  framework_commit: daa6b16fc7f0f1628f2c9e36a303e3312b333cc6
+
+sampler: {num_steps: 8, guidance: 1.0}      # fixed by the distilled checkpoint
+negative_prompt: none
+
+video: {num_frames: 113, fps: 16, resolution: "480", aspect_ratio: "16,9"}     # 832x480, 7.06 s: the same clip for every model
+first_frame: none
+
+conditions:
+  D: {depth: {}}            # the bundle's depth video (p2s/2_render/control_videos.py): inverse depth, near bright, one scale per clip
+
+cuts:
+  intersection_4way: {cut3: [{cam: cctv, frames: [0, 36]}, {cam: dashcam, frames: [37, 76]}, {cam: phone, frames: [77, 112]}]}
+  robot_pour:        {cut3: [{cam: side, frames: [0, 36]}, {cam: wrist, frames: [37, 76]}, {cam: cctv, frames: [77, 112]}]}
+
+seeds: [0, 1]
+
+gpu: {min_free_gib: 45, max_parallel: 4, launch_gap_s: 60, retries: 1}      # measured 2026-11-24: 36.5 GiB peak, 49 s per clip, all weights on the GPU

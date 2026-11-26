@@ -1,0 +1,14 @@
+{
+  "_about": "Cut block: cut3 (output frames 0-36 cctv, 37-76 dashcam, 77-112 phone; hard cuts at 2.31 s and 4.81 s). One clock: each shot shows the world at the same times it shows in its own camera's separate video.",
+  "temporal_caption": "From 0:00 to 0:02 a static high-angle security-camera view of the whole intersection: the white SUV and the red sedan approach from opposite sides on the green light while the dark grey hatchback and the blue sedan wait, two pedestrians cross the crosswalk on the left and the person in the green hoodie stands filming on the corner. At 0:02 a hard cut to the dashcam of the waiting dark grey hatchback: through the windscreen the white SUV crosses in front from left to right and the red sedan from right to left, the two pedestrians finish crossing just ahead, the side lights turn amber then red and the light ahead turns green. At 0:05 a hard cut to the bystander's handheld phone on the corner: the pedestrian in white steps onto the corner and the dark grey hatchback pulls forward across the frame.",
+  "aesthetics": {"composition": "Three framings of the same intersection: high wide, in-car forward, eye-level handheld"},
+  "cinematography": {"camera_motion": "Three shots joined by hard cuts: a fixed security camera, a dashcam in a waiting car, a handheld phone", "framing": "Wide, then wide forward, then medium-wide", "camera_angle": "High angle, then eye level from a car, then eye level from the sidewalk", "depth_of_field": "Deep", "focus": "Everything in focus", "lens_focal_length": "Wide-angle in all three"},
+  "style_medium": "Real-world footage edited from three cameras: CCTV, dashcam and a phone; photoreal live-action",
+  "artistic_style": "Realistic multi-camera edit of one traffic scene",
+  "segments": [
+    {"segment_index": 0, "time_range": "0:00-0:02", "description": "CCTV view: the north-south cars approach on green; pedestrians crossing", "key_changes": "Cars enter the intersection", "camera": "Fixed CCTV camera high on a building corner"},
+    {"segment_index": 1, "time_range": "0:02-0:05", "description": "Dashcam view: cars cross in front; lights change; the light ahead turns green", "key_changes": "Light change", "camera": "Dashcam in the waiting dark grey hatchback"},
+    {"segment_index": 2, "time_range": "0:05-0:07", "description": "Phone view: the waiting car drives off", "key_changes": "The hatchback moves", "camera": "Bystander's handheld phone"}
+  ],
+  "transitions": ["Hard cut at 0:02 from the CCTV view to the dashcam view", "Hard cut at 0:05 from the dashcam view to the phone view"]
+}

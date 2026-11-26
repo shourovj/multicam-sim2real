@@ -1,0 +1,51 @@
+# p2s_v1: the prompt-to-sim pipeline end to end, on LTX-2.5 (22B, distilled) with the repo's TWO-STAGE recipe.
+# The same scenes, views, controls, seeds and clip as ltx25.yaml; the only difference is the second stage: after the
+# 8 steps at 832x512 with the control, the latent is upscaled 2x and refined for 3 more fixed steps, without the
+# control (the repo's default). The model returns 1664x1024 (raw_video.mp4); out_video.mp4 is that resized to
+# 832x480, so it is scored against the same simulator reference as every other run.
+# This is the recipe the Union Control adapter was built and evaluated with: distilled, no guidance, two stages.
+# Prompt: each scene's caption blocks (the `prompts:` folder below), as paragraph (composed/<view>.txt).
+# Runner: p2s/3_generate/run_multicam.py; this model's scripts: p2s/3_generate/models/ltx25/.
+experiment: p2s_v1_ltx25_2stage
+out_root: cv-project/p2s
+
+scenes:      # p2s: the prompt file the scene is built from (bash p2s/build_scene.sh <file>); prompts: the video models' captions
+  intersection: {rev: 1, p2s: p2s/prompts/intersection.yaml, prompts: p2s/captions/intersection}
+  robot_pour:   {rev: 1, p2s: p2s/prompts/robot_pour.yaml,   prompts: p2s/captions/robot_pour}
+  ball_ramp:    {rev: 1, p2s: p2s/prompts/ball_ramp.yaml,    prompts: p2s/captions/ball_ramp}      # scene written by the SceneAgent; starter captions (p2s/3_generate/write_captions.py)
+
+model:
+  name: ltx25-distilled-2stage
+  family: ltx25
+  hf: Lightricks/LTX-2.5
+  revision: 49b093a39c19169a8a81721dcc541e07e945232f
+  files:
+    transformer: diffusion_models/ltx-2.5-22b-distilled-transformer-bf16.safetensors
+    text_encoder: text_encoders/gemma4-12b-with-proj-ltx-2.5-bf16.safetensors
+    video_vae: vae/ltx-2.5-video-vae-bf16.safetensors
+    audio_vae: vae/ltx-2.5-audio-vae-bf16.safetensors
+    spatial_upsampler: latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors
+  control_adapter:
+    hf: Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control
+    revision: 20a580c8606c06a0988d40375a61309e0fe5893d
+    file: ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors
+  framework: LTX-2
+  framework_commit: daa6b16fc7f0f1628f2c9e36a303e3312b333cc6
+
+sampler: {num_steps: 8, guidance: 1.0, second_stage: {num_steps: 3, control: false}}      # 8 fixed steps at 832x512, then 2x and 3 fixed refinement steps
+negative_prompt: none
+
+video: {num_frames: 113, fps: 16, resolution: "480", aspect_ratio: "16,9"}     # 832x480, 7.06 s: the same clip for every model
+first_frame: none
+
+conditions:      # the simulator's control videos, from each camera's bundle (p2s/2_render/control_videos.py)
+  D: {depth: {}}                # depth video: inverse depth, near bright, one scale per clip
+  E: {edge: {}}                 # geometry edges: object outlines, depth steps and creases, white on black
+
+cuts:
+  intersection: {cut3: [{cam: cctv, frames: [0, 36]}, {cam: dashcam, frames: [37, 76]}, {cam: phone, frames: [77, 112]}]}
+  robot_pour:   {cut3: [{cam: side, frames: [0, 36]}, {cam: wrist, frames: [37, 76]}, {cam: cctv, frames: [77, 112]}]}
+
+seeds: [0, 1]
+
+gpu: {min_free_gib: 50, max_parallel: 4, launch_gap_s: 60, retries: 1}      # measured 2026-11-25 on one clip: 95 s, 39.1 GiB peak

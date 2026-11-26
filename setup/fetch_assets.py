@@ -1,4 +1,4 @@
-"""Download the CC0 assets listed in configs/assets/polyhaven.yaml into $S2R_DATA/assets/polyhaven/<id>/.
+"""Download the CC0 assets listed in legacy/configs/assets/polyhaven.yaml into $S2R_DATA/assets/polyhaven/<id>/.
 
   source ~/.sim2real.env; $S2R_ROOT/envs/eval/.venv/bin/python setup/fetch_assets.py
 
@@ -31,7 +31,7 @@ def fetch(url, path, md5):
 
 
 def main():
-    cfg = yaml.safe_load(open(os.path.join(REPO, "configs/assets/polyhaven.yaml")))
+    cfg = yaml.safe_load(open(os.path.join(REPO, "legacy/configs/assets/polyhaven.yaml")))
     for kind in ("textures", "models"):
         for aid, a in cfg[kind].items():
             files = json.loads(get(f"https://api.polyhaven.com/files/{aid}"))

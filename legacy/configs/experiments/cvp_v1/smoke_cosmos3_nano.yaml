@@ -1,0 +1,40 @@
+# Smoke test for cvp_v1_cosmos3_nano: the same inputs and settings, but 4 sampler steps and seed 0, in its own folder
+# (gen_smoke/), so a short run never lands among the real ones. Run with --only to pick a view.
+# cvp_v1, the four-model benchmark: Cosmos3-Nano (base).
+# The four files in this folder differ only in the model. Same two scenes (rev 2, clay), cameras, cut, seeds and clip
+# (113 frames at 16 fps, 832x480), same out_root, so they share one simulated world and one set of bundles, and each
+# model's runs sit next to the others' under gen/<view>/D/<model name>/. One control, the simulator's depth video, and
+# no first frame: depth is the one control all four models take. Appearance comes only from the prompt.
+# Prompt: the blocks in legacy/configs/prompts/multicam_v1/<scene>/, as Cosmos3's structured caption (composed/<view>.json).
+# Runner: p2s/3_generate/run_multicam.py; this model's scripts: p2s/3_generate/models/cosmos3_nano/.
+# Settings: multicam_v1.1's (the Cosmos cookbook's transfer values), with depth alone instead of depth + segmentation.
+experiment: cvp_v1_cosmos3_nano_smoke
+out_root: cv-project/multi-cam
+gen_subdir: gen_smoke
+
+scenes:
+  intersection_4way: {rev: 2, spec: legacy/configs/scenes/intersection_4way.yaml, prompts: legacy/configs/prompts/multicam_v1/intersection_4way}
+  robot_pour:        {rev: 2, spec: legacy/configs/scenes/robot_pour.yaml,        prompts: legacy/configs/prompts/multicam_v1/robot_pour}
+
+model:
+  name: cosmos3-nano
+  family: cosmos3-nano
+  hf: nvidia/Cosmos3-Nano
+  revision: 45666784803b3a7ad577e0def405f9afcc3bddb2
+  framework_commit: 5950e7b4ea3677b99a2de279a7ed7058b5446e42
+
+sampler: {num_steps: 4, guidance: 3.0, control_guidance: 1.5, shift: 10.0}
+
+video: {num_frames: 113, fps: 16, resolution: "480", aspect_ratio: "16,9"}     # 832x480, 7.06 s: the same clip for every model
+first_frame: none
+
+conditions:
+  D: {depth: {}}            # the bundle's depth video (p2s/2_render/control_videos.py): inverse depth, near bright, one scale per clip
+
+cuts:
+  intersection_4way: {cut3: [{cam: cctv, frames: [0, 36]}, {cam: dashcam, frames: [37, 76]}, {cam: phone, frames: [77, 112]}]}
+  robot_pour:        {cut3: [{cam: side, frames: [0, 36]}, {cam: wrist, frames: [37, 76]}, {cam: cctv, frames: [77, 112]}]}
+
+seeds: [0]
+
+gpu: {min_free_gib: 50, max_parallel: 4, launch_gap_s: 120, retries: 1}

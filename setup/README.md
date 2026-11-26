@@ -53,11 +53,11 @@ Source `~/.sim2real.env` first: without it `env.sh` falls back to `~/code/sim2re
 
 | Env | Python | Spec in this repo | Used by |
 | --- | --- | --- | --- |
-| `$S2R_ROOT/envs/eval` | 3.11 | [`setup/envs/eval/`](envs/eval/) (`pyproject.toml` + `uv.lock`) | `sim/export.py`, `gen/run_matrix.py`, `gen/run_multicam.py`, `gen/common/multicam_inputs.py`, `gen/cosmos3_nano/singlecam_request.py`, SAM 2 + CoTracker3 |
-| `$S2R_ROOT/VACE/.venv` | 3.10 (system) | [`setup/envs/vace-requirements.txt`](envs/vace-requirements.txt) | `sim/controls.py`, VACE runs, prompt loading |
-| `$S2R_ROOT/VideoX-Fun/.venv` | 3.10 (system) | [`setup/envs/videox-fun-requirements.txt`](envs/videox-fun-requirements.txt) | Wan2.2-VACE-Fun runs ([`gen/wan22_vace_fun/`](../gen/wan22_vace_fun/)) |
-| `$S2R_ROOT/cosmos-framework/.venv` | 3.13 | the clone's own `uv.lock` | Cosmos3-Nano and Cosmos3-Nano-Sim-Transfer runs ([`gen/cosmos3_nano/`](../gen/cosmos3_nano/), [`gen/cosmos3_sim_transfer/`](../gen/cosmos3_sim_transfer/)) |
-| `$S2R_ROOT/LTX-2/.venv` | 3.13 | [`setup/envs/ltx-2/uv.lock`](envs/ltx-2/uv.lock) (the clone ships none) | LTX-2.5 runs ([`gen/ltx25/`](../gen/ltx25/)) |
+| `$S2R_ROOT/envs/eval` | 3.11 | [`setup/envs/eval/`](envs/eval/) (`pyproject.toml` + `uv.lock`) | `legacy/sim/export.py`, `legacy/gen/run_matrix.py`, `p2s/3_generate/run_multicam.py`, `p2s/3_generate/common/multicam_inputs.py`, `legacy/gen/cosmos3_nano/singlecam_request.py`, SAM 2 + CoTracker3 |
+| `$S2R_ROOT/VACE/.venv` | 3.10 (system) | [`setup/envs/vace-requirements.txt`](envs/vace-requirements.txt) | `legacy/sim/controls.py`, VACE runs, prompt loading |
+| `$S2R_ROOT/VideoX-Fun/.venv` | 3.10 (system) | [`setup/envs/videox-fun-requirements.txt`](envs/videox-fun-requirements.txt) | Wan2.2-VACE-Fun runs ([`p2s/3_generate/models/wan22_vace_fun/`](../p2s/3_generate/models/wan22_vace_fun/)) |
+| `$S2R_ROOT/cosmos-framework/.venv` | 3.13 | the clone's own `uv.lock` | Cosmos3-Nano and Cosmos3-Nano-Sim-Transfer runs ([`p2s/3_generate/models/cosmos3_nano/`](../p2s/3_generate/models/cosmos3_nano/), [`p2s/3_generate/models/cosmos3_sim_transfer/`](../p2s/3_generate/models/cosmos3_sim_transfer/)) |
+| `$S2R_ROOT/LTX-2/.venv` | 3.13 | [`setup/envs/ltx-2/uv.lock`](envs/ltx-2/uv.lock) (the clone ships none) | LTX-2.5 runs ([`p2s/3_generate/models/ltx25/`](../p2s/3_generate/models/ltx25/)) |
 | `$S2R_ROOT/Wan-Move/.venv` | 3.10 (system) | [`setup/envs/wanmove-requirements.txt`](envs/wanmove-requirements.txt) | Wan-Move runs (not re-tested on 2026-11-18) |
 
 ```
@@ -122,7 +122,15 @@ hfdl Lightricks/LTX-2.5 --revision 49b093a39c19169a8a81721dcc541e07e945232f \
 hfdl Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control --revision 20a580c8606c06a0988d40375a61309e0fe5893d   # the depth / edge control adapter
 ```
 
-The revisions and file names are the ones [`configs/experiments/cvp_v1/ltx25.yaml`](../configs/experiments/cvp_v1/ltx25.yaml) pins; `gen/ltx25/run.sh` reads them from the cache, offline. As of 2026-11-23 these two commands have not been run on the lab server (it is not logged in to Hugging Face).
+The full (not distilled) LTX-2.5 model is one more file, 39 GiB, needed only for
+[`p2s/experiments/v1/ltx25_dev.yaml`](../p2s/experiments/v1/ltx25_dev.yaml) (50 steps with guidance):
+
+```
+HF_HUB_OFFLINE=0 uvx hf@2.4.0 download Lightricks/LTX-2.5 --revision 49b093a39c19169a8a81721dcc541e07e945232f \
+  diffusion_models/ltx-2.5-22b-dev-transformer-bf16.safetensors
+```
+
+The revisions and file names are the ones [`legacy/configs/experiments/cvp_v1/ltx25.yaml`](../legacy/configs/experiments/cvp_v1/ltx25.yaml) pins; `p2s/3_generate/models/ltx25/run.sh` reads them from the cache, offline. As of 2026-11-23 these two commands have not been run on the lab server (it is not logged in to Hugging Face).
 
 The first two are what Round 2 and the two-camera test used. They were already on disk on 2026-11-18, so the download lines above were not re-run then. The models of the first proof of concept (VACE-14B, its annotators, Wan-Move, Cosmos Sim-Transfer) are optional:
 
@@ -131,9 +139,9 @@ The first two are what Round 2 and the two-camera test used. They were already o
 | VACE-14B | `Wan-AI/Wan2.1-VACE-14B` | `539c162b1387eac9dc4c20bd3f74671309e76a4c` | 59 GB | `VACE/models/Wan2.1-VACE-14B` |
 | VACE annotators | `ali-vilab/VACE-Annotators` | `63512cbbe4e3a98e1636356ef2230da84649f617` | 1.3 GB (`depth/`, `scribble/` only) | `VACE/models/VACE-Annotators` |
 | Wan-Move-14B | `Ruihang/Wan-Move-14B-480P` | `63a21fd3f4f1e6c6104e29f6b8d9b8ce3d635456` | 82 GB | `Wan-Move/Wan-Move-14B-480P` |
-| Cosmos Sim-Transfer | `nvidia/Cosmos3-Nano-Sim-Transfer` | `main` (`45510d5b…` when the PoC ran) | | fetched by `smoke/cosmos_simtransfer_153.sh` |
+| Cosmos Sim-Transfer | `nvidia/Cosmos3-Nano-Sim-Transfer` | `main` (`45510d5b…` when the PoC ran) | | fetched by `legacy/smoke/cosmos_simtransfer_153.sh` |
 
-Eval checkpoints go in `$S2R_ROOT/checkpoints/` (SAM 2.1 and CoTracker3, read by `eval/run_eval.py`):
+Eval checkpoints go in `$S2R_ROOT/checkpoints/` (SAM 2.1 and CoTracker3, read by `p2s/4_score/run_eval.py`):
 
 ```
 mkdir -p $S2R_ROOT/checkpoints/{sam2,cotracker}
@@ -141,7 +149,7 @@ curl -L -o $S2R_ROOT/checkpoints/sam2/sam2.1_hiera_large.pt https://dl.fbaipubli
 curl -L -o $S2R_ROOT/checkpoints/cotracker/scaled_offline.pth https://huggingface.co/facebook/cotracker3/resolve/main/scaled_offline.pth
 ```
 
-The depth reader of `eval/run_eval.py` is Depth Anything 3, in its own env (7 GB; torch 2.15 / CUDA 13.2 wheels, which ran on driver 580.159). Its repo does not declare `addict`, which it imports, so the freeze below carries it:
+The depth reader of `p2s/4_score/run_eval.py` is Depth Anything 3, in its own env (7 GB; torch 2.15 / CUDA 13.2 wheels, which ran on driver 580.159). Its repo does not declare `addict`, which it imports, so the freeze below carries it:
 
 ```
 uv venv --python 3.11 $S2R_ROOT/envs/da3/.venv
@@ -157,7 +165,7 @@ DINOv2 (the feature diagnostic) downloads itself through torch.hub into `$S2R_CA
 $S2R_ROOT/envs/eval/.venv/bin/python setup/fetch_assets.py   # CC0 Poly Haven textures and models, ~35 MB
 ```
 
-The list is [`configs/assets/polyhaven.yaml`](../configs/assets/polyhaven.yaml). Files go to `$S2R_DATA/assets/polyhaven/<id>/`, each folder with a `SOURCE.md` (URLs, licence, sha256). Re-running keeps files whose md5 matches.
+The list is [`legacy/configs/assets/polyhaven.yaml`](../legacy/configs/assets/polyhaven.yaml). Files go to `$S2R_DATA/assets/polyhaven/<id>/`, each folder with a `SOURCE.md` (URLs, licence, sha256). Re-running keeps files whose md5 matches.
 
 ### 5. Check it
 
@@ -168,14 +176,14 @@ source ~/.sim2real.env
 SM=$S2R_DATA/smoke/setup/drones_air_phys
 
 # simulator: render + export, then controls (about 5 min). The poses must match the Round 2 bundle exactly.
-CUDA_VISIBLE_DEVICES=<gpu> bash sim/build_bundle.sh configs/scenes/drones_air_phys.yaml $SM/bundle
-$S2R_ROOT/VACE/.venv/bin/python sim/controls.py $SM/bundle $SM --only vace cosmos C0
+CUDA_VISIBLE_DEVICES=<gpu> bash legacy/sim/build_bundle.sh legacy/configs/scenes/drones_air_phys.yaml $SM/bundle
+$S2R_ROOT/VACE/.venv/bin/python legacy/sim/controls.py $SM/bundle $SM --only vace cosmos C0
 
 # Wan2.2-VACE-Fun at 2 steps (about 4.5 min, 40.8 GiB peak). Writes A/vacefun-a14b-s2/ next to the real clips; delete it after.
-SCENE=drones_air_phys COND=A SEED=0 STEPS=2 CUDA_VISIBLE_DEVICES=<gpu> bash gen/wan22_vace_fun/singlecam_run.sh
+SCENE=drones_air_phys COND=A SEED=0 STEPS=2 CUDA_VISIBLE_DEVICES=<gpu> bash legacy/gen/wan22_vace_fun/singlecam_run.sh
 
 # Cosmos3-Nano, depth only, full 50 steps (about 9 min). Seed 9 is unused, so no real clip is overwritten; delete C0/cosmos3-nano/seed9/ after.
-SCENE=drones_air_phys COND=C0 SEED=9 CUDA_VISIBLE_DEVICES=<gpu> bash gen/cosmos3_nano/singlecam_run.sh
+SCENE=drones_air_phys COND=C0 SEED=9 CUDA_VISIBLE_DEVICES=<gpu> bash legacy/gen/cosmos3_nano/singlecam_run.sh
 ```
 
 Each clip should be 832×480 with 81 frames: `ffprobe -v error -show_entries stream=width,height,nb_frames -of csv=p=0 <clip>`.
@@ -186,12 +194,12 @@ VACE-14B peaks at 74 GB, so it needs nearly a whole 80 GB card. Results and per-
 
 ```
 source env.sh; D=$S2R_DATA/poc/single-cam/drones_air; mkdir -p $D
-bash sim/build_bundle.sh configs/scenes/drones_air.yaml $D/bundle           # render + bundle, ~5 min
-$S2R_ROOT/VACE/.venv/bin/python sim/controls.py $D/bundle $D                  # control videos for every condition
-for c in A Aplus B C C0 Bbox; do SCENE=drones_air COND=$c SEED=0 bash gen/wan21_vace/singlecam_run.sh; done   # ~27 min each
-SCENE=drones_air SEED=0 bash gen/cosmos3_sim_transfer/singlecam_run.sh                               # condition D, ~3 min
-SCENE=drones_air SEED=0 bash gen/wan_move/singlecam_run.sh                              # condition E, ~31 min
-$S2R_ROOT/envs/eval/.venv/bin/python eval/grid.py $D                          # grid.mp4 + grid_frames.png
+bash legacy/sim/build_bundle.sh legacy/configs/scenes/drones_air.yaml $D/bundle           # render + bundle, ~5 min
+$S2R_ROOT/VACE/.venv/bin/python legacy/sim/controls.py $D/bundle $D                  # control videos for every condition
+for c in A Aplus B C C0 Bbox; do SCENE=drones_air COND=$c SEED=0 bash legacy/gen/wan21_vace/singlecam_run.sh; done   # ~27 min each
+SCENE=drones_air SEED=0 bash legacy/gen/cosmos3_sim_transfer/singlecam_run.sh                               # condition D, ~3 min
+SCENE=drones_air SEED=0 bash legacy/gen/wan_move/singlecam_run.sh                              # condition E, ~31 min
+$S2R_ROOT/envs/eval/.venv/bin/python legacy/eval/grid.py $D                          # grid.mp4 + grid_frames.png
 ```
 
-Wrap any of these in `smoke/measure.py --out <dir>/measure.json --` to record wall time and peak memory.
+Wrap any of these in `legacy/smoke/measure.py --out <dir>/measure.json --` to record wall time and peak memory.
